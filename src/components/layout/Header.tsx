@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  Building2, 
-  ChevronDown, 
-  UserCheck, 
-  ShieldCheck, 
-  Bell, 
-  Check, 
+import {
+  Building2,
+  ChevronDown,
+  UserCheck,
+  ShieldCheck,
+  Bell,
+  Check,
   Sparkles,
   MapPin
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
 export const Header: React.FC = () => {
-  const { 
-    user, 
-    role, 
-    obras, 
-    activeObra, 
-    setActiveObra, 
-    switchRole 
+  const {
+    user,
+    role,
+    obras,
+    activeObra,
+    setActiveObra,
+    switchRole
   } = useAuth();
 
   const [showObraMenu, setShowObraMenu] = useState(false);
@@ -44,21 +44,20 @@ export const Header: React.FC = () => {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6 py-2.5 flex items-center justify-between gap-2">
-        
-        {/* LOGO + NOME (32px de altura conforme especificação) */}
+        {/* LOGO + NOME */}
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center bg-slate-50 border border-slate-200 p-0.5 shadow-xs">
-            <img 
-              src="/logo-meurbanismo.png" 
-              alt="Logo meUrbanismo" 
-              className="h-7 w-7 object-contain"
+          <div className="h-9 w-9 flex items-center justify-center">
+            <img
+              src="/logo-meurbanismo.png"
+              alt="Logo meUrbanismo"
+              className="h-full w-full object-contain"
             />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-extrabold tracking-tight text-slate-900 leading-none">
-              me<span className="text-blue-900">Urbanismo</span>
+            <span className="text-base font-extrabold tracking-tight text-slate-800">
+              me<span className="text-[#3b82f6]">U</span>rbanismo
             </span>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
               Spechotto
             </span>
           </div>
@@ -96,11 +95,10 @@ export const Header: React.FC = () => {
                       setActiveObra(o);
                       setShowObraMenu(false);
                     }}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${
-                      activeObra?.id === o.id
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${activeObra?.id === o.id
                         ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
                         : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <div>
                       <div className="font-semibold text-slate-900">{o.nome}</div>
@@ -118,7 +116,7 @@ export const Header: React.FC = () => {
 
         {/* AÇÕES DIREITAS: NOTIFICAÇÕES & SIMULADOR DE PERFIS */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          
+
           {/* Botão de Notificações com Touch Target de 28px/44px */}
           <div className="relative">
             <button
@@ -169,9 +167,9 @@ export const Header: React.FC = () => {
               title="Simular / Alternar Perfil RBAC"
             >
               <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-300">
-                <img 
-                  src={user.avatar_url || '/logo-meurbanismo.png'} 
-                  alt={user.nome} 
+                <img
+                  src={user.avatar_url || '/logo-meurbanismo.png'}
+                  alt={user.nome}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -205,9 +203,8 @@ export const Header: React.FC = () => {
                   <div className="space-y-1">
                     <button
                       onClick={() => { switchRole('admin'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${
-                        role === 'ADMINISTRADOR' ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'ADMINISTRADOR' ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       <div>
                         <div className="font-bold">1. ADMINISTRADOR</div>
@@ -218,9 +215,8 @@ export const Header: React.FC = () => {
 
                     <button
                       onClick={() => { switchRole('investidor'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${
-                        role === 'PROPRIETARIO_INVESTIDOR' ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'PROPRIETARIO_INVESTIDOR' ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       <div>
                         <div className="font-bold">2. PROPRIETÁRIO / INVESTIDOR</div>
@@ -231,9 +227,8 @@ export const Header: React.FC = () => {
 
                     <button
                       onClick={() => { switchRole('corretor'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${
-                        role === 'CORRETOR' ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CORRETOR' ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       <div>
                         <div className="font-bold">3. CORRETOR DE IMÓVEIS</div>
@@ -244,9 +239,8 @@ export const Header: React.FC = () => {
 
                     <button
                       onClick={() => { switchRole('cliente'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${
-                        role === 'CLIENTE_COMPRADOR' ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200' : 'text-slate-700 hover:bg-slate-50'
-                      }`}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CLIENTE_COMPRADOR' ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
                     >
                       <div>
                         <div className="font-bold">4. CLIENTE / COMPRADOR</div>
