@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-navy-950 text-slate-100 antialiased overflow-x-hidden min-h-screen;
+    @apply bg-slate-50 text-slate-900 antialiased overflow-x-hidden min-h-screen;
     touch-action: manipulation;
   }
 }

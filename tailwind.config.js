@@ -36,9 +36,13 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       boxShadow: {
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-        'glow': '0 0 20px -5px rgba(2, 132, 199, 0.5)',
-        'glow-sm': '0 0 10px -2px rgba(56, 189, 248, 0.4)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+        'sm': '0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
+        'card': '0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 1px 4px -1px rgba(15, 23, 42, 0.03)',
+        'soft': '0 4px 20px -4px rgba(15, 23, 42, 0.08)',
+        'glass': '0 8px 30px rgba(0, 0, 0, 0.06)',
+        'glow': '0 0 20px -5px rgba(2, 132, 199, 0.3)',
+        'glow-sm': '0 0 10px -2px rgba(2, 132, 199, 0.25)',
       },
       animation: {
         'pulse-subtle': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -47,7 +51,7 @@ export default {
       keyframes: {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-6px)' },
+          '50%': { transform: 'translateY(-4px)' },
         }
       }
     },

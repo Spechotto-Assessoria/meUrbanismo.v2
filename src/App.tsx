@@ -58,7 +58,7 @@ const MainApp: React.FC = () => {
     <>
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
-      <div className="min-h-screen flex flex-col bg-navy-950 text-slate-100 max-w-full overflow-x-hidden">
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden">
         {/* Header Responsivo */}
         <Header />
 
