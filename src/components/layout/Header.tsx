@@ -96,8 +96,8 @@ export const Header: React.FC = () => {
                       setShowObraMenu(false);
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${activeObra?.id === o.id
-                        ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
+                      : 'text-slate-700 hover:bg-slate-50'
                       }`}
                   >
                     <div>
