@@ -99,8 +99,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                       setShowObraMenu(false);
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${activeObra?.id === o.id
-                        ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                      ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
+                      : 'text-slate-700 hover:bg-slate-50'
                       }`}
                   >
                     <div>
@@ -207,8 +207,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     <button
                       onClick={() => { switchRole('admin'); setShowProfileMenu(false); }}
                       className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'ADMINISTRADOR'
-                          ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
-                          : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                        : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -221,8 +221,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     <button
                       onClick={() => { switchRole('investidor'); setShowProfileMenu(false); }}
                       className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'PROPRIETARIO_INVESTIDOR'
-                          ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200'
-                          : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200'
+                        : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -235,8 +235,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     <button
                       onClick={() => { switchRole('corretor'); setShowProfileMenu(false); }}
                       className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CORRETOR'
-                          ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
-                          : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
+                        : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -249,8 +249,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     <button
                       onClick={() => { switchRole('cliente'); setShowProfileMenu(false); }}
                       className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CLIENTE_COMPRADOR'
-                          ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200'
-                          : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200'
+                        : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
