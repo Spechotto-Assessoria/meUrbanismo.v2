@@ -22,26 +22,27 @@ const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  // Redireciona para o dashboard se o perfil não puder acessar a aba atual
+  // Redireciona para o dashboard se o perfil não tiver permissão para a aba ativa
   useEffect(() => {
     if (!canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
-  // Clicar na Logo limpa a obra e volta para a tela inicial
+  // Ação ao clicar no logo: reseta a obra selecionada e força a aba 'dashboard'
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
   };
 
-  // Clicar em um card de obra no Dashboard troca a aba para 'andamento'
+  // Ação ao selecionar uma obra dentro do Dashboard
   const handleSelectObra = () => {
     setActiveTab('andamento');
   };
 
   const renderContent = () => {
-    if (activeTab === 'dashboard') {
+    // Se estiver na aba dashboard OU não houver nenhuma obra selecionada, exibe o Dashboard
+    if (activeTab === 'dashboard' || !activeObra) {
       return <DashboardTab onSelectObra={handleSelectObra} />;
     }
 
@@ -85,8 +86,8 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* Exibe o BottomNav sempre que houver uma obra selecionada */}
-        {activeObra && (
+        {/* Exibe o menu inferior apenas quando houver uma obra selecionada */}
+        {activeObra && activeTab !== 'dashboard' && (
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         )}
       </div>
