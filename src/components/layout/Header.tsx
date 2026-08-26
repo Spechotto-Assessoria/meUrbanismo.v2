@@ -9,7 +9,8 @@ import {
   MapPin,
   User as UserIcon,
   Sparkles,
-  Save
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -38,7 +39,9 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
   const [telefone, setTelefone] = useState('(17) 99999-8888');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  const isAdmin = user.role === 'ADMINISTRADOR' || role === 'ADMINISTRADOR';
+  // Garante que o usuário logado como ADMIN SEMPRE veja o painel de troca de perfil,
+  // mesmo que esteja simulando a visão de Cliente, Corretor ou Investidor.
+  const isRealAdmin = user.role === 'ADMINISTRADOR' || user.email?.includes('admin');
 
   const getRoleBadge = (r: UserRole) => {
     switch (r) {
@@ -232,8 +235,22 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                   </div>
                 </div>
 
+                {/* BOTÃO DE ATALHO RÁPIDO PARA RESTAURAR PERFIL DE ADMIN QUANDO ESTIVER SIMULANDO */}
+                {role !== 'ADMINISTRADOR' && isRealAdmin && (
+                  <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+                    <span className="text-[11px] text-amber-900 font-semibold">Simulando: {roleInfo.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Voltar para Admin
+                    </button>
+                  </div>
+                )}
+
                 {/* FORMULÁRIO COMPACTO DE EDIÇÃO DE CADASTRO */}
-                {isEditing ? (
+                {isEditing && (
                   <form onSubmit={handleSaveProfile} className="mt-3 space-y-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-700 text-[11px] flex items-center gap-1">
                       <UserIcon className="w-3.5 h-3.5 text-blue-600" /> Alterar Dados Cadastrais
@@ -266,10 +283,10 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                       <p className="text-[10px] text-emerald-600 font-bold text-center">Salvo com sucesso!</p>
                     )}
                   </form>
-                ) : null}
+                )}
 
-                {/* SIMULADOR DE PERFIS (EXCLUSIVO PARA ADMINISTRADOR) */}
-                {isAdmin && (
+                {/* PAINEL DE SIMULAÇÃO DE PERFIS (SEMPRE VISÍVEL PARA O USUÁRIO ADMINISTRADOR) */}
+                {isRealAdmin && (
                   <div className="mt-3.5 pt-3 border-t border-slate-100">
                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                       <Sparkles className="w-3.5 h-3.5 text-amber-500" /> ALTERNAR PERFIL DE TESTE:
