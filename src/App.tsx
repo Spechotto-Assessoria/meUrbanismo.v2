@@ -16,31 +16,34 @@ import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
 import { AdminTab } from './components/tabs/AdminTab';
 import { TabId } from './types';
+import { ShieldAlert } from 'lucide-react';
 
 const MainApp: React.FC = () => {
-  const { canAccessTab, role, activeObra, setActiveObra } = useAuth();
+  const { canAccessTab, role, user, activeObra, setActiveObra, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  // Redireciona para o dashboard se o perfil não tiver permissão para a aba ativa
   useEffect(() => {
     if (!canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
-  // Ação ao clicar no logo: reseta a obra selecionada e força a aba 'dashboard'
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
   };
 
-  // Ação ao selecionar uma obra dentro do Dashboard
   const handleSelectObra = () => {
     setActiveTab('andamento');
   };
 
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard');
+
+  // Identifica se a sessão é a sua de Administrador em teste
+  const isSimulatingFromAdmin =
+    role !== 'ADMINISTRADOR' &&
+    (user.role === 'ADMINISTRADOR' || user.email?.includes('spechotto.com.br'));
 
   const renderContent = () => {
     if (activeTab === 'dashboard' || !activeObra) {
@@ -77,10 +80,9 @@ const MainApp: React.FC = () => {
     <>
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden">
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
         <Header onLogoClick={handleGoToDashboard} />
 
-        {/* Container Principal de Conteúdo: altera o padding inferior dinamicamente */}
         <main
           id="tab-content-container"
           className={`flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 transition-all ${showBottomNav ? 'pb-24 sm:pb-28' : 'pb-6'
@@ -89,7 +91,19 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* Exibe o menu inferior apenas quando houver uma obra selecionada */}
+        {/* BOTÃO FLUTUANTE EXCLUSIVO PARA O SIMULADOR DA SUA CONTA ADMIN */}
+        {isSimulatingFromAdmin && (
+          <button
+            type="button"
+            onClick={() => switchRole('admin')}
+            className="fixed top-16 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 cursor-pointer animate-bounce"
+            title="Sair do modo de simulação e voltar para Admin"
+          >
+            <ShieldAlert className="w-4 h-4" />
+            <span>Voltar p/ Admin</span>
+          </button>
+        )}
+
         {showBottomNav && (
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         )}
