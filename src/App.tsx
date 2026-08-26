@@ -40,8 +40,9 @@ const MainApp: React.FC = () => {
     setActiveTab('andamento');
   };
 
+  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard');
+
   const renderContent = () => {
-    // Se estiver na aba dashboard OU não houver nenhuma obra selecionada, exibe o Dashboard
     if (activeTab === 'dashboard' || !activeObra) {
       return <DashboardTab onSelectObra={handleSelectObra} />;
     }
@@ -79,15 +80,17 @@ const MainApp: React.FC = () => {
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden">
         <Header onLogoClick={handleGoToDashboard} />
 
+        {/* Container Principal de Conteúdo: altera o padding inferior dinamicamente */}
         <main
           id="tab-content-container"
-          className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 pb-24 sm:pb-28"
+          className={`flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 transition-all ${showBottomNav ? 'pb-24 sm:pb-28' : 'pb-6'
+            }`}
         >
           {renderContent()}
         </main>
 
         {/* Exibe o menu inferior apenas quando houver uma obra selecionada */}
-        {activeObra && activeTab !== 'dashboard' && (
+        {showBottomNav && (
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         )}
       </div>
