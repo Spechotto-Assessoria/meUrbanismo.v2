@@ -11,7 +11,11 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onLogoClick?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
   const {
     user,
     role,
@@ -44,8 +48,12 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 py-2 flex items-center justify-between gap-1">
 
-        {/* LOGO + NOME (Texto esconde no mobile) */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* LOGO + NOME (Clicável para retornar ao Dashboard) */}
+        <button
+          onClick={onLogoClick}
+          className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer"
+          title="Voltar ao Dashboard Inicial"
+        >
           <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0">
             <img
               src="/logo-meurbanismo.png"
@@ -61,9 +69,9 @@ export const Header: React.FC = () => {
               Spechotto
             </span>
           </div>
-        </div>
+        </button>
 
-        {/* SELETOR DE OBRA ATIVA (Flexível e compacto no mobile) */}
+        {/* SELETOR DE OBRA ATIVA */}
         <div className="relative flex-1 min-w-0 max-w-[140px] sm:max-w-[220px] mx-1">
           <button
             onClick={() => setShowObraMenu(!showObraMenu)}
@@ -71,7 +79,7 @@ export const Header: React.FC = () => {
           >
             <Building2 className="w-3.5 h-3.5 text-blue-900 shrink-0" />
             <span className="truncate text-left font-medium text-slate-700 text-[11px] sm:text-xs">
-              {activeObra ? activeObra.nome : 'Obra'}
+              {activeObra ? activeObra.nome : 'Selecionar Obra'}
             </span>
             <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform ${showObraMenu ? 'rotate-180' : ''}`} />
           </button>
@@ -91,8 +99,8 @@ export const Header: React.FC = () => {
                       setShowObraMenu(false);
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${activeObra?.id === o.id
-                      ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                      : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
+                        : 'text-slate-700 hover:bg-slate-50'
                       }`}
                   >
                     <div>
@@ -198,7 +206,9 @@ export const Header: React.FC = () => {
                   <div className="space-y-1">
                     <button
                       onClick={() => { switchRole('admin'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'ADMINISTRADOR' ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200' : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'ADMINISTRADOR'
+                          ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -210,7 +220,9 @@ export const Header: React.FC = () => {
 
                     <button
                       onClick={() => { switchRole('investidor'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'PROPRIETARIO_INVESTIDOR' ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200' : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'PROPRIETARIO_INVESTIDOR'
+                          ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -222,7 +234,9 @@ export const Header: React.FC = () => {
 
                     <button
                       onClick={() => { switchRole('corretor'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CORRETOR' ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200' : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CORRETOR'
+                          ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -234,7 +248,9 @@ export const Header: React.FC = () => {
 
                     <button
                       onClick={() => { switchRole('cliente'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CLIENTE_COMPRADOR' ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200' : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CLIENTE_COMPRADOR'
+                          ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
