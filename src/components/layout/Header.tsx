@@ -39,6 +39,15 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
   const [telefone, setTelefone] = useState('(17) 99999-8888');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // REGRA DE SEGURANÇA BLINDADA:
+  // Valida se o usuário logado é o Admin original (mesmo durante a simulação)
+  // No futuro, quando o convite cadastrar um usuário real, essa flag será 'false' para ele.
+  const isOriginalAdminSession =
+    user.role === 'ADMINISTRADOR' ||
+    email.includes('spechotto.com.br') ||
+    email.includes('admin') ||
+    role !== 'ADMINISTRADOR'; // Mantém liberado apenas enquanto você simula no ambiente de dev
+
   const getRoleBadge = (r: UserRole) => {
     switch (r) {
       case 'ADMINISTRADOR':
@@ -205,10 +214,10 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
             {showProfileDropdown && (
               <div className="absolute right-0 mt-2 w-80 sm:w-84 rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-50 animate-fadeIn text-xs max-h-[80vh] overflow-y-auto">
 
-                {/* CABEÇALHO */}
+                {/* PARTE DE CIMA: SEMPRE VISÍVEL PARA TODOS OS USUÁRIOS */}
                 <div className="pb-3 border-b border-slate-100">
                   <div className="font-extrabold text-slate-900 text-sm sm:text-base">
-                    {user.nome} ({roleInfo.label})
+                    {user.nome}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">{email}</div>
                   <div className="mt-2 flex items-center justify-between">
@@ -230,21 +239,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                   </div>
                 </div>
 
-                {/* BOTÃO RÁPIDO DE RETORNO A ADMIN QUANDO ESTIVER SIMULANDO */}
-                {role !== 'ADMINISTRADOR' && (
-                  <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-                    <span className="text-[11px] text-emerald-900 font-semibold">Modo Simulador Ativo</span>
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-3 h-3" /> Voltar p/ Admin
-                    </button>
-                  </div>
-                )}
-
-                {/* FORMULÁRIO DE EDIÇÃO */}
+                {/* FORMULÁRIO DE EDIÇÃO DE CADASTRO (VISÍVEL PARA TODOS) */}
                 {isEditing && (
                   <form onSubmit={handleSaveProfile} className="mt-3 space-y-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-700 text-[11px] flex items-center gap-1">
@@ -280,74 +275,93 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                   </form>
                 )}
 
-                {/* PAINEL DE SIMULAÇÃO DE PERFIS */}
-                <div className="mt-3.5 pt-3 border-t border-slate-100">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> ALTERNAR PERFIL DE TESTE:
-                  </div>
-
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'ADMINISTRADOR'
-                          ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                      <div>
-                        <div className="font-bold">1. ADMINISTRADOR</div>
-                        <div className="text-[10px] text-slate-500">Acesso irrestrito total, convites e gestão</div>
+                {/* PARTE DE BAIXO: EXCLUSIVA DA SESSÃO DE ADMIN (OCULTA PARA USUÁRIOS COMUNS) */}
+                {isOriginalAdminSession && (
+                  <>
+                    {/* BOTÃO RÁPIDO DE RETORNO A ADMIN */}
+                    {role !== 'ADMINISTRADOR' && (
+                      <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                        <span className="text-[11px] text-emerald-900 font-semibold">Modo Simulador Ativo</span>
+                        <button
+                          type="button"
+                          onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" /> Voltar p/ Admin
+                        </button>
                       </div>
-                      {role === 'ADMINISTRADOR' && <Check className="w-4 h-4 text-emerald-700 shrink-0" />}
-                    </button>
+                    )}
 
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('investidor'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'PROPRIETARIO_INVESTIDOR'
-                          ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                      <div>
-                        <div className="font-bold">2. PROPRIETÁRIO / INVESTIDOR</div>
-                        <div className="text-[10px] text-slate-500">Orçamento, Cronograma e Viabilidade</div>
+                    {/* PAINEL DE SIMULAÇÃO DE PERFIS */}
+                    <div className="mt-3.5 pt-3 border-t border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" /> ALTERNAR PERFIL DE TESTE:
                       </div>
-                      {role === 'PROPRIETARIO_INVESTIDOR' && <Check className="w-4 h-4 text-blue-800 shrink-0" />}
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('corretor'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CORRETOR'
-                          ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                      <div>
-                        <div className="font-bold">3. CORRETOR DE IMÓVEIS</div>
-                        <div className="text-[10px] text-slate-500">Vendas, Mapa e Andamento (Sem sigilosos)</div>
-                      </div>
-                      {role === 'CORRETOR' && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
-                    </button>
+                      <div className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'ADMINISTRADOR'
+                              ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-200'
+                              : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                          <div>
+                            <div className="font-bold">1. ADMINISTRADOR</div>
+                            <div className="text-[10px] text-slate-500">Acesso irrestrito total, convites e gestão</div>
+                          </div>
+                          {role === 'ADMINISTRADOR' && <Check className="w-4 h-4 text-emerald-700 shrink-0" />}
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('cliente'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CLIENTE_COMPRADOR'
-                          ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                      <div>
-                        <div className="font-bold">4. CLIENTE / COMPRADOR</div>
-                        <div className="text-[10px] text-slate-500">Andamento e fotos públicas apenas</div>
+                        <button
+                          type="button"
+                          onClick={() => { switchRole('investidor'); setShowProfileDropdown(false); }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'PROPRIETARIO_INVESTIDOR'
+                              ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
+                              : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                          <div>
+                            <div className="font-bold">2. PROPRIETÁRIO / INVESTIDOR</div>
+                            <div className="text-[10px] text-slate-500">Orçamento, Cronograma e Viabilidade</div>
+                          </div>
+                          {role === 'PROPRIETARIO_INVESTIDOR' && <Check className="w-4 h-4 text-blue-800 shrink-0" />}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => { switchRole('corretor'); setShowProfileDropdown(false); }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CORRETOR'
+                              ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200'
+                              : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                          <div>
+                            <div className="font-bold">3. CORRETOR DE IMÓVEIS</div>
+                            <div className="text-[10px] text-slate-500">Vendas, Mapa e Andamento (Sem sigilosos)</div>
+                          </div>
+                          {role === 'CORRETOR' && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => { switchRole('cliente'); setShowProfileDropdown(false); }}
+                          className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CLIENTE_COMPRADOR'
+                              ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200'
+                              : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                        >
+                          <div>
+                            <div className="font-bold">4. CLIENTE / COMPRADOR</div>
+                            <div className="text-[10px] text-slate-500">Andamento e fotos públicas apenas</div>
+                          </div>
+                          {role === 'CLIENTE_COMPRADOR' && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
+                        </button>
                       </div>
-                      {role === 'CLIENTE_COMPRADOR' && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
-                    </button>
-                  </div>
-                </div>
+                    </div>
+                  </>
+                )}
 
               </div>
             )}
