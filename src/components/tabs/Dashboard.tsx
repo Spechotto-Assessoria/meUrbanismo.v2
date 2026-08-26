@@ -10,12 +10,23 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-export const DashboardTab: React.FC = () => {
+interface DashboardTabProps {
+  onSelectObra?: () => void;
+}
+
+export const DashboardTab: React.FC<DashboardTabProps> = ({ onSelectObra }) => {
   const { user, role, obras, setActiveObra } = useAuth();
 
   const isAdmin = role === 'ADMINISTRADOR';
   const totalObras = obras.length;
   const valorSobGestao = 'R$ 39.221.779';
+
+  const handleCardClick = (obra: any) => {
+    setActiveObra(obra);
+    if (onSelectObra) {
+      onSelectObra(); // Muda a aba para 'andamento' imediatamente
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto pb-24">
@@ -78,7 +89,7 @@ export const DashboardTab: React.FC = () => {
         )}
       </div>
 
-      {/* 3. Acessos Rápidos (Somente Admin) */}
+      {/* 3. Acessos Rápidos */}
       {isAdmin && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">
@@ -86,8 +97,9 @@ export const DashboardTab: React.FC = () => {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
+              type="button"
               onClick={() => alert('Em breve: Cadastro de Nova Empresa')}
-              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors"
+              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors cursor-pointer"
             >
               <div className="p-1.5 rounded-lg bg-slate-100 text-slate-700">
                 <Plus className="w-4 h-4" />
@@ -96,8 +108,9 @@ export const DashboardTab: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => alert('Em breve: Criação de Nova Obra')}
-              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors"
+              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors cursor-pointer"
             >
               <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700">
                 <Building2 className="w-4 h-4" />
@@ -106,8 +119,9 @@ export const DashboardTab: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => alert('Em breve: Gestão de Convites')}
-              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors"
+              className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors cursor-pointer"
             >
               <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
                 <UserPlus className="w-4 h-4" />
@@ -116,8 +130,9 @@ export const DashboardTab: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => alert('Em breve: Calculadora de Viabilidade')}
-              className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 flex items-center gap-2.5 font-medium text-xs text-blue-900 shadow-xs transition-colors"
+              className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-50 flex items-center gap-2.5 font-medium text-xs text-blue-900 shadow-xs transition-colors cursor-pointer"
             >
               <div className="p-1.5 rounded-lg bg-blue-600 text-white">
                 <Calculator className="w-4 h-4" />
@@ -138,8 +153,8 @@ export const DashboardTab: React.FC = () => {
           {obras.map((obra) => (
             <div
               key={obra.id}
-              onClick={() => setActiveObra(obra)}
-              className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+              onClick={() => handleCardClick(obra)}
+              className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -158,7 +173,7 @@ export const DashboardTab: React.FC = () => {
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
                 <span>Evolução Física: <strong className="text-slate-900">64.5%</strong></span>
-                <span className="font-medium text-blue-700">Ver Detalhes →</span>
+                <span className="font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform">Ver Detalhes →</span>
               </div>
             </div>
           ))}

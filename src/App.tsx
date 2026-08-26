@@ -4,9 +4,7 @@ import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
 import { SplashScreen } from './components/layout/SplashScreen';
 
-// Importação da nova aba Dashboard
 import { DashboardTab } from './components/tabs/Dashboard';
-
 import { AndamentoTab } from './components/tabs/AndamentoTab';
 import { OrcamentoTab } from './components/tabs/OrcamentoTab';
 import { CronogramaTab } from './components/tabs/CronogramaTab';
@@ -21,28 +19,30 @@ import { TabId } from './types';
 
 const MainApp: React.FC = () => {
   const { canAccessTab, role, activeObra, setActiveObra } = useAuth();
-
-  // Define 'dashboard' como a aba inicial padrão
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  // Se o utilizador alternar para um papel sem acesso à aba atual, redireciona para 'dashboard'
+  // Redireciona para o dashboard se o perfil não puder acessar a aba atual
   useEffect(() => {
     if (!canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
-  // Função para limpar a obra selecionada e retornar ao Dashboard
+  // Clicar na Logo limpa a obra e volta para a tela inicial
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
   };
 
+  // Clicar em um card de obra no Dashboard troca a aba para 'andamento'
+  const handleSelectObra = () => {
+    setActiveTab('andamento');
+  };
+
   const renderContent = () => {
-    // Se não houver obra ativa ou a aba for 'dashboard', exibe a Dashboard inicial
-    if (!activeObra || activeTab === 'dashboard') {
-      return <DashboardTab />;
+    if (activeTab === 'dashboard') {
+      return <DashboardTab onSelectObra={handleSelectObra} />;
     }
 
     switch (activeTab) {
@@ -67,7 +67,7 @@ const MainApp: React.FC = () => {
       case 'admin':
         return <AdminTab />;
       default:
-        return <DashboardTab />;
+        return <DashboardTab onSelectObra={handleSelectObra} />;
     }
   };
 
@@ -76,10 +76,8 @@ const MainApp: React.FC = () => {
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden">
-        {/* Header Responsivo acionando o retorno à tela inicial ao clicar na logo */}
         <Header onLogoClick={handleGoToDashboard} />
 
-        {/* Container Principal de Conteúdo */}
         <main
           id="tab-content-container"
           className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 pb-24 sm:pb-28"
@@ -87,8 +85,8 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* Footer exibido apenas quando houver obra selecionada E fora do Dashboard */}
-        {activeObra && activeTab !== 'dashboard' && (
+        {/* Exibe o BottomNav sempre que houver uma obra selecionada */}
+        {activeObra && (
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
         )}
       </div>
