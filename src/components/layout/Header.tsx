@@ -48,10 +48,15 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 py-2 flex items-center justify-between gap-1">
 
-        {/* LOGO + NOME (Clicável para retornar ao Dashboard) */}
+        {/* LOGO + NOME (Aciona o retorno ao Dashboard) */}
         <button
-          onClick={onLogoClick}
-          className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer"
+          type="button"
+          onClick={() => {
+            if (onLogoClick) {
+              onLogoClick();
+            }
+          }}
+          className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer border-0 bg-transparent p-0"
           title="Voltar ao Dashboard Inicial"
         >
           <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0">
@@ -74,8 +79,9 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
         {/* SELETOR DE OBRA ATIVA */}
         <div className="relative flex-1 min-w-0 max-w-[140px] sm:max-w-[220px] mx-1">
           <button
+            type="button"
             onClick={() => setShowObraMenu(!showObraMenu)}
-            className="w-full flex items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border text-xs overflow-hidden"
+            className="w-full flex items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border text-xs overflow-hidden cursor-pointer"
           >
             <Building2 className="w-3.5 h-3.5 text-blue-900 shrink-0" />
             <span className="truncate text-left font-medium text-slate-700 text-[11px] sm:text-xs">
@@ -94,13 +100,14 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                 {obras.map((o) => (
                   <button
                     key={o.id}
+                    type="button"
                     onClick={() => {
                       setActiveObra(o);
                       setShowObraMenu(false);
                     }}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors ${activeObra?.id === o.id
-                      ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                      : 'text-slate-700 hover:bg-slate-50'
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${activeObra?.id === o.id
+                        ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
+                        : 'text-slate-700 hover:bg-slate-50'
                       }`}
                   >
                     <div>
@@ -123,12 +130,13 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
           {/* Botão de Notificações */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => {
                 setShowNotifications(!showNotifications);
                 setShowProfileMenu(false);
                 setShowObraMenu(false);
               }}
-              className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 transition-colors relative shadow-xs"
+              className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 transition-colors relative shadow-xs cursor-pointer"
               aria-label="Notificações"
             >
               <Bell className="w-4 h-4" />
@@ -161,12 +169,13 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
           {/* SIMULADOR DE PERFIS (RBAC) */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => {
                 setShowProfileMenu(!showProfileMenu);
                 setShowObraMenu(false);
                 setShowNotifications(false);
               }}
-              className="flex items-center gap-1 p-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors shadow-xs"
+              className="flex items-center gap-1 p-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors shadow-xs cursor-pointer"
               title="Simular / Alternar Perfil RBAC"
             >
               <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-300 shrink-0">
@@ -205,10 +214,11 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
 
                   <div className="space-y-1">
                     <button
+                      type="button"
                       onClick={() => { switchRole('admin'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'ADMINISTRADOR'
-                        ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'ADMINISTRADOR'
+                          ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -219,10 +229,11 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => { switchRole('investidor'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'PROPRIETARIO_INVESTIDOR'
-                        ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'PROPRIETARIO_INVESTIDOR'
+                          ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -233,10 +244,11 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => { switchRole('corretor'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CORRETOR'
-                        ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CORRETOR'
+                          ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>
@@ -247,10 +259,11 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     </button>
 
                     <button
+                      type="button"
                       onClick={() => { switchRole('cliente'); setShowProfileMenu(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors ${role === 'CLIENTE_COMPRADOR'
-                        ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CLIENTE_COMPRADOR'
+                          ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <div>

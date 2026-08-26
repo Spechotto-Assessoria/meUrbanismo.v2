@@ -20,23 +20,32 @@ import { AdminTab } from './components/tabs/AdminTab';
 import { TabId } from './types';
 
 const MainApp: React.FC = () => {
-  const { canAccessTab, role } = useAuth();
+  const { canAccessTab, role, activeObra, setActiveObra } = useAuth();
 
   // Define 'dashboard' como a aba inicial padrão
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  // Se o usuário alternar para um papel sem acesso à aba atual, redireciona para 'dashboard'
+  // Se o utilizador alternar para um papel sem acesso à aba atual, redireciona para 'dashboard'
   useEffect(() => {
     if (!canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
+  // Função para limpar a obra selecionada e retornar ao Dashboard
+  const handleGoToDashboard = () => {
+    setActiveObra(null as any);
+    setActiveTab('dashboard');
+  };
+
   const renderContent = () => {
+    // Se não houver obra ativa ou a aba for 'dashboard', exibe a Dashboard inicial
+    if (!activeObra || activeTab === 'dashboard') {
+      return <DashboardTab />;
+    }
+
     switch (activeTab) {
-      case 'dashboard':
-        return <DashboardTab />;
       case 'andamento':
         return <AndamentoTab />;
       case 'orcamento':
@@ -67,8 +76,8 @@ const MainApp: React.FC = () => {
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden">
-        {/* Header Responsivo com ação no clique da logo */}
-        <Header />
+        {/* Header Responsivo acionando o retorno à tela inicial ao clicar na logo */}
+        <Header onLogoClick={handleGoToDashboard} />
 
         {/* Container Principal de Conteúdo */}
         <main
@@ -78,8 +87,10 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* Footer com navegação */}
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        {/* Footer exibido apenas quando houver obra selecionada E fora do Dashboard */}
+        {activeObra && activeTab !== 'dashboard' && (
+          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        )}
       </div>
     </>
   );
