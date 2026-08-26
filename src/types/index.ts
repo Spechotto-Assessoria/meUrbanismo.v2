@@ -1,9 +1,9 @@
 // Definição dos tipos e modelos do sistema meUrbanismo
 
-export type UserRole = 
-  | 'ADMINISTRADOR' 
-  | 'PROPRIETARIO_INVESTIDOR' 
-  | 'CORRETOR' 
+export type UserRole =
+  | 'ADMINISTRADOR'
+  | 'PROPRIETARIO_INVESTIDOR'
+  | 'CORRETOR'
   | 'CLIENTE_COMPRADOR';
 
 export interface UserProfile {
@@ -17,7 +17,8 @@ export interface UserProfile {
   created_at: string;
 }
 
-export type TabId = 
+export type TabId =
+  | 'dashboard'
   | 'andamento'
   | 'orcamento'
   | 'cronograma'

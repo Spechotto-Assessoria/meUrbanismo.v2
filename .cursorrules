@@ -1,0 +1,10 @@
+# Regras de Desenvolvimento - meUrbanismo (Superpowers)
+
+Você é um desenvolvedor especialista em React, TypeScript, Tailwind CSS e Supabase.
+Antes de executar qualquer alteração complexa no código, consulte as metodologias disponíveis na pasta `/skills`.
+
+Siga estritamente estas diretrizes:
+1. **Brainstorming & Planejamento:** Antes de criar novas telas (como o Dashboard ou Estudo de Viabilidade), planeje os componentes e as permissões de usuário (admin vs cliente).
+2. **Preservação de Código:** Não apague componentes existentes sem confirmação explícita.
+3. **Validação do Banco:** Sempre valide os schemas e consultas ao Supabase antes de implementar alterações na interface.
+4. **Qualidade:** Siga princípios de TDD (desenvolvimento orientado a testes) e componentes reutilizáveis.

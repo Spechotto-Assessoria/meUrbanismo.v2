@@ -3,29 +3,29 @@ import { useAuth } from '../../contexts/AuthContext';
 import { FotoObra, DiarioObra, MedicaoItem } from '../../types';
 import { apiService } from '../../services/supabase';
 import { SkeletonCard } from '../common/SkeletonLoader';
-import { 
-  Camera, 
-  BookOpen, 
-  Ruler, 
-  Sun, 
-  CloudSun, 
-  Users, 
-  Truck, 
-  Eye, 
-  EyeOff, 
-  Plus, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Camera,
+  BookOpen,
+  Ruler,
+  Sun,
+  CloudSun,
+  Users,
+  Truck,
+  Eye,
+  EyeOff,
+  Plus,
+  CheckCircle2,
+  Clock,
   X,
   Sparkles
 } from 'lucide-react';
 
 export const AcompanhamentoTab: React.FC = () => {
   const { activeObra, role, isAdmin, canViewFinancials } = useAuth();
-  
+
   // Sub-abas dentro de Acompanhamento
   const [subAba, setSubAba] = useState<'fotos' | 'diario' | 'medicoes'>('fotos');
-  
+
   const [fotos, setFotos] = useState<FotoObra[]>([]);
   const [diarios, setDiarios] = useState<DiarioObra[]>([]);
   const [medicoes, setMedicoes] = useState<MedicaoItem[]>([]);
@@ -143,16 +143,15 @@ export const AcompanhamentoTab: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 max-w-full overflow-x-hidden">
-      
+
       {/* SELETOR DE SUB-ABAS (FOTOS, DIÁRIO, MEDIÇÕES) */}
       <div className="flex items-center gap-1.5 bg-navy-950 p-1 rounded-2xl border border-slate-800">
         <button
           onClick={() => setSubAba('fotos')}
-          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-            subAba === 'fotos'
-              ? 'bg-brand-500 text-white shadow-glow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${subAba === 'fotos'
+            ? 'bg-brand-500 text-white shadow-glow-sm'
+            : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <Camera className="w-4 h-4" />
           Galeria de Fotos
@@ -161,11 +160,10 @@ export const AcompanhamentoTab: React.FC = () => {
         {canViewFinancials && (
           <button
             onClick={() => setSubAba('diario')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              subAba === 'diario'
-                ? 'bg-brand-500 text-white shadow-glow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${subAba === 'diario'
+              ? 'bg-brand-500 text-white shadow-glow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+              }`}
           >
             <BookOpen className="w-4 h-4" />
             Diário de Obra
@@ -175,11 +173,10 @@ export const AcompanhamentoTab: React.FC = () => {
         {canViewFinancials && (
           <button
             onClick={() => setSubAba('medicoes')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              subAba === 'medicoes'
-                ? 'bg-brand-500 text-white shadow-glow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${subAba === 'medicoes'
+              ? 'bg-brand-500 text-white shadow-glow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+              }`}
           >
             <Ruler className="w-4 h-4" />
             Medições
@@ -198,11 +195,10 @@ export const AcompanhamentoTab: React.FC = () => {
                 <button
                   key={cat}
                   onClick={() => setFiltroCategoriaFoto(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                    filtroCategoriaFoto === cat
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-navy-900 text-slate-400 border border-slate-800'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${filtroCategoriaFoto === cat
+                    ? 'bg-brand-500 text-white'
+                    : 'bg-navy-900 text-slate-400 border border-slate-800'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -226,7 +222,7 @@ export const AcompanhamentoTab: React.FC = () => {
                 key={foto.id}
                 className="group relative rounded-3xl overflow-hidden bg-navy-900 border border-slate-800 shadow-md hover:border-brand-500/40 transition-all"
               >
-                <div 
+                <div
                   className="aspect-video w-full overflow-hidden cursor-pointer relative"
                   onClick={() => setSelectedFoto(foto)}
                 >
@@ -236,7 +232,7 @@ export const AcompanhamentoTab: React.FC = () => {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-transparent opacity-80"></div>
-                  
+
                   {/* Badge Categoria */}
                   <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-navy-950/80 backdrop-blur-md text-[10px] font-bold text-brand-300 border border-slate-700">
                     {foto.categoria}
@@ -249,11 +245,10 @@ export const AcompanhamentoTab: React.FC = () => {
                         e.stopPropagation();
                         handleToggleVisibilidadeFoto(foto);
                       }}
-                      className={`absolute top-3 right-3 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-md transition-colors ${
-                        foto.visivel_convidados
-                          ? 'bg-emerald-500/80 text-white border border-emerald-400'
-                          : 'bg-amber-500/80 text-navy-950 border border-amber-400'
-                      }`}
+                      className={`absolute top-3 right-3 px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-md transition-colors ${foto.visivel_convidados
+                        ? 'bg-emerald-500/80 text-white border border-emerald-400'
+                        : 'bg-amber-500/80 text-navy-950 border border-amber-400'
+                        }`}
                       title="Clique para alternar visibilidade para convidados"
                     >
                       {foto.visivel_convidados ? (
@@ -285,11 +280,11 @@ export const AcompanhamentoTab: React.FC = () => {
 
           {/* LIGHTBOX MODAL PARA VISUALIZAÇÃO AMPLIADA */}
           {selectedFoto && (
-            <div 
+            <div
               className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn"
               onClick={() => setSelectedFoto(null)}
             >
-              <div 
+              <div
                 className="relative max-w-3xl w-full bg-navy-900 rounded-3xl overflow-hidden border border-slate-700 p-4 space-y-3"
                 onClick={e => e.stopPropagation()}
               >
@@ -426,11 +421,10 @@ export const AcompanhamentoTab: React.FC = () => {
                     </span>
                     <span className="font-bold text-white">{m.fornecedor_empreiteiro}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    m.status === 'Aprovada'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.status === 'Aprovada'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}>
                     {m.status}
                   </span>
                 </div>
@@ -469,7 +463,7 @@ export const AcompanhamentoTab: React.FC = () => {
       {showAddFotoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-md rounded-3xl bg-navy-900 border border-slate-700 p-6 shadow-2xl space-y-4">
-            <button 
+            <button
               onClick={() => setShowAddFotoModal(false)}
               className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
             >
@@ -554,7 +548,7 @@ export const AcompanhamentoTab: React.FC = () => {
       {showAddDiarioModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className="relative w-full max-w-lg rounded-3xl bg-navy-900 border border-slate-700 p-6 shadow-2xl space-y-4">
-            <button 
+            <button
               onClick={() => setShowAddDiarioModal(false)}
               className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
             >
