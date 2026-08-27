@@ -19,7 +19,7 @@ import { TabId } from './types';
 import { ShieldAlert } from 'lucide-react';
 
 const MainApp: React.FC = () => {
-  const { canAccessTab, role, user, activeObra, setActiveObra, switchRole } = useAuth();
+  const { canAccessTab, role, activeObra, setActiveObra, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
@@ -39,11 +39,6 @@ const MainApp: React.FC = () => {
   };
 
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard');
-
-  // Identifica se a sessão é a sua de Administrador em teste
-  const isSimulatingFromAdmin =
-    role !== 'ADMINISTRADOR' &&
-    (user.role === 'ADMINISTRADOR' || user.email?.includes('spechotto.com.br'));
 
   const renderContent = () => {
     if (activeTab === 'dashboard' || !activeObra) {
@@ -91,13 +86,13 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* BOTÃO FLUTUANTE EXCLUSIVO PARA O SIMULADOR DA SUA CONTA ADMIN */}
-        {isSimulatingFromAdmin && (
+        {/* BOTÃO FLUTUANTE DE SIMULAÇÃO: Exibido sempre que a visão ativa for diferente de Admin */}
+        {role !== 'ADMINISTRADOR' && (
           <button
             type="button"
             onClick={() => switchRole('admin')}
             className="fixed top-16 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 cursor-pointer animate-bounce"
-            title="Sair do modo de simulação e voltar para Admin"
+            title="Voltar ao modo Administrador"
           >
             <ShieldAlert className="w-4 h-4" />
             <span>Voltar p/ Admin</span>
