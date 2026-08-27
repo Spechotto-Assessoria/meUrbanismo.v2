@@ -41,7 +41,9 @@ const MainApp: React.FC = () => {
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard');
 
   const renderContent = () => {
-    if (activeTab === 'dashboard' || !activeObra) {
+    // Permite abrir a aba Admin mesmo sem obra selecionada.
+    // Para as demais abas operacionais, exige uma obra ativa ou redireciona para o Dashboard.
+    if (activeTab === 'dashboard' || (!activeObra && activeTab !== 'admin')) {
       return <DashboardTab onSelectObra={handleSelectObra} />;
     }
 
@@ -76,7 +78,7 @@ const MainApp: React.FC = () => {
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
-        <Header onLogoClick={handleGoToDashboard} />
+        <Header onLogoClick={handleGoToDashboard} onNavigateAdmin={() => setActiveTab('admin')} />
 
         <main
           id="tab-content-container"

@@ -1,486 +1,463 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Convite, Empresa, Obra, UserRole } from '../../types';
-import { apiService } from '../../services/supabase';
-import { 
-  Settings, 
-  UserPlus, 
-  Building2, 
-  Send, 
-  Mail, 
-  Phone, 
-  Copy, 
-  Check, 
-  Plus, 
-  ShieldCheck, 
-  Sparkles,
-  MapPin,
-  X
+import {
+  Send,
+  Mail,
+  Phone,
+  Building2,
+  UserPlus,
+  Trash2,
+  Copy,
+  MessageSquare,
+  Check,
+  Search,
+  Lock,
+  Unlock,
+  Shield,
+  Users
 } from 'lucide-react';
+import { UserRole } from '../../types';
+
+interface ConviteItem {
+  id: string;
+  email: string;
+  nome?: string;
+  telefone?: string;
+  obraId: string;
+  obraNome: string;
+  role: UserRole;
+  ativo: boolean;
+  dataCriacao: string;
+  token: string;
+}
 
 export const AdminTab: React.FC = () => {
-  const { activeObra, obras, refreshObras } = useAuth();
-  const [convites, setConvites] = useState<Convite[]>([]);
-  const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const { obras } = useAuth();
 
-  // Estados dos formulários de criação
-  const [showNovoConviteModal, setShowNovoConviteModal] = useState(false);
-  const [showNovaObraModal, setShowNovaObraModal] = useState(false);
+  // Campos do formulário
+  const [emailInput, setEmailInput] = useState('');
+  const [nomeInput, setNomeInput] = useState('');
+  const [telefoneInput, setTelefoneInput] = useState('');
+  const [selectedObraId, setSelectedObraId] = useState(obras[0]?.id || '');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('CLIENTE_COMPRADOR');
 
-  const [novoConvite, setNovoConvite] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    role: 'CORRETOR' as UserRole,
-    obra_id: activeObra?.id || ''
-  });
+  // Filtros da lista
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<string>('TODOS');
+  const [filterObra, setFilterObra] = useState<string>('TODOS');
 
-  const [novaObra, setNovaObra] = useState<Partial<Obra>>({
-    nome: '',
-    tipo: 'Loteamento Fechado',
-    cidade: 'São José do Rio Preto',
-    uf: 'SP',
-    data_inicio: '2025-01-01',
-    data_previsao: '2026-12-31',
-    area_total_m2: 200000,
-    total_lotes: 250,
-    vgv_total: 35000000,
-    custo_orcado: 12000000,
-    custo_realizado: 0,
-    percentual_concluido: 0,
-    status: 'Planejamento'
-  });
+  // Cópia de link feedback
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
-    const [emp, convs] = await Promise.all([
-      apiService.getEmpresa(),
-      apiService.getConvites(activeObra?.id || '')
-    ]);
-    setEmpresa(emp);
-    setConvites(convs);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [activeObra?.id]);
-
-  const handleGerarConvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!novoConvite.nome || !novoConvite.email) return;
-
-    const token = `tok_${Math.random().toString(36).substring(2, 10)}`;
-    const conviteCriado: Convite = {
-      id: `conv-${Date.now()}`,
-      obra_id: novoConvite.obra_id || activeObra?.id || 'obra-001',
-      nome: novoConvite.nome,
-      email: novoConvite.email,
-      telefone: novoConvite.telefone,
-      role: novoConvite.role,
-      token: token,
-      status: 'Pendente',
-      link_acesso: `https://meurbanismo.com.br/acesso?token=${token}`,
-      created_at: new Date().toISOString(),
-      expira_em: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    };
-
-    await apiService.createConvite(conviteCriado);
-    await loadData();
-    setShowNovoConviteModal(false);
-    setNovoConvite({
-      nome: '',
-      email: '',
-      telefone: '',
+  // Lista Mock de Convites
+  const [convites, setConvites] = useState<ConviteItem[]>([
+    {
+      id: '1',
+      email: 'rennan_seidl@hotmail.com',
+      nome: 'Rennan Seidl',
+      telefone: '(17) 99999-8888',
+      obraId: obras[0]?.id || '1',
+      obraNome: obras[0]?.nome || 'Residencial Reserva dos Ipês',
+      role: 'PROPRIETARIO_INVESTIDOR',
+      ativo: true,
+      dataCriacao: '01/08/2026',
+      token: 'conv-8921-xyz'
+    },
+    {
+      id: '2',
+      email: 'corretor.parceiro@gmail.com',
+      nome: 'Marcos Vinicius',
+      telefone: '(17) 98888-7777',
+      obraId: obras[1]?.id || '2',
+      obraNome: obras[1]?.nome || 'Villa Bella Urban Park',
       role: 'CORRETOR',
-      obra_id: activeObra?.id || ''
-    });
+      ativo: true,
+      dataCriacao: '15/08/2026',
+      token: 'conv-3341-abc'
+    }
+  ]);
+
+  // Abas visualizadas por perfil
+  const getAbasPermitidas = (r: UserRole) => {
+    switch (r) {
+      case 'PROPRIETARIO_INVESTIDOR':
+        return ['Orçamento', 'Cronograma', 'Andamento', 'Viabilidade', 'Acompanhamento', 'Projetos/Docs', 'Relatórios', 'Mapa Disponibilidade', 'Vendas'];
+      case 'CORRETOR':
+        return ['Andamento', 'Acompanhamento', 'Projetos/Docs', 'Mapa Disponibilidade', 'Vendas'];
+      case 'CLIENTE_COMPRADOR':
+        return ['Andamento', 'Acompanhamento', 'Projetos/Docs', 'Mapa Disponibilidade'];
+      case 'ADMINISTRADOR':
+        return ['Todas as Abas do Sistema'];
+    }
   };
 
-  const handleSalvarNovaObra = async (e: React.FormEvent) => {
+  // Criar novo convite
+  const handleCreateConvite = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!novaObra.nome || !novaObra.cidade) return;
+    if (!emailInput.trim()) {
+      alert('Por favor, informe ao menos o e-mail do convidado.');
+      return;
+    }
 
-    const obraCriada: Obra = {
-      id: `obra-${Date.now()}`,
-      empresa_id: empresa?.id || 'emp-001',
-      nome: novaObra.nome,
-      tipo: novaObra.tipo as any || 'Loteamento Fechado',
-      cidade: novaObra.cidade,
-      uf: novaObra.uf || 'SP',
-      status: 'Planejamento',
-      data_inicio: novaObra.data_inicio || '2025-01-01',
-      data_previsao: novaObra.data_previsao || '2026-12-31',
-      percentual_concluido: 0,
-      area_total_m2: Number(novaObra.area_total_m2) || 100000,
-      total_lotes: Number(novaObra.total_lotes) || 150,
-      lotes_disponiveis: Number(novaObra.total_lotes) || 150,
-      lotes_reservados: 0,
-      lotes_vendidos: 0,
-      vgv_total: Number(novaObra.vgv_total) || 20000000,
-      custo_orcado: Number(novaObra.custo_orcado) || 8000000,
-      custo_realizado: 0,
-      imagem_capa: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80',
-      endereco_completo: `${novaObra.cidade} - ${novaObra.uf}`
+    const obra = obras.find(o => o.id === selectedObraId);
+    const novo: ConviteItem = {
+      id: Date.now().toString(),
+      email: emailInput.trim(),
+      nome: nomeInput.trim() || undefined,
+      telefone: telefoneInput.trim() || undefined,
+      obraId: selectedObraId,
+      obraNome: obra ? obra.nome : 'Empreendimento Selecionado',
+      role: selectedRole,
+      ativo: true,
+      dataCriacao: new Date().toLocaleDateString('pt-BR'),
+      token: `conv-${Math.floor(Math.random() * 90000) + 10000}`
     };
 
-    await apiService.saveObra(obraCriada);
-    await refreshObras();
-    await loadData();
-    setShowNovaObraModal(false);
+    setConvites([novo, ...convites]);
+    setEmailInput('');
+    setNomeInput('');
+    setTelefoneInput('');
+    alert('Convite gerado com sucesso!');
   };
 
-  const handleCopiarLink = (link: string, id: string) => {
-    navigator.clipboard.writeText(link);
-    setCopiedToken(id);
-    setTimeout(() => setCopiedToken(null), 2500);
+  // Alternar Status (Bloquear / Ativar)
+  const toggleStatus = (id: string) => {
+    setConvites(convites.map(c => c.id === id ? { ...c, ativo: !c.ativo } : c));
   };
+
+  // Alterar Perfil do Usuário
+  const handleChangeRole = (id: string, newRole: UserRole) => {
+    setConvites(convites.map(c => c.id === id ? { ...c, role: newRole } : c));
+  };
+
+  // Excluir Convite
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja remover este acesso?')) {
+      setConvites(convites.filter(c => c.id !== id));
+    }
+  };
+
+  // Gerar Link do Convite
+  const getInviteLink = (c: ConviteItem) => {
+    return `https://app.meurbanismo.com.br/autenticacao?invite_token=${c.token}&email=${encodeURIComponent(c.email)}&obra=${c.obraId}`;
+  };
+
+  // Copiar Link
+  const handleCopyLink = (c: ConviteItem) => {
+    navigator.clipboard.writeText(getInviteLink(c));
+    setCopiedId(c.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Disparar WhatsApp com Mensagem Personalizada
+  const handleSendWhatsapp = (c: ConviteItem) => {
+    const nomePessoa = c.nome ? c.nome : 'Olá';
+    const link = getInviteLink(c);
+    const mensagem = `${nomePessoa}! Você está recebendo o acesso à plataforma meUrbanismo, nela você poderá acessar todos os dados do *${c.obraNome}*!\n\nCrie seu login com o mesmo e-mail cadastrado (*${c.email}*) e crie sua nova senha no link abaixo:\n${link}`;
+
+    const phoneClean = c.telefone ? c.telefone.replace(/\D/g, '') : '';
+    const url = phoneClean
+      ? `https://api.whatsapp.com/send?phone=55${phoneClean}&text=${encodeURIComponent(mensagem)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url, '_blank');
+  };
+
+  // Disparar E-mail Padrão
+  const handleSendEmail = (c: ConviteItem) => {
+    const assunto = `Acesso à Plataforma meUrbanismo - ${c.obraNome}`;
+    const link = getInviteLink(c);
+    const corpo = `Olá!\n\nVocê recebeu o acesso à plataforma meUrbanismo para acompanhar o empreendimento: ${c.obraNome}.\n\nPara acessar, crie sua senha utilizando o e-mail: ${c.email}\n\nClique no link para ativar sua conta: ${link}`;
+
+    window.open(`mailto:${c.email}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`);
+  };
+
+  // Filtragem
+  const convitesFiltrados = convites.filter(c => {
+    const matchSearch = c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.nome && c.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchRole = filterRole === 'TODOS' || c.role === filterRole;
+    const matchObra = filterObra === 'TODOS' || c.obraId === filterObra;
+    return matchSearch && matchRole && matchObra;
+  });
 
   return (
-    <div className="space-y-6 pb-20 max-w-full overflow-x-hidden">
-      
-      {/* HEADER DA ABA ADMIN */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Settings className="w-5 h-5 text-brand-400" />
-            Painel Geral de Administração
-          </h3>
-          <p className="text-xs text-slate-400">
-            Gerenciamento de convites inteligentes, empresa construtora e obras cadastradas
-          </p>
-        </div>
+    <div className="p-3.5 sm:p-6 space-y-6 max-w-7xl mx-auto pb-24">
 
+      {/* CABEÇALHO */}
+      <div className="border-b border-slate-200 pb-4">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowNovaObraModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-navy-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 transition-colors"
-          >
-            <Building2 className="w-3.5 h-3.5 text-brand-400" />
-            Cadastrar Obra
-          </button>
-
-          <button
-            onClick={() => setShowNovoConviteModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-xs font-semibold text-white shadow-glow transition-all"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Novo Convite Inteligente
-          </button>
+          <div className="p-2 rounded-xl bg-blue-50 text-blue-700">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Gestão de Convites & Acessos</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Crie links de acesso, vincule a uma empresa/obra e controle as abas de cada perfil.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* SEÇÃO: MÓDULO DE CONVITES INTELIGENTES */}
-      <div className="p-5 rounded-3xl bg-navy-900/90 border border-slate-800 space-y-4 shadow-glass">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-brand-400" />
-            <h4 className="text-sm font-bold text-white">Convites Emitidos & Acessos</h4>
-          </div>
-          <span className="text-xs text-slate-400 font-mono">
-            {convites.length} convite(s) gerado(s)
-          </span>
-        </div>
+      {/* FORMULÁRIO DE NOVO CONVITE */}
+      <div className="p-4 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+          <Send className="w-4 h-4 text-blue-600" /> Novo Convite
+        </h2>
 
-        <div className="space-y-3">
-          {convites.map((conv) => {
-            const mensagemWhats = `Olá ${conv.nome}! Você recebeu um convite de acesso para o sistema meUrbanismo (${activeObra?.nome}) com perfil de ${conv.role}.\n\nAcesse seu painel pelo link seguro:\n${conv.link_acesso}`;
-            const linkWhats = `https://wa.me/${conv.telefone?.replace(/\D/g, '')}?text=${encodeURIComponent(mensagemWhats)}`;
-
-            return (
-              <div
-                key={conv.id}
-                className="p-4 rounded-2xl bg-navy-950 border border-slate-800 hover:border-slate-700 transition-all space-y-2.5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h5 className="text-sm font-bold text-white flex items-center gap-2">
-                      {conv.nome}
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                        {conv.role}
-                      </span>
-                    </h5>
-                    <div className="text-xs text-slate-400 flex items-center gap-3 mt-0.5">
-                      <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-brand-400" /> {conv.email}</span>
-                      {conv.telefone && (
-                        <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-emerald-400" /> {conv.telefone}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                    conv.status === 'Aceito'
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  }`}>
-                    {conv.status}
-                  </span>
-                </div>
-
-                {/* BOTÕES DE ENVIO RÁPIDO DO CONVITE (WHATSAPP, E-MAIL, COPIAR) */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-850 text-xs">
-                  <span className="text-[11px] text-slate-500 font-mono">
-                    Token: {conv.token}
-                  </span>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopiarLink(conv.link_acesso, conv.id)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-colors"
-                    >
-                      {copiedToken === conv.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      {copiedToken === conv.id ? 'Copiado!' : 'Copiar Link'}
-                    </button>
-
-                    {conv.telefone && (
-                      <a
-                        href={linkWhats}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-colors"
-                      >
-                        <Send className="w-3 h-3" />
-                        WhatsApp
-                      </a>
-                    )}
-
-                    <button
-                      onClick={() => alert(`Convite disparado para o e-mail: ${conv.email}`)}
-                      className="px-3 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-colors"
-                    >
-                      <Mail className="w-3 h-3" />
-                      Reenviar E-mail
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* SEÇÃO: DADOS DA EMPRESA CONSTRUTORA */}
-      {empresa && (
-        <div className="p-5 rounded-3xl bg-navy-900/90 border border-slate-800 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-brand-400" />
-              Empresa / Construtora Responsável
-            </h4>
-            <span className="text-xs text-brand-300 font-semibold">{empresa.crea_cau}</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <form onSubmit={handleCreateConvite} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <span className="text-slate-400 block">Razão Social / Nome Fantasia</span>
-              <strong className="text-white text-sm">{empresa.nome}</strong>
-              <span className="block text-slate-400">CNPJ: {empresa.cnpj}</span>
-            </div>
-            <div>
-              <span className="text-slate-400 block">Responsável Técnico Principal</span>
-              <strong className="text-slate-200">{empresa.responsavel_tecnico}</strong>
-              <span className="block text-slate-400">{empresa.email} • {empresa.telefone}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL NOVO CONVITE INTELIGENTE */}
-      {showNovoConviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md rounded-3xl bg-navy-900 border border-slate-700 p-6 shadow-2xl space-y-4">
-            <button
-              onClick={() => setShowNovoConviteModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-brand-500/20 text-brand-400">
-                <UserPlus className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Criar Convite Inteligente</h3>
-                <p className="text-xs text-slate-400">Gera token com envio via WhatsApp e E-mail</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleGerarConvite} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Nome Completo</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Carlos Eduardo Fontes"
-                  value={novoConvite.nome}
-                  onChange={e => setNovoConvite({ ...novoConvite, nome: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">E-mail do Usuário</label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail do Convidado *</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                 <input
                   type="email"
+                  placeholder="exemplo@email.com"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:border-blue-500"
                   required
-                  placeholder="Ex: carlos.investidor@gmail.com"
-                  value={novoConvite.email}
-                  onChange={e => setNovoConvite({ ...novoConvite, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Telefone / WhatsApp (com DDD)</label>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Nome Completo (Opcional)</label>
+              <input
+                type="text"
+                placeholder="Nome do cliente/corretor"
+                value={nomeInput}
+                onChange={(e) => setNomeInput(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">WhatsApp / Telefone (Opcional)</label>
+              <div className="relative">
+                <Phone className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Ex: (17) 99123-4567"
-                  value={novoConvite.telefone}
-                  onChange={e => setNovoConvite({ ...novoConvite, telefone: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
+                  placeholder="(17) 99999-9999"
+                  value={telefoneInput}
+                  onChange={(e) => setTelefoneInput(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:border-blue-500"
                 />
               </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Perfil de Acesso (RBAC)</label>
-                <select
-                  value={novoConvite.role}
-                  onChange={e => setNovoConvite({ ...novoConvite, role: e.target.value as any })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                >
-                  <option value="PROPRIETARIO_INVESTIDOR">Proprietário / Investidor (Orçamento, Cronograma e Viabilidade)</option>
-                  <option value="CORRETOR">Corretor de Imóveis (Vendas, Mapa e Andamento)</option>
-                  <option value="CLIENTE_COMPRADOR">Cliente / Comprador (Andamento e Fotos Públicas)</option>
-                  <option value="ADMINISTRADOR">Administrador Geral</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Empreendimento Vinculado</label>
-                <select
-                  value={novoConvite.obra_id}
-                  onChange={e => setNovoConvite({ ...novoConvite, obra_id: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                >
-                  {obras.map(o => (
-                    <option key={o.id} value={o.id}>{o.nome} ({o.cidade} - {o.uf})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNovoConviteModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-500 text-white font-semibold shadow-glow"
-                >
-                  Gerar Convite
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* MODAL NOVA OBRA */}
-      {showNovaObraModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-lg rounded-3xl bg-navy-900 border border-slate-700 p-6 shadow-2xl space-y-4">
-            <button
-              onClick={() => setShowNovaObraModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Empresa / Obra *</label>
+              <select
+                value={selectedObraId}
+                onChange={(e) => setSelectedObraId(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:border-blue-500 bg-white"
+              >
+                {obras.map(o => (
+                  <option key={o.id} value={o.id}>{o.nome} ({o.cidade}-{o.uf})</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Perfil de Acesso *</label>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-hidden focus:border-blue-500 bg-white font-semibold"
+              >
+                <option value="CLIENTE_COMPRADOR">Comprador / Adquirente</option>
+                <option value="CORRETOR">Corretor de Imóveis</option>
+                <option value="PROPRIETARIO_INVESTIDOR">Proprietário / Investidor</option>
+              </select>
+            </div>
+          </div>
+
+          {/* BADGES DAS ABAS LIBERADAS */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 mt-2">
+            <div className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-blue-600" /> Abas que ficarão visíveis para este perfil:
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {getAbasPermitidas(selectedRole).map((aba, idx) => (
+                <span key={idx} className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+                  {aba}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+          >
+            <Send className="w-4 h-4" /> Criar e Gerar Link de Convite
+          </button>
+        </form>
+      </div>
+
+      {/* FILTROS E PESQUISA DA LISTA */}
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+            <Users className="w-4 h-4 text-slate-500" /> Convites Gerados ({convitesFiltrados.length})
+          </h2>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 sm:w-48">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar por e-mail ou nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
+              />
+            </div>
+
+            <select
+              value={filterObra}
+              onChange={(e) => setFilterObra(e.target.value)}
+              className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
             >
-              <X className="w-4 h-4" />
-            </button>
+              <option value="TODOS">Todas as Obras</option>
+              {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+            </select>
 
-            <h3 className="text-base font-bold text-white">Cadastrar Novo Empreendimento</h3>
-
-            <form onSubmit={handleSalvarNovaObra} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Nome do Loteamento / Obra</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Residencial Quinta do Golfe"
-                  value={novaObra.nome}
-                  onChange={e => setNovaObra({ ...novaObra, nome: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tipo de Empreendimento</label>
-                  <select
-                    value={novaObra.tipo}
-                    onChange={e => setNovaObra({ ...novaObra, tipo: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                  >
-                    <option value="Loteamento Fechado">Loteamento Fechado</option>
-                    <option value="Loteamento Aberto">Loteamento Aberto</option>
-                    <option value="Condomínio de Chácaras">Condomínio de Chácaras</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Cidade - UF</label>
-                  <input
-                    type="text"
-                    value={novaObra.cidade}
-                    onChange={e => setNovaObra({ ...novaObra, cidade: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Total de Lotes</label>
-                  <input
-                    type="number"
-                    value={novaObra.total_lotes}
-                    onChange={e => setNovaObra({ ...novaObra, total_lotes: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">VGV Total Previsto (R$)</label>
-                  <input
-                    type="number"
-                    value={novaObra.vgv_total}
-                    onChange={e => setNovaObra({ ...novaObra, vgv_total: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNovaObraModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-500 text-white font-semibold shadow-glow"
-                >
-                  Salvar Empreendimento
-                </button>
-              </div>
-            </form>
+            <select
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
+            >
+              <option value="TODOS">Todos os Perfis</option>
+              <option value="CLIENTE_COMPRADOR">Compradores</option>
+              <option value="CORRETOR">Corretores</option>
+              <option value="PROPRIETARIO_INVESTIDOR">Investidores</option>
+            </select>
           </div>
         </div>
-      )}
+
+        {/* LISTA DE CARDS DOS CONVITES */}
+        <div className="space-y-3">
+          {convitesFiltrados.map((c) => (
+            <div key={c.id} className={`p-4 rounded-2xl bg-white border transition-all ${c.ativo ? 'border-slate-200 shadow-xs' : 'border-red-200 bg-red-50/20 opacity-75'
+              }`}>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-slate-900 text-sm">{c.email}</span>
+                    {c.nome && <span className="text-xs text-slate-500">({c.nome})</span>}
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${c.ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}>
+                      {c.ativo ? 'Acesso Ativo' : 'Bloqueado'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-2 mt-1">
+                    <span className="flex items-center gap-1">
+                      <Building2 className="w-3 h-3 text-blue-600" /> {c.obraNome}
+                    </span>
+                    <span>• Criado em: {c.dataCriacao}</span>
+                    {c.telefone && (
+                      <span className="flex items-center gap-0.5">
+                        • <Phone className="w-3 h-3 text-emerald-600 ml-1 inline" /> {c.telefone}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* CONTROLE DE PERFIL E BLOQUEIO DA CONTA */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <select
+                    value={c.role}
+                    onChange={(e) => handleChangeRole(c.id, e.target.value as UserRole)}
+                    className="px-2 py-1 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 text-slate-800"
+                  >
+                    <option value="CLIENTE_COMPRADOR">Comprador</option>
+                    <option value="CORRETOR">Corretor</option>
+                    <option value="PROPRIETARIO_INVESTIDOR">Investidor</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleStatus(c.id)}
+                    className={`p-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${c.ativo
+                        ? 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-200'
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200'
+                      }`}
+                    title={c.ativo ? 'Bloquear Acesso' : 'Ativar Acesso'}
+                  >
+                    {c.ativo ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* ABAS LIBERADAS PARA ESTE REGISTRO */}
+              <div className="py-2.5 border-b border-slate-100">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Abas Ativas no Perfil:
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {getAbasPermitidas(c.role).map((aba, idx) => (
+                    <span key={idx} className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                      {aba}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* BOTÕES DE AÇÃO RÁPIDA */}
+              <div className="pt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSendWhatsapp(c)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" /> Enviar por WhatsApp
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSendEmail(c)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-blue-600" /> Enviar E-mail
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopyLink(c)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    {copiedId === c.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+                    <span>{copiedId === c.id ? 'Link Copiado!' : 'Copiar Link'}</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleDelete(c.id)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  title="Excluir Convite"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+            </div>
+          ))}
+
+          {convitesFiltrados.length === 0 && (
+            <div className="p-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
+              Nenhum convite encontrado com os filtros selecionados.
+            </div>
+          )}
+        </div>
+      </div>
 
     </div>
   );
