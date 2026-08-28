@@ -17,30 +17,31 @@ import { ViabilidadeTab } from './components/tabs/ViabilidadeTab';
 import { MapaDisponibilidadeTab } from './components/tabs/MapaDisponibilidadeTab';
 import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
+import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab'; // Nova Importação
 import { TabId } from './types';
 
 const MainApp: React.FC = () => {
   const { canAccessTab, role, activeObra, setActiveObra } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [activeTab, setActiveTab] = useState<TabId | 'estudo-viabilidade'>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
 
-  // Redireciona para dashboard se a aba ativa não for acessível pelo role atual
   useEffect(() => {
     if (
       activeTab !== 'dashboard' &&
       activeTab !== 'admin' &&
       activeTab !== 'nova-empresa' &&
       activeTab !== 'nova-obra' &&
+      activeTab !== 'estudo-viabilidade' && // Liberando a rota global
       canAccessTab &&
-      !canAccessTab(activeTab)
+      !canAccessTab(activeTab as TabId)
     ) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
   const handleResetToDashboard = () => {
-    setActiveObra(null);
+    setActiveObra(null as any);
     setActiveTab('dashboard');
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -55,10 +56,14 @@ const MainApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra';
+  const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra' || activeTab === 'estudo-viabilidade';
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin' && !isFormPage);
 
   const renderContent = () => {
+    if (activeTab === 'estudo-viabilidade') {
+      return <EstudoViabilidadeTab onBack={() => setActiveTab('dashboard')} />;
+    }
+
     if (activeTab === 'nova-empresa') {
       return (
         <NovaEmpresaTab
@@ -92,6 +97,7 @@ const MainApp: React.FC = () => {
           onSelectAdmin={handleSelectAdmin}
           onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
           onNavigateToNovaObra={() => setActiveTab('nova-obra')}
+          onNavigateToViabilidade={() => setActiveTab('estudo-viabilidade')}
         />
       );
     }
@@ -122,6 +128,7 @@ const MainApp: React.FC = () => {
             onSelectAdmin={handleSelectAdmin}
             onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
             onNavigateToNovaObra={() => setActiveTab('nova-obra')}
+            onNavigateToViabilidade={() => setActiveTab('estudo-viabilidade')}
           />
         );
     }
@@ -146,7 +153,7 @@ const MainApp: React.FC = () => {
         </main>
 
         {showBottomNav && (
-          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+          <BottomNav activeTab={activeTab as TabId} onTabChange={(t) => setActiveTab(t)} />
         )}
       </div>
     </>
