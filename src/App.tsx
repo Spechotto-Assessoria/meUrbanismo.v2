@@ -23,16 +23,20 @@ const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
-  // VALIDAÇÃO SEGURA DE ACESSO
+  // VALIDAÇÃO SEGURA DE PERMISSÃO POR PERFIL
   useEffect(() => {
     if (activeTab !== 'dashboard' && activeTab !== 'admin' && !canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
-  // FUNÇÃO RETORNO BLINDADA PARA O DASHBOARD
+  // RESET TOTAL PARA O DASHBOARD
   const handleResetToDashboard = () => {
-    setActiveObra(null as any);
+    try {
+      setActiveObra(null as any);
+    } catch (e) {
+      console.warn('Suprimindo alerta de limpeza de obra:', e);
+    }
     setActiveTab('dashboard');
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -50,11 +54,10 @@ const MainApp: React.FC = () => {
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
 
   const renderContent = () => {
-    if (activeTab === 'admin') {
-      return <ConvitesTab />;
-    }
-
     if (activeTab === 'dashboard' || !activeObra) {
+      if (activeTab === 'admin') {
+        return <ConvitesTab />;
+      }
       return (
         <DashboardTab
           onSelectObra={handleSelectObra}
@@ -82,6 +85,8 @@ const MainApp: React.FC = () => {
         return <VendasTab />;
       case 'relatorios':
         return <RelatoriosTab />;
+      case 'admin':
+        return <ConvitesTab />;
       default:
         return (
           <DashboardTab

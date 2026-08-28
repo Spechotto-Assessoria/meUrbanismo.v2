@@ -1,102 +1,93 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserProfile, UserRole, Obra, TabId } from '../types';
-import { MOCK_USERS_PERFIS, MOCK_OBRAS } from '../services/mockData';
-import { apiService } from '../services/supabase';
+import React, { createContext, useContext, useState } from 'react';
+import { User, UserRole, Obra, TabId } from '../types';
 
 interface AuthContextType {
-  user: UserProfile;
+  user: User;
   role: UserRole;
   obras: Obra[];
   activeObra: Obra | null;
-  setActiveObra: (obra: Obra) => void;
-  switchRole: (roleKey: 'admin' | 'investidor' | 'corretor' | 'cliente') => void;
+  setActiveObra: (obra: Obra | null) => void;
+  switchRole: (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => void;
   canAccessTab: (tabId: TabId) => boolean;
-  isAdmin: boolean;
-  isInvestidor: boolean;
-  isCorretor: boolean;
-  isCliente: boolean;
-  canViewFinancials: boolean;
-  canEditObra: boolean;
-  canManageUsers: boolean;
-  canToggleVisibility: boolean;
-  refreshObras: () => Promise<void>;
 }
+
+const MOCK_USER: User = {
+  id: 'usr_1',
+  nome: 'Rennan Spechotto',
+  email: 'rennan_seidl@hotmail.com',
+  role: 'ADMINISTRADOR',
+  avatar_url: '/logo-meurbanismo.png'
+};
+
+const MOCK_OBRAS: Obra[] = [
+  {
+    id: 'obra-001',
+    nome: 'Residencial Reserva dos Ipês',
+    cidade: 'Mirassol',
+    uf: 'SP',
+    tipo: 'Loteamento Fechado',
+    foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
+  },
+  {
+    id: 'obra-002',
+    nome: 'Villa Bella Urban Park',
+    cidade: 'São José do Rio Preto',
+    uf: 'SP',
+    tipo: 'Loteamento Aberto',
+    foto_capa: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800'
+  }
+];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUserKey, setCurrentUserKey] = useState<'admin' | 'investidor' | 'corretor' | 'cliente'>(() => {
-    return (localStorage.getItem('meurbanismo_active_role_key') as any) || 'admin';
-  });
-
-  const [user, setUser] = useState<UserProfile>(MOCK_USERS_PERFIS[currentUserKey]);
-  const [obras, setObras] = useState<Obra[]>(MOCK_OBRAS);
+  const [user] = useState<User>(MOCK_USER);
+  const [role, setRole] = useState<UserRole>('ADMINISTRADOR');
+  const [obras] = useState<Obra[]>(MOCK_OBRAS);
   const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0]);
 
-  const loadObras = async () => {
-    const list = await apiService.getObras();
-    if (list && list.length > 0) {
-      setObras(list);
-      const savedActiveId = localStorage.getItem('meurbanismo_active_obra_id');
-      const found = list.find(o => o.id === savedActiveId) || list[0];
-      setActiveObraState(found);
+  // TRATAMENTO SEGURO DE ATRIBUIÇÃO DE OBRA
+  const setActiveObra = (obra: Obra | null) => {
+    if (!obra) {
+      setActiveObraState(null);
+      return;
+    }
+    setActiveObraState(obra);
+  };
+
+  const switchRole = (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => {
+    switch (newRole) {
+      case 'admin':
+        setRole('ADMINISTRADOR');
+        break;
+      case 'investidor':
+        setRole('PROPRIETARIO_INVESTIDOR');
+        break;
+      case 'corretor':
+        setRole('CORRETOR');
+        break;
+      case 'cliente':
+        setRole('CLIENTE_COMPRADOR');
+        break;
     }
   };
 
-  useEffect(() => {
-    loadObras();
-  }, []);
-
-  const setActiveObra = (obra: Obra) => {
-    setActiveObraState(obra);
-    localStorage.setItem('meurbanismo_active_obra_id', obra.id);
-  };
-
-  const switchRole = (roleKey: 'admin' | 'investidor' | 'corretor' | 'cliente') => {
-    setCurrentUserKey(roleKey);
-    const selectedProfile = MOCK_USERS_PERFIS[roleKey];
-    setUser(selectedProfile);
-    localStorage.setItem('meurbanismo_active_role_key', roleKey);
-  };
-
-  const role = user.role;
-  const isAdmin = role === 'ADMINISTRADOR';
-  const isInvestidor = role === 'PROPRIETARIO_INVESTIDOR';
-  const isCorretor = role === 'CORRETOR';
-  const isCliente = role === 'CLIENTE_COMPRADOR';
-
-  // Matriz de Acessos Estrita por Perfil
   const canAccessTab = (tabId: TabId): boolean => {
-    switch (tabId) {
-      case 'andamento':
-        return true; // Todos os 4 perfis
-      case 'acompanhamento':
-        return true; // Todos (com filtros de visualização nas fotos e diários)
-      case 'documentos':
-        return true; // Todos (com filtro visivel_convidados para Corretor e Cliente)
-      case 'orcamento':
-        return isAdmin || isInvestidor; // Bloqueado para Corretor e Cliente
-      case 'cronograma':
-        return isAdmin || isInvestidor; // Bloqueado para Corretor e Cliente
-      case 'viabilidade':
-        return isAdmin || isInvestidor; // Bloqueado para Corretor e Cliente
-      case 'mapa':
-        return true; // Todos os 4 perfis
-      case 'vendas':
-        return isAdmin || isInvestidor || isCorretor; // Bloqueado para Cliente
-      case 'relatorios':
-        return isAdmin || isInvestidor; // Bloqueado para Corretor e Cliente
-      case 'admin':
-        return isAdmin; // Exclusivo do Administrador
+    if (tabId === 'dashboard') return true;
+
+    switch (role) {
+      case 'ADMINISTRADOR':
+        return true;
+      case 'PROPRIETARIO_INVESTIDOR':
+        return ['andamento', 'orcamento', 'cronograma', 'viabilidade', 'acompanhamento', 'documentos', 'relatorios', 'mapa', 'vendas'].includes(tabId);
+      case 'CORRETOR':
+        return ['andamento', 'vendas', 'mapa', 'documentos', 'acompanhamento'].includes(tabId);
+      case 'CLIENTE_COMPRADOR':
+        return ['andamento', 'mapa', 'documentos', 'acompanhamento'].includes(tabId);
       default:
         return false;
     }
   };
-
-  const canViewFinancials = isAdmin || isInvestidor;
-  const canEditObra = isAdmin;
-  const canManageUsers = isAdmin;
-  const canToggleVisibility = isAdmin;
 
   return (
     <AuthContext.Provider
@@ -107,16 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeObra,
         setActiveObra,
         switchRole,
-        canAccessTab,
-        isAdmin,
-        isInvestidor,
-        isCorretor,
-        isCliente,
-        canViewFinancials,
-        canEditObra,
-        canManageUsers,
-        canToggleVisibility,
-        refreshObras: loadObras,
+        canAccessTab
       }}
     >
       {children}
@@ -127,7 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth deve ser utilizado dentro de um AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
 };

@@ -45,15 +45,18 @@ export const ConvitesTab: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
+    const defaultObraId = obras && obras.length > 0 ? obras[0].id : '1';
+    const defaultObraNome = obras && obras.length > 0 ? obras[0].nome : 'Residencial Reserva dos Ipês';
+
     // Estados do Formulário
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [telefone, setTelefone] = useState('');
     const [quadraLote, setQuadraLote] = useState('');
-    const [obraId, setObraId] = useState(obras[0]?.id || '1');
+    const [obraId, setObraId] = useState(defaultObraId);
     const [role, setRole] = useState<UserRole>('CLIENTE_COMPRADOR');
 
-    // Estado de Edição de Convite
+    // Estado de Edição
     const [editingConvite, setEditingConvite] = useState<Convite | null>(null);
 
     // Carrega do localStorage ou inicializa
@@ -73,8 +76,8 @@ export const ConvitesTab: React.FC = () => {
                 email: 'rennan_seidl@hotmail.com',
                 nome: 'Rennan Spechotto',
                 telefone: '(17) 99999-8888',
-                obraId: obras[0]?.id || '1',
-                obraNome: obras[0]?.nome || 'Residencial Reserva dos Ipês',
+                obraId: defaultObraId,
+                obraNome: defaultObraNome,
                 role: 'PROPRIETARIO_INVESTIDOR',
                 ativo: true,
                 dataCriacao: '01/08/2026',
@@ -122,8 +125,8 @@ export const ConvitesTab: React.FC = () => {
         }
 
         const baseUrl = window.location.origin;
-        const obraSelecionada = obras.find(o => o.id === obraId) || obras[0];
-        const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id}#/convite`;
+        const obraSelecionada = (obras || []).find(o => o.id === obraId) || obras?.[0];
+        const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id || '1'}#/convite`;
 
         const newConvite: Convite = {
             id: Date.now().toString(),
@@ -281,7 +284,7 @@ export const ConvitesTab: React.FC = () => {
                                 onChange={e => setObraId(e.target.value)}
                                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white"
                             >
-                                {obras.map(o => (
+                                {obras && obras.map(o => (
                                     <option key={o.id} value={o.id}>{o.nome} ({o.cidade})</option>
                                 ))}
                             </select>
@@ -362,7 +365,7 @@ export const ConvitesTab: React.FC = () => {
                             className="px-2 py-1 text-[11px] rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-medium max-w-[140px] truncate"
                         >
                             <option value="TODAS">Todas Obras</option>
-                            {obras.map(o => (
+                            {obras && obras.map(o => (
                                 <option key={o.id} value={o.id}>{o.nome}</option>
                             ))}
                         </select>
