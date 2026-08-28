@@ -148,7 +148,7 @@ const MainApp: React.FC = () => {
         {role !== 'ADMINISTRADOR' && (
           <button
             type="button"
-            onClick={() => switchRole && switchRole('ADMINISTRADOR')}
+            onClick={() => switchRole && switchRole('ADMINISTRADOR' as any)}
             className="fixed top-16 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 cursor-pointer animate-bounce"
             title="Voltar ao modo Administrador"
           >
