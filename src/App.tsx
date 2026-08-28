@@ -23,14 +23,17 @@ const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
 
+  // PROTEÇÃO DE ACESSO: Garante que 'dashboard' seja sempre livre
   useEffect(() => {
-    if (!canAccessTab(activeTab)) {
+    if (activeTab !== 'dashboard' && activeTab !== 'admin' && !canAccessTab(activeTab)) {
+      console.warn(`⚠️ Perfil sem acesso para a aba "${activeTab}". Redirecionando para Dashboard.`);
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
-  // AÇÃO DIRETA DE RETORNO AO DASHBOARD
+  // RETORNO DIRETO E INCONDICIONAL AO DASHBOARD
   const handleResetToDashboard = () => {
+    console.log('🔴 Clique na Logo: Forçando Dashboard!');
     setActiveObra(null as any);
     setActiveTab('dashboard');
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -48,7 +51,7 @@ const MainApp: React.FC = () => {
 
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
 
-  // RENDERIZAÇÃO ESTRITA BASEADA APENAS NO ACTIVETAB
+  // RENDERIZAÇÃO DIRECTA SEM REJEIÇÃO DO DASHBOARD
   const renderContent = () => {
     if (activeTab === 'admin') {
       return <ConvitesTab />;

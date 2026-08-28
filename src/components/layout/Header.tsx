@@ -66,9 +66,11 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
   const handleLogoPress = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     setShowObraMenu(false);
     setShowNotifications(false);
     setShowProfileDropdown(false);
+
     if (onLogoClick) {
       onLogoClick();
     }
@@ -78,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 py-2 flex items-center justify-between gap-1">
 
-        {/* LOGO QUE FORÇA RETORNO IMEDIATO */}
+        {/* LOGO DO APP */}
         <div
           onClick={handleLogoPress}
           className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer select-none"
