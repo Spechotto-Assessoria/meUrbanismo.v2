@@ -53,7 +53,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onBack}
-                        className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
+                        className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors cursor-pointer"
                         title="Voltar ao Dashboard"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -72,7 +72,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
                     <button
                         onClick={() => setViewMode('pipeline')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'pipeline'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'pipeline'
                                 ? 'bg-white text-slate-900 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-900'
                             }`}
@@ -82,7 +82,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                     </button>
                     <button
                         onClick={() => setViewMode('form')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${viewMode === 'form'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'form'
                                 ? 'bg-white text-slate-900 shadow-sm'
                                 : 'text-slate-500 hover:text-slate-900'
                             }`}
@@ -147,7 +147,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                         setTipo(t);
                                         setCustoM2(PRESETS_AREAS[t].custoM2);
                                     }}
-                                    className={`w-full text-left p-3 rounded-xl border transition-all ${tipo === t
+                                    className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${tipo === t
                                             ? 'border-purple-500 bg-purple-50 font-bold text-purple-900'
                                             : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-purple-200'
                                         }`}

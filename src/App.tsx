@@ -17,7 +17,7 @@ import { ViabilidadeTab } from './components/tabs/ViabilidadeTab';
 import { MapaDisponibilidadeTab } from './components/tabs/MapaDisponibilidadeTab';
 import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
-import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab'; // Nova Importação
+import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab';
 import { TabId } from './types';
 
 const MainApp: React.FC = () => {
@@ -32,7 +32,7 @@ const MainApp: React.FC = () => {
       activeTab !== 'admin' &&
       activeTab !== 'nova-empresa' &&
       activeTab !== 'nova-obra' &&
-      activeTab !== 'estudo-viabilidade' && // Liberando a rota global
+      activeTab !== 'estudo-viabilidade' &&
       canAccessTab &&
       !canAccessTab(activeTab as TabId)
     ) {

@@ -17,20 +17,21 @@ interface DashboardProps {
   onSelectAdmin?: () => void;
   onNavigateToNovaEmpresa?: () => void;
   onNavigateToNovaObra?: () => void;
+  onNavigateToViabilidade?: () => void;
 }
 
 export const DashboardTab: React.FC<DashboardProps> = ({
   onSelectObra,
   onSelectAdmin,
   onNavigateToNovaEmpresa,
-  onNavigateToNovaObra
+  onNavigateToNovaObra,
+  onNavigateToViabilidade
 }) => {
   const { obras, empresas, setActiveObra } = useAuth();
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
 
-      {/* BOAS-VINDAS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Olá, Spechotto 👋</h1>
@@ -38,7 +39,6 @@ export const DashboardTab: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* CARDS DE MÉTRICAS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center gap-2 text-slate-500 mb-1">
@@ -73,7 +73,6 @@ export const DashboardTab: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* ACESSOS RÁPIDOS & GESTÃO */}
       <div className="space-y-2">
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Acessos Rápidos & Gestão</h2>
 
@@ -122,8 +121,8 @@ export const DashboardTab: React.FC<DashboardProps> = ({
 
           <button
             type="button"
-            onClick={() => alert('Estudo de Viabilidade em breve')}
-            className="p-3.5 rounded-2xl bg-white hover:bg-blue-50/50 border border-slate-200 text-left transition-all cursor-pointer shadow-2xs group flex items-center gap-2"
+            onClick={onNavigateToViabilidade}
+            className="p-3.5 rounded-2xl bg-white hover:bg-purple-50/50 border border-slate-200 text-left transition-all cursor-pointer shadow-2xs group flex items-center gap-2"
           >
             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <Calculator className="w-4 h-4" />
@@ -136,7 +135,6 @@ export const DashboardTab: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* OBRAS ADMINISTRADAS */}
       <div className="space-y-3">
         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Obras Administradas</h2>
 
@@ -183,7 +181,6 @@ export const DashboardTab: React.FC<DashboardProps> = ({
           ))}
         </div>
       </div>
-
     </div>
   );
 };
