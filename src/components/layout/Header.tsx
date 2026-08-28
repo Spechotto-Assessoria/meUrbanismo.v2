@@ -67,11 +67,13 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
       <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 py-2 flex items-center justify-between gap-1">
 
-        {/* LOGO */}
+        {/* LOGO DO APP (CLIQUE GARANTIDO QUE RESETA PARA O DASHBOARD) */}
         <button
           type="button"
           onClick={() => {
-            if (onLogoClick) onLogoClick();
+            if (onLogoClick) {
+              onLogoClick();
+            }
           }}
           className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer border-0 bg-transparent p-0"
           title="Voltar ao Dashboard Inicial"
@@ -178,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
             )}
           </div>
 
-          {/* PERFIL (DROPDOWN FLUTUANTE) */}
+          {/* PERFIL */}
           <div className="relative">
             <button
               type="button"
@@ -205,7 +207,6 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
             {showProfileDropdown && (
               <div className="absolute right-0 mt-2 w-80 sm:w-84 rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-50 animate-fadeIn text-xs max-h-[80vh] overflow-y-auto">
 
-                {/* DADOS CADASTRAIS */}
                 <div className="pb-3 border-b border-slate-100">
                   <div className="font-extrabold text-slate-900 text-sm sm:text-base">
                     {user.nome}
@@ -230,7 +231,6 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                   </div>
                 </div>
 
-                {/* FORMULÁRIO DE EDIÇÃO */}
                 {isEditing && (
                   <form onSubmit={handleSaveProfile} className="mt-3 space-y-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-700 text-[11px] flex items-center gap-1">
@@ -266,7 +266,6 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                   </form>
                 )}
 
-                {/* SIMULADOR DE PERFIS */}
                 {role !== 'ADMINISTRADOR' && (
                   <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
                     <span className="text-[11px] text-emerald-900 font-semibold">Modo Simulador Ativo</span>

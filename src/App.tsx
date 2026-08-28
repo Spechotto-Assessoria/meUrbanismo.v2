@@ -29,7 +29,7 @@ const MainApp: React.FC = () => {
     }
   }, [role, activeTab, canAccessTab]);
 
-  // Função garantida para voltar SEMPRE para a tela inicial
+  // FUNÇÃO DE RETORNO DIRETO E INCONDICIONAL AO DASHBOARD
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
@@ -49,8 +49,23 @@ const MainApp: React.FC = () => {
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
 
   const renderContent = () => {
-    // Se a aba for 'dashboard' OU não houver obra selecionada (exceto na aba 'admin')
-    if (activeTab === 'dashboard' || (!activeObra && activeTab !== 'admin')) {
+    // Força a renderização do DashboardTab sempre que activeTab for 'dashboard'
+    if (activeTab === 'dashboard') {
+      return (
+        <DashboardTab
+          onSelectObra={handleSelectObra}
+          onSelectAdmin={handleSelectAdmin}
+        />
+      );
+    }
+
+    // Se estiver na aba 'admin'
+    if (activeTab === 'admin') {
+      return <ConvitesTab />;
+    }
+
+    // Se não tiver obra ativa, força Dashboard
+    if (!activeObra) {
       return (
         <DashboardTab
           onSelectObra={handleSelectObra}
@@ -78,8 +93,6 @@ const MainApp: React.FC = () => {
         return <VendasTab />;
       case 'relatorios':
         return <RelatoriosTab />;
-      case 'admin':
-        return <ConvitesTab />;
       default:
         return (
           <DashboardTab
