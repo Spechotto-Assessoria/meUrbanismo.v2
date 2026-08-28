@@ -16,7 +16,9 @@ import {
     Lock,
     Edit3,
     X,
-    Save
+    Save,
+    ArrowLeft,
+    MapPin
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -35,12 +37,15 @@ export interface Convite {
     statusCadastro?: 'PENDENTE' | 'COMPLETO';
 }
 
+interface ConvitesTabProps {
+    onBackToDashboard?: () => void;
+}
+
 const STORAGE_KEY = 'meurbanismo_convites_v1';
 
-export const ConvitesTab: React.FC = () => {
+export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) => {
     const { obras } = useAuth();
 
-    // Scrolla para o topo assim que a tela carrega
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
@@ -49,13 +54,14 @@ export const ConvitesTab: React.FC = () => {
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [telefone, setTelefone] = useState('');
+    const [quadraLote, setQuadraLote] = useState('');
     const [obraId, setObraId] = useState(obras[0]?.id || '1');
     const [role, setRole] = useState<UserRole>('CLIENTE_COMPRADOR');
 
-    // Estado de Edição de Convite Existente
+    // Estado de Edição de Convite
     const [editingConvite, setEditingConvite] = useState<Convite | null>(null);
 
-    // Carrega convites salvos no localStorage ou usa lista inicial
+    // Carrega do localStorage ou inicializa
     const [convites, setConvites] = useState<Convite[]>(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -65,7 +71,7 @@ export const ConvitesTab: React.FC = () => {
                 console.error('Erro ao ler convites salvos:', e);
             }
         }
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://meurbanismo.vercel.app';
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
         return [
             {
                 id: '1',
@@ -77,14 +83,13 @@ export const ConvitesTab: React.FC = () => {
                 role: 'PROPRIETARIO_INVESTIDOR',
                 ativo: true,
                 dataCriacao: '01/08/2026',
-                linkAcceso: `${baseUrl}/convite?token=abc123xyz`,
+                linkAcceso: `${baseUrl}/?email=rennan_seidl%40hotmail.com&obra=1#/convite`,
                 statusCadastro: 'COMPLETO',
-                quadraLote: 'Quadra B - Lote 14'
+                quadraLote: ''
             }
         ];
     });
 
-    // Salva no localStorage a cada alteração na lista de convites
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(convites));
     }, [convites]);
@@ -115,7 +120,6 @@ export const ConvitesTab: React.FC = () => {
             return;
         }
 
-        // Trava de e-mail duplicado
         const jaExiste = convites.some(c => c.email.toLowerCase() === cleanEmail);
         if (jaExiste) {
             alert(`O e-mail "${cleanEmail}" já possui um convite gerado! Você pode editá-lo ou reenviá-lo na lista abaixo.`);
@@ -125,17 +129,21 @@ export const ConvitesTab: React.FC = () => {
         const baseUrl = window.location.origin;
         const obraSelecionada = obras.find(o => o.id === obraId) || obras[0];
 
+        // Gera o link usando parâmetro seguro que não quebra o roteamento da Vercel
+        const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id}#/convite`;
+
         const newConvite: Convite = {
             id: Date.now().toString(),
             email: cleanEmail,
             nome: nome.trim(),
             telefone: telefone.trim(),
+            quadraLote: role === 'CLIENTE_COMPRADOR' ? quadraLote.trim() : '',
             obraId: obraSelecionada?.id || '1',
             obraNome: obraSelecionada?.nome || 'Empreendimento',
             role,
             ativo: true,
             dataCriacao: new Date().toLocaleDateString('pt-BR'),
-            linkAcceso: `${baseUrl}/convite?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id}`,
+            linkAcceso: linkSeguro,
             statusCadastro: 'PENDENTE'
         };
 
@@ -143,6 +151,7 @@ export const ConvitesTab: React.FC = () => {
         setEmail('');
         setNome('');
         setTelefone('');
+        setQuadraLote('');
         alert('Convite gerado e salvo com sucesso!');
     };
 
@@ -151,7 +160,16 @@ export const ConvitesTab: React.FC = () => {
     };
 
     const handleChangeRole = (id: string, newRole: UserRole) => {
-        setConvites(convites.map(c => c.id === id ? { ...c, role: newRole } : c));
+        setConvites(convites.map(c => {
+            if (c.id === id) {
+                return {
+                    ...c,
+                    role: newRole,
+                    quadraLote: newRole === 'CLIENTE_COMPRADOR' ? c.quadraLote : ''
+                };
+            }
+            return c;
+        }));
     };
 
     const handleDelete = (id: string) => {
@@ -200,9 +218,19 @@ export const ConvitesTab: React.FC = () => {
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-12">
 
-            {/* CABEÇALHO */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-                <div className="flex items-center gap-3 text-blue-600 mb-1">
+            {/* BOTÃO VOLTAR AO DASHBOARD E CABEÇALHO */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                {onBackToDashboard && (
+                    <button
+                        type="button"
+                        onClick={onBackToDashboard}
+                        className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                    >
+                        <ArrowLeft className="w-4 h-4" /> Voltar ao Dashboard
+                    </button>
+                )}
+
+                <div className="flex items-center gap-3 text-blue-600">
                     <Send className="w-6 h-6" />
                     <h1 className="text-xl font-bold text-slate-900">Gestão de Convites & Acessos</h1>
                 </div>
@@ -291,6 +319,22 @@ export const ConvitesTab: React.FC = () => {
                     </select>
                 </div>
 
+                {/* EXIBE QUADRA E LOTE APENAS SE FOR CLIENTE / COMPRADOR */}
+                {role === 'CLIENTE_COMPRADOR' && (
+                    <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 animate-fadeIn">
+                        <label className="block text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-blue-600" /> Quadra e Lote Adquirido (Opcional)
+                        </label>
+                        <input
+                            type="text"
+                            value={quadraLote}
+                            onChange={e => setQuadraLote(e.target.value)}
+                            placeholder="Ex: Quadra B - Lote 14"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-blue-200 bg-white focus:outline-hidden"
+                        />
+                    </div>
+                )}
+
                 {/* PREVIEW DAS ABAS LIBERADAS */}
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="text-[11px] font-bold text-slate-600 mb-2">Abas liberadas para este perfil:</div>
@@ -344,7 +388,7 @@ export const ConvitesTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* LISTA DE CONVITES */}
+                {/* LISTA DE CARDS */}
                 <div className="space-y-3">
                     {convitesFiltrados.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-6">Nenhum convite encontrado com os filtros selecionados.</p>
@@ -367,7 +411,11 @@ export const ConvitesTab: React.FC = () => {
                                         </div>
                                         <div className="text-xs text-slate-500 mt-0.5">
                                             {c.nome ? `${c.nome} • ` : ''} Empreendimento: <strong className="text-slate-700">{c.obraNome}</strong>
-                                            {c.quadraLote && <span className="ml-2 font-medium text-blue-600">({c.quadraLote})</span>}
+                                            {c.role === 'CLIENTE_COMPRADOR' && c.quadraLote && (
+                                                <span className="ml-2 font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                                                    {c.quadraLote}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -413,7 +461,7 @@ export const ConvitesTab: React.FC = () => {
                                         ))}
                                     </div>
 
-                                    {/* AÇÕES: WHATSAPP, EMAIL, COPIAR, EDITAR, EXCLUIR */}
+                                    {/* BOTÕES DE AÇÃO */}
                                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
                                         <button
                                             type="button"
@@ -473,7 +521,7 @@ export const ConvitesTab: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => setEditingConvite(null)}
-                            className="absolute top-4 right-4 p-1 rounded-full text-slate-400 hover:text-slate-600"
+                            className="absolute top-4 right-4 p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -514,16 +562,19 @@ export const ConvitesTab: React.FC = () => {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-600 mb-1">Quadra / Lote (Ex: Quadra C - Lote 05)</label>
-                                <input
-                                    type="text"
-                                    value={editingConvite.quadraLote || ''}
-                                    onChange={e => setEditingConvite({ ...editingConvite, quadraLote: e.target.value })}
-                                    placeholder="Quadra e Lote do cliente"
-                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
-                                />
-                            </div>
+                            {/* EXIBE CAMPO DE QUADRA E LOTE APENAS PARA CLIENTES */}
+                            {editingConvite.role === 'CLIENTE_COMPRADOR' && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Quadra / Lote (Ex: Quadra C - Lote 05)</label>
+                                    <input
+                                        type="text"
+                                        value={editingConvite.quadraLote || ''}
+                                        onChange={e => setEditingConvite({ ...editingConvite, quadraLote: e.target.value })}
+                                        placeholder="Quadra e Lote do cliente"
+                                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                                    />
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Status do Cadastro</label>
@@ -541,13 +592,13 @@ export const ConvitesTab: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={() => setEditingConvite(null)}
-                                    className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold"
+                                    className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1"
+                                    className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
                                 >
                                     <Save className="w-4 h-4" /> Salvar
                                 </button>

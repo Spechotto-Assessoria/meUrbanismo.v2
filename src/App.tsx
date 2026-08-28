@@ -29,7 +29,7 @@ const MainApp: React.FC = () => {
     }
   }, [role, activeTab, canAccessTab]);
 
-  // Retorna do Header direto para o Dashboard
+  // Retorna diretamente para o Dashboard e reseta a obra selecionada no topo
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
@@ -51,7 +51,7 @@ const MainApp: React.FC = () => {
   const renderContent = () => {
     if (activeTab === 'dashboard' || !activeObra) {
       if (activeTab === 'admin') {
-        return <ConvitesTab />;
+        return <ConvitesTab onBackToDashboard={handleGoToDashboard} />;
       }
       return (
         <DashboardTab
@@ -81,7 +81,7 @@ const MainApp: React.FC = () => {
       case 'relatorios':
         return <RelatoriosTab />;
       case 'admin':
-        return <ConvitesTab />;
+        return <ConvitesTab onBackToDashboard={handleGoToDashboard} />;
       default:
         return (
           <DashboardTab
