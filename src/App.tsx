@@ -29,7 +29,7 @@ const MainApp: React.FC = () => {
     }
   }, [role, activeTab, canAccessTab]);
 
-  // Retorna diretamente para o Dashboard e reseta a obra selecionada no topo
+  // Função garantida para voltar SEMPRE para a tela inicial
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
@@ -49,10 +49,8 @@ const MainApp: React.FC = () => {
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
 
   const renderContent = () => {
-    if (activeTab === 'dashboard' || !activeObra) {
-      if (activeTab === 'admin') {
-        return <ConvitesTab onBackToDashboard={handleGoToDashboard} />;
-      }
+    // Se a aba for 'dashboard' OU não houver obra selecionada (exceto na aba 'admin')
+    if (activeTab === 'dashboard' || (!activeObra && activeTab !== 'admin')) {
       return (
         <DashboardTab
           onSelectObra={handleSelectObra}
@@ -81,7 +79,7 @@ const MainApp: React.FC = () => {
       case 'relatorios':
         return <RelatoriosTab />;
       case 'admin':
-        return <ConvitesTab onBackToDashboard={handleGoToDashboard} />;
+        return <ConvitesTab />;
       default:
         return (
           <DashboardTab

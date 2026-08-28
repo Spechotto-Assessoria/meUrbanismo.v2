@@ -17,7 +17,6 @@ import {
     Edit3,
     X,
     Save,
-    ArrowLeft,
     MapPin
 } from 'lucide-react';
 import { UserRole } from '../../types';
@@ -37,13 +36,9 @@ export interface Convite {
     statusCadastro?: 'PENDENTE' | 'COMPLETO';
 }
 
-interface ConvitesTabProps {
-    onBackToDashboard?: () => void;
-}
-
 const STORAGE_KEY = 'meurbanismo_convites_v1';
 
-export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) => {
+export const ConvitesTab: React.FC = () => {
     const { obras } = useAuth();
 
     useEffect(() => {
@@ -128,8 +123,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
 
         const baseUrl = window.location.origin;
         const obraSelecionada = obras.find(o => o.id === obraId) || obras[0];
-
-        // Gera o link usando parâmetro seguro que não quebra o roteamento da Vercel
         const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id}#/convite`;
 
         const newConvite: Convite = {
@@ -218,19 +211,9 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
     return (
         <div className="space-y-6 max-w-4xl mx-auto pb-12">
 
-            {/* BOTÃO VOLTAR AO DASHBOARD E CABEÇALHO */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-                {onBackToDashboard && (
-                    <button
-                        type="button"
-                        onClick={onBackToDashboard}
-                        className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-                    >
-                        <ArrowLeft className="w-4 h-4" /> Voltar ao Dashboard
-                    </button>
-                )}
-
-                <div className="flex items-center gap-3 text-blue-600">
+            {/* CABEÇALHO */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                <div className="flex items-center gap-3 text-blue-600 mb-1">
                     <Send className="w-6 h-6" />
                     <h1 className="text-xl font-bold text-slate-900">Gestão de Convites & Acessos</h1>
                 </div>
@@ -319,7 +302,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                     </select>
                 </div>
 
-                {/* EXIBE QUADRA E LOTE APENAS SE FOR CLIENTE / COMPRADOR */}
                 {role === 'CLIENTE_COMPRADOR' && (
                     <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 animate-fadeIn">
                         <label className="block text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
@@ -335,7 +317,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                     </div>
                 )}
 
-                {/* PREVIEW DAS ABAS LIBERADAS */}
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                     <div className="text-[11px] font-bold text-slate-600 mb-2">Abas liberadas para este perfil:</div>
                     <div className="flex flex-wrap gap-1.5">
@@ -388,7 +369,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                     </div>
                 </div>
 
-                {/* LISTA DE CARDS */}
                 <div className="space-y-3">
                     {convitesFiltrados.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-6">Nenhum convite encontrado com os filtros selecionados.</p>
@@ -419,7 +399,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                                         </div>
                                     </div>
 
-                                    {/* TOGGLE ATIVO / BLOQUEADO */}
                                     <div className="flex items-center gap-2 shrink-0">
                                         <span className="text-[11px] font-semibold text-slate-600">
                                             {c.ativo ? 'Ativo' : 'Bloqueado'}
@@ -452,7 +431,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                                         <span className="text-[10px] text-slate-400">Criado em: {c.dataCriacao}</span>
                                     </div>
 
-                                    {/* ABAS LIBERADAS */}
                                     <div className="flex flex-wrap gap-1">
                                         {getAbasPreview(c.role).map((aba, i) => (
                                             <span key={i} className="text-[9px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
@@ -461,7 +439,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                                         ))}
                                     </div>
 
-                                    {/* BOTÕES DE AÇÃO */}
                                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
                                         <button
                                             type="button"
@@ -514,7 +491,7 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
 
             </div>
 
-            {/* MODAL DE EDIÇÃO DE CONVITE */}
+            {/* MODAL DE EDIÇÃO */}
             {editingConvite && (
                 <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative my-auto">
@@ -562,7 +539,6 @@ export const ConvitesTab: React.FC<ConvitesTabProps> = ({ onBackToDashboard }) =
                                 />
                             </div>
 
-                            {/* EXIBE CAMPO DE QUADRA E LOTE APENAS PARA CLIENTES */}
                             {editingConvite.role === 'CLIENTE_COMPRADOR' && (
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-600 mb-1">Quadra / Lote (Ex: Quadra C - Lote 05)</label>
