@@ -6,6 +6,8 @@ import { SplashScreen } from './components/layout/SplashScreen';
 
 import { DashboardTab } from './components/tabs/Dashboard';
 import { ConvitesTab } from './components/tabs/ConvitesTab';
+import { NovaEmpresaTab } from './components/tabs/NovaEmpresaTab';
+import { NovaObraTab } from './components/tabs/NovaObraTab';
 import { AndamentoTab } from './components/tabs/AndamentoTab';
 import { OrcamentoTab } from './components/tabs/OrcamentoTab';
 import { CronogramaTab } from './components/tabs/CronogramaTab';
@@ -22,21 +24,16 @@ const MainApp: React.FC = () => {
   const { canAccessTab, role, activeObra, setActiveObra, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
 
-  // VALIDAÇÃO SEGURA DE PERMISSÃO POR PERFIL
   useEffect(() => {
-    if (activeTab !== 'dashboard' && activeTab !== 'admin' && !canAccessTab(activeTab)) {
+    if (activeTab !== 'dashboard' && activeTab !== 'admin' && activeTab !== 'nova-empresa' && activeTab !== 'nova-obra' && !canAccessTab(activeTab)) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
 
-  // RESET TOTAL PARA O DASHBOARD
   const handleResetToDashboard = () => {
-    try {
-      setActiveObra(null as any);
-    } catch (e) {
-      console.warn('Suprimindo alerta de limpeza de obra:', e);
-    }
+    setActiveObra(null as any);
     setActiveTab('dashboard');
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -51,17 +48,43 @@ const MainApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
+  const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra';
+  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin' && !isFormPage);
 
   const renderContent = () => {
+    if (activeTab === 'nova-empresa') {
+      return (
+        <NovaEmpresaTab
+          onBack={() => setActiveTab('dashboard')}
+          onSuccess={(empresaId) => {
+            setLastEmpresaCreatedId(empresaId);
+            setActiveTab('nova-obra');
+          }}
+        />
+      );
+    }
+
+    if (activeTab === 'nova-obra') {
+      return (
+        <NovaObraTab
+          onBack={() => setActiveTab('dashboard')}
+          onGoToNovaEmpresa={() => setActiveTab('nova-empresa')}
+          preSelectedEmpresaId={lastEmpresaCreatedId}
+        />
+      );
+    }
+
+    if (activeTab === 'admin') {
+      return <ConvitesTab />;
+    }
+
     if (activeTab === 'dashboard' || !activeObra) {
-      if (activeTab === 'admin') {
-        return <ConvitesTab />;
-      }
       return (
         <DashboardTab
           onSelectObra={handleSelectObra}
           onSelectAdmin={handleSelectAdmin}
+          onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
+          onNavigateToNovaObra={() => setActiveTab('nova-obra')}
         />
       );
     }
@@ -85,13 +108,13 @@ const MainApp: React.FC = () => {
         return <VendasTab />;
       case 'relatorios':
         return <RelatoriosTab />;
-      case 'admin':
-        return <ConvitesTab />;
       default:
         return (
           <DashboardTab
             onSelectObra={handleSelectObra}
             onSelectAdmin={handleSelectAdmin}
+            onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
+            onNavigateToNovaObra={() => setActiveTab('nova-obra')}
           />
         );
     }

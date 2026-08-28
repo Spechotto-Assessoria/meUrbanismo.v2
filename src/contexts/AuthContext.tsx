@@ -1,20 +1,15 @@
 import React, { createContext, useContext, useState } from 'react';
-import { UserRole, Obra, TabId } from '../types';
-
-export interface User {
-  id: string;
-  nome: string;
-  email: string;
-  role: UserRole;
-  avatar_url?: string;
-}
+import { UserRole, Obra, Empresa, TabId, User } from '../types';
 
 interface AuthContextType {
   user: User;
   role: UserRole;
   obras: Obra[];
+  empresas: Empresa[];
   activeObra: Obra | null;
   setActiveObra: (obra: Obra | null) => void;
+  addEmpresa: (empresa: Omit<Empresa, 'id'>) => Empresa;
+  addObra: (obra: Omit<Obra, 'id'>) => Obra;
   switchRole: (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => void;
   canAccessTab: (tabId: TabId) => boolean;
   isAdmin: boolean;
@@ -30,10 +25,27 @@ const MOCK_USER: User = {
   avatar_url: '/logo-meurbanismo.png'
 };
 
-const MOCK_OBRAS: any[] = [
+const MOCK_EMPRESAS: Empresa[] = [
+  {
+    id: 'emp-001',
+    nome: 'Conecta Urbanismo',
+    cnpj: '12.345.678/0001-90',
+    email: 'contato@conectaurbanismo.com.br'
+  },
+  {
+    id: 'emp-002',
+    nome: 'Linkage Empreendimentos',
+    cnpj: '98.765.432/0001-10',
+    email: 'contato@linkage.com.br'
+  }
+];
+
+const MOCK_OBRAS: Obra[] = [
   {
     id: 'obra-001',
     nome: 'Residencial Reserva dos Ipês',
+    empresaId: 'emp-001',
+    empresaNome: 'Conecta Urbanismo',
     cidade: 'Mirassol',
     uf: 'SP',
     tipo: 'Loteamento Fechado',
@@ -42,6 +54,8 @@ const MOCK_OBRAS: any[] = [
   {
     id: 'obra-002',
     nome: 'Villa Bella Urban Park',
+    empresaId: 'emp-002',
+    empresaNome: 'Linkage Empreendimentos',
     cidade: 'São José do Rio Preto',
     uf: 'SP',
     tipo: 'Loteamento Aberto',
@@ -54,15 +68,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user] = useState<User>(MOCK_USER);
   const [role, setRole] = useState<UserRole>('ADMINISTRADOR');
-  const [obras] = useState<Obra[]>(MOCK_OBRAS as Obra[]);
-  const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0] as Obra);
+  const [empresas, setEmpresas] = useState<Empresa[]>(MOCK_EMPRESAS);
+  const [obras, setObras] = useState<Obra[]>(MOCK_OBRAS);
+  const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0]);
 
   const setActiveObra = (obra: Obra | null) => {
-    if (!obra) {
-      setActiveObraState(null);
-      return;
-    }
     setActiveObraState(obra);
+  };
+
+  const addEmpresa = (novaData: Omit<Empresa, 'id'>): Empresa => {
+    const novaEmpresa: Empresa = {
+      ...novaData,
+      id: `emp-${Date.now()}`
+    };
+    setEmpresas(prev => [novaEmpresa, ...prev]);
+    return novaEmpresa;
+  };
+
+  const addObra = (novaData: Omit<Obra, 'id'>): Obra => {
+    const novaObra: Obra = {
+      ...novaData,
+      id: `obra-${Date.now()}`
+    };
+    setObras(prev => [novaObra, ...prev]);
+    return novaObra;
   };
 
   const switchRole = (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => {
@@ -87,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isCorretor = role === 'CORRETOR' || role === 'ADMINISTRADOR';
 
   const canAccessTab = (tabId: TabId): boolean => {
-    if (tabId === 'dashboard') return true;
+    if (tabId === 'dashboard' || tabId === 'nova-empresa' || tabId === 'nova-obra') return true;
 
     switch (role) {
       case 'ADMINISTRADOR':
@@ -109,8 +138,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         role,
         obras,
+        empresas,
         activeObra,
         setActiveObra,
+        addEmpresa,
+        addObra,
         switchRole,
         canAccessTab,
         isAdmin,
