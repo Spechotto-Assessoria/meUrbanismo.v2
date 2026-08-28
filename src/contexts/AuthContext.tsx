@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState } from 'react';
-import { User, UserRole, Obra, TabId } from '../types';
+import { UserRole, Obra, TabId } from '../types';
+
+export interface User {
+  id: string;
+  nome: string;
+  email: string;
+  role: UserRole;
+  avatar_url?: string;
+}
 
 interface AuthContextType {
   user: User;
@@ -9,6 +17,9 @@ interface AuthContextType {
   setActiveObra: (obra: Obra | null) => void;
   switchRole: (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => void;
   canAccessTab: (tabId: TabId) => boolean;
+  isAdmin: boolean;
+  canViewFinancials: boolean;
+  isCorretor: boolean;
 }
 
 const MOCK_USER: User = {
@@ -19,7 +30,7 @@ const MOCK_USER: User = {
   avatar_url: '/logo-meurbanismo.png'
 };
 
-const MOCK_OBRAS: Obra[] = [
+const MOCK_OBRAS: any[] = [
   {
     id: 'obra-001',
     nome: 'Residencial Reserva dos Ipês',
@@ -43,10 +54,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user] = useState<User>(MOCK_USER);
   const [role, setRole] = useState<UserRole>('ADMINISTRADOR');
-  const [obras] = useState<Obra[]>(MOCK_OBRAS);
-  const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0]);
+  const [obras] = useState<Obra[]>(MOCK_OBRAS as Obra[]);
+  const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0] as Obra);
 
-  // TRATAMENTO SEGURO DE ATRIBUIÇÃO DE OBRA
   const setActiveObra = (obra: Obra | null) => {
     if (!obra) {
       setActiveObraState(null);
@@ -71,6 +81,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         break;
     }
   };
+
+  const isAdmin = role === 'ADMINISTRADOR';
+  const canViewFinancials = role === 'ADMINISTRADOR' || role === 'PROPRIETARIO_INVESTIDOR';
+  const isCorretor = role === 'CORRETOR' || role === 'ADMINISTRADOR';
 
   const canAccessTab = (tabId: TabId): boolean => {
     if (tabId === 'dashboard') return true;
@@ -98,7 +112,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeObra,
         setActiveObra,
         switchRole,
-        canAccessTab
+        canAccessTab,
+        isAdmin,
+        canViewFinancials,
+        isCorretor
       }}
     >
       {children}
