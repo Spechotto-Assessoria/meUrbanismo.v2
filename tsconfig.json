@@ -6,7 +6,6 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
-    /* Modos de empacotamento */
     "moduleResolution": "bundling",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
@@ -14,7 +13,6 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Permissivo para liberar compilacao no Vite */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
