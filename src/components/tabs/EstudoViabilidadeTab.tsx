@@ -73,8 +73,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                     <button
                         onClick={() => setViewMode('pipeline')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'pipeline'
-                                ? 'bg-white text-slate-900 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
                             }`}
                     >
                         <Layers className="w-4 h-4" />
@@ -83,8 +83,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                     <button
                         onClick={() => setViewMode('form')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'form'
-                                ? 'bg-white text-slate-900 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-900'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-900'
                             }`}
                     >
                         <Calculator className="w-4 h-4" />
@@ -148,8 +148,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                         setCustoM2(PRESETS_AREAS[t].custoM2);
                                     }}
                                     className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${tipo === t
-                                            ? 'border-purple-500 bg-purple-50 font-bold text-purple-900'
-                                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-purple-200'
+                                        ? 'border-purple-500 bg-purple-50 font-bold text-purple-900'
+                                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-purple-200'
                                         }`}
                                 >
                                     <div className="text-xs font-bold">{PRESETS_AREAS[t].label}</div>
