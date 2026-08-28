@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     Send,
@@ -14,11 +14,13 @@ import {
     Filter,
     ShieldCheck,
     Lock,
-    Unlock
+    Edit3,
+    X,
+    Save
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
-interface Convite {
+export interface Convite {
     id: string;
     email: string;
     nome?: string;
@@ -29,39 +31,68 @@ interface Convite {
     ativo: boolean;
     dataCriacao: string;
     linkAcceso: string;
+    quadraLote?: string;
+    statusCadastro?: 'PENDENTE' | 'COMPLETO';
 }
+
+const STORAGE_KEY = 'meurbanismo_convites_v1';
 
 export const ConvitesTab: React.FC = () => {
     const { obras } = useAuth();
 
-    // Formulário
+    // Scrolla para o topo assim que a tela carrega
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, []);
+
+    // Estados do Formulário
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [telefone, setTelefone] = useState('');
-    const [obraId, setObraId] = useState(obras[0]?.id || '');
+    const [obraId, setObraId] = useState(obras[0]?.id || '1');
     const [role, setRole] = useState<UserRole>('CLIENTE_COMPRADOR');
 
-    // Estados da Lista de Convites e Filtros
-    const [convites, setConvites] = useState<Convite[]>([
-        {
-            id: '1',
-            email: 'rennan_seidl@hotmail.com',
-            nome: 'Rennan Spechotto',
-            telefone: '(17) 99999-8888',
-            obraId: obras[0]?.id || '1',
-            obraNome: obras[0]?.nome || 'Residencial Reserva dos Ipês',
-            role: 'PROPRIETARIO_INVESTIDOR',
-            ativo: true,
-            dataCriacao: '01/08/2026',
-            linkAcceso: 'https://meurbanismo.app/convite?token=abc123xyz'
+    // Estado de Edição de Convite Existente
+    const [editingConvite, setEditingConvite] = useState<Convite | null>(null);
+
+    // Carrega convites salvos no localStorage ou usa lista inicial
+    const [convites, setConvites] = useState<Convite[]>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Erro ao ler convites salvos:', e);
+            }
         }
-    ]);
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://meurbanismo.vercel.app';
+        return [
+            {
+                id: '1',
+                email: 'rennan_seidl@hotmail.com',
+                nome: 'Rennan Spechotto',
+                telefone: '(17) 99999-8888',
+                obraId: obras[0]?.id || '1',
+                obraNome: obras[0]?.nome || 'Residencial Reserva dos Ipês',
+                role: 'PROPRIETARIO_INVESTIDOR',
+                ativo: true,
+                dataCriacao: '01/08/2026',
+                linkAcceso: `${baseUrl}/convite?token=abc123xyz`,
+                statusCadastro: 'COMPLETO',
+                quadraLote: 'Quadra B - Lote 14'
+            }
+        ];
+    });
+
+    // Salva no localStorage a cada alteração na lista de convites
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(convites));
+    }, [convites]);
 
     const [filtroRole, setFiltroRole] = useState<string>('TODOS');
     const [filtroObra, setFiltroObra] = useState<string>('TODAS');
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    // Mapeamento visual das abas que cada perfil ganha acesso
     const getAbasPreview = (r: UserRole) => {
         switch (r) {
             case 'CLIENTE_COMPRADOR':
@@ -77,30 +108,42 @@ export const ConvitesTab: React.FC = () => {
 
     const handleCreateConvite = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email) {
+        const cleanEmail = email.trim().toLowerCase();
+
+        if (!cleanEmail) {
             alert('Por favor, informe o e-mail do convidado.');
             return;
         }
 
+        // Trava de e-mail duplicado
+        const jaExiste = convites.some(c => c.email.toLowerCase() === cleanEmail);
+        if (jaExiste) {
+            alert(`O e-mail "${cleanEmail}" já possui um convite gerado! Você pode editá-lo ou reenviá-lo na lista abaixo.`);
+            return;
+        }
+
+        const baseUrl = window.location.origin;
         const obraSelecionada = obras.find(o => o.id === obraId) || obras[0];
+
         const newConvite: Convite = {
             id: Date.now().toString(),
-            email,
-            nome,
-            telefone,
+            email: cleanEmail,
+            nome: nome.trim(),
+            telefone: telefone.trim(),
             obraId: obraSelecionada?.id || '1',
             obraNome: obraSelecionada?.nome || 'Empreendimento',
             role,
             ativo: true,
             dataCriacao: new Date().toLocaleDateString('pt-BR'),
-            linkAcceso: `https://meurbanismo.app/convite?email=${encodeURIComponent(email)}&obra=${obraSelecionada?.id}`
+            linkAcceso: `${baseUrl}/convite?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id}`,
+            statusCadastro: 'PENDENTE'
         };
 
         setConvites([newConvite, ...convites]);
         setEmail('');
         setNome('');
         setTelefone('');
-        alert('Convite gerado com sucesso!');
+        alert('Convite gerado e salvo com sucesso!');
     };
 
     const handleToggleAtivo = (id: string) => {
@@ -115,6 +158,15 @@ export const ConvitesTab: React.FC = () => {
         if (confirm('Deseja realmente excluir este convite/acesso?')) {
             setConvites(convites.filter(c => c.id !== id));
         }
+    };
+
+    const handleSaveEdit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingConvite) return;
+
+        setConvites(convites.map(c => c.id === editingConvite.id ? editingConvite : c));
+        setEditingConvite(null);
+        alert('Convite atualizado com sucesso!');
     };
 
     const handleCopyLink = (c: Convite) => {
@@ -139,7 +191,6 @@ export const ConvitesTab: React.FC = () => {
         window.open(`mailto:${c.email}?subject=${assunto}&body=${corpo}`, '_blank');
     };
 
-    // Filtros
     const convitesFiltrados = convites.filter(c => {
         const matchRole = filtroRole === 'TODOS' || c.role === filtroRole;
         const matchObra = filtroObra === 'TODAS' || c.obraId === filtroObra;
@@ -260,14 +311,13 @@ export const ConvitesTab: React.FC = () => {
                 </button>
             </form>
 
-            {/* PAINEL DE CONVITES CADASTRADOS & FILTROS */}
+            {/* PAINEL DE CONVITES CADASTRADOS */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                         <ShieldCheck className="w-4 h-4 text-emerald-600" /> Convites & Acessos Gerados ({convitesFiltrados.length})
                     </h2>
 
-                    {/* FILTROS GRUPAIS */}
                     <div className="flex items-center gap-2">
                         <Filter className="w-3.5 h-3.5 text-slate-400" />
                         <select
@@ -294,7 +344,7 @@ export const ConvitesTab: React.FC = () => {
                     </div>
                 </div>
 
-                {/* LISTA DE CARDS DE CONVITE */}
+                {/* LISTA DE CONVITES */}
                 <div className="space-y-3">
                     {convitesFiltrados.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-6">Nenhum convite encontrado com os filtros selecionados.</p>
@@ -306,18 +356,22 @@ export const ConvitesTab: React.FC = () => {
                                     <div>
                                         <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
                                             {c.email}
+                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${c.statusCadastro === 'COMPLETO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                                                {c.statusCadastro === 'COMPLETO' ? 'Cadastro Completo' : 'Cadastro Pendente'}
+                                            </span>
                                             {!c.ativo && (
                                                 <span className="text-[9px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                                                    <Lock className="w-3 h-3" /> Acesso Bloqueado
+                                                    <Lock className="w-3 h-3" /> Bloqueado
                                                 </span>
                                             )}
                                         </div>
                                         <div className="text-xs text-slate-500 mt-0.5">
                                             {c.nome ? `${c.nome} • ` : ''} Empreendimento: <strong className="text-slate-700">{c.obraNome}</strong>
+                                            {c.quadraLote && <span className="ml-2 font-medium text-blue-600">({c.quadraLote})</span>}
                                         </div>
                                     </div>
 
-                                    {/* CHAVE TOGGLE PARA ATIVAR / BLOQUEAR */}
+                                    {/* TOGGLE ATIVO / BLOQUEADO */}
                                     <div className="flex items-center gap-2 shrink-0">
                                         <span className="text-[11px] font-semibold text-slate-600">
                                             {c.ativo ? 'Ativo' : 'Bloqueado'}
@@ -333,10 +387,9 @@ export const ConvitesTab: React.FC = () => {
                                 </div>
 
                                 <div className="pt-3 space-y-3">
-                                    {/* SELETOR DE MUDANÇA RÁPIDA DE PERFIL */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-slate-500">Perfil de Acesso:</span>
+                                            <span className="text-xs font-semibold text-slate-500">Perfil:</span>
                                             <select
                                                 value={c.role}
                                                 onChange={e => handleChangeRole(c.id, e.target.value as UserRole)}
@@ -351,7 +404,7 @@ export const ConvitesTab: React.FC = () => {
                                         <span className="text-[10px] text-slate-400">Criado em: {c.dataCriacao}</span>
                                     </div>
 
-                                    {/* PREVIEW DAS ABAS DO CONVITADO */}
+                                    {/* ABAS LIBERADAS */}
                                     <div className="flex flex-wrap gap-1">
                                         {getAbasPreview(c.role).map((aba, i) => (
                                             <span key={i} className="text-[9px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
@@ -360,7 +413,7 @@ export const ConvitesTab: React.FC = () => {
                                         ))}
                                     </div>
 
-                                    {/* BOTÕES DE ENVIO E AÇÃO RÁPIDA */}
+                                    {/* AÇÕES: WHATSAPP, EMAIL, COPIAR, EDITAR, EXCLUIR */}
                                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
                                         <button
                                             type="button"
@@ -389,6 +442,14 @@ export const ConvitesTab: React.FC = () => {
 
                                         <button
                                             type="button"
+                                            onClick={() => setEditingConvite(c)}
+                                            className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs flex items-center gap-1.5 border border-amber-200 transition-colors cursor-pointer"
+                                        >
+                                            <Edit3 className="w-3.5 h-3.5 text-amber-600" /> Editar
+                                        </button>
+
+                                        <button
+                                            type="button"
                                             onClick={() => handleDelete(c.id)}
                                             className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 border border-rose-200 transition-colors cursor-pointer ml-auto"
                                         >
@@ -404,6 +465,97 @@ export const ConvitesTab: React.FC = () => {
                 </div>
 
             </div>
+
+            {/* MODAL DE EDIÇÃO DE CONVITE */}
+            {editingConvite && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative my-auto">
+                        <button
+                            type="button"
+                            onClick={() => setEditingConvite(null)}
+                            className="absolute top-4 right-4 p-1 rounded-full text-slate-400 hover:text-slate-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h3 className="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
+                            <Edit3 className="w-5 h-5 text-amber-600" /> Editar Cadastro do Convidado
+                        </h3>
+
+                        <form onSubmit={handleSaveEdit} className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">E-mail</label>
+                                <input
+                                    type="email"
+                                    value={editingConvite.email}
+                                    onChange={e => setEditingConvite({ ...editingConvite, email: e.target.value })}
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Nome Completo</label>
+                                <input
+                                    type="text"
+                                    value={editingConvite.nome || ''}
+                                    onChange={e => setEditingConvite({ ...editingConvite, nome: e.target.value })}
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Telefone / WhatsApp</label>
+                                <input
+                                    type="text"
+                                    value={editingConvite.telefone || ''}
+                                    onChange={e => setEditingConvite({ ...editingConvite, telefone: e.target.value })}
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Quadra / Lote (Ex: Quadra C - Lote 05)</label>
+                                <input
+                                    type="text"
+                                    value={editingConvite.quadraLote || ''}
+                                    onChange={e => setEditingConvite({ ...editingConvite, quadraLote: e.target.value })}
+                                    placeholder="Quadra e Lote do cliente"
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Status do Cadastro</label>
+                                <select
+                                    value={editingConvite.statusCadastro || 'PENDENTE'}
+                                    onChange={e => setEditingConvite({ ...editingConvite, statusCadastro: e.target.value as any })}
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                                >
+                                    <option value="PENDENTE">Pendente (Aguardando conclusão do cliente)</option>
+                                    <option value="COMPLETO">Completo (Dados preenchidos)</option>
+                                </select>
+                            </div>
+
+                            <div className="pt-2 flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingConvite(null)}
+                                    className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1"
+                                >
+                                    <Save className="w-4 h-4" /> Salvar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

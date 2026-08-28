@@ -15,7 +15,6 @@ import { ViabilidadeTab } from './components/tabs/ViabilidadeTab';
 import { MapaDisponibilidadeTab } from './components/tabs/MapaDisponibilidadeTab';
 import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
-import { AdminTab } from './components/tabs/AdminTab';
 import { TabId } from './types';
 import { ShieldAlert } from 'lucide-react';
 
@@ -30,20 +29,24 @@ const MainApp: React.FC = () => {
     }
   }, [role, activeTab, canAccessTab]);
 
+  // Retorna do Header direto para o Dashboard
   const handleGoToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectObra = () => {
     setActiveTab('andamento');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectAdmin = () => {
     setActiveTab('admin');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard');
+  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
 
   const renderContent = () => {
     if (activeTab === 'dashboard' || !activeObra) {
@@ -96,7 +99,10 @@ const MainApp: React.FC = () => {
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
         <Header
           onLogoClick={handleGoToDashboard}
-          onNavigateAdmin={() => setActiveTab('admin')}
+          onNavigateAdmin={() => {
+            setActiveTab('admin');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
 
         <main
@@ -107,7 +113,7 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* BOTÃO FLUTUANTE DE SIMULAÇÃO: Exibido sempre que a visão ativa for diferente de Admin */}
+        {/* BOTÃO FLUTUANTE DE SIMULAÇÃO */}
         {role !== 'ADMINISTRADOR' && (
           <button
             type="button"
