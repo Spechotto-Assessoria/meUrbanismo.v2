@@ -27,7 +27,14 @@ const MainApp: React.FC = () => {
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (activeTab !== 'dashboard' && activeTab !== 'admin' && activeTab !== 'nova-empresa' && activeTab !== 'nova-obra' && !canAccessTab(activeTab)) {
+    if (
+      activeTab !== 'dashboard' &&
+      activeTab !== 'admin' &&
+      activeTab !== 'nova-empresa' &&
+      activeTab !== 'nova-obra' &&
+      canAccessTab &&
+      !canAccessTab(activeTab)
+    ) {
       setActiveTab('dashboard');
     }
   }, [role, activeTab, canAccessTab]);
@@ -141,7 +148,7 @@ const MainApp: React.FC = () => {
         {role !== 'ADMINISTRADOR' && (
           <button
             type="button"
-            onClick={() => switchRole('admin')}
+            onClick={() => switchRole && switchRole('ADMINISTRADOR')}
             className="fixed top-16 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 cursor-pointer animate-bounce"
             title="Voltar ao modo Administrador"
           >
