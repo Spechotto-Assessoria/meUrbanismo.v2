@@ -34,8 +34,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [nome, setNome] = useState(user.nome || '');
-  const [email] = useState(user.email || '');
+  const [nome, setNome] = useState(user?.nome || '');
+  const [email] = useState(user?.email || '');
   const [telefone, setTelefone] = useState('(17) 99999-8888');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
           </div>
         </div>
 
-        {/* SELETOR DE OBRA */}
+        {/* SELETOR DE OBRA (PROTEÇÃO CONTRA NULL) */}
         <div className="relative flex-1 min-w-0 max-w-[140px] sm:max-w-[220px] mx-1">
           <button
             type="button"
@@ -116,7 +116,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
           >
             <Building2 className="w-3.5 h-3.5 text-blue-900 shrink-0" />
             <span className="truncate text-left font-medium text-slate-700 text-[11px] sm:text-xs">
-              {activeObra ? activeObra.nome : 'Selecionar Obra'}
+              {activeObra && activeObra.nome ? activeObra.nome : 'Selecionar Obra'}
             </span>
             <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform ${showObraMenu ? 'rotate-180' : ''}`} />
           </button>
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                 Selecione o Empreendimento
               </div>
               <div className="space-y-1 mt-1 max-h-60 overflow-y-auto">
-                {obras.map((o) => (
+                {obras && obras.map((o) => (
                   <button
                     key={o.id}
                     type="button"
@@ -199,8 +199,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
             >
               <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-300 shrink-0">
                 <img
-                  src={user.avatar_url || '/logo-meurbanismo.png'}
-                  alt={user.nome}
+                  src={user?.avatar_url || '/logo-meurbanismo.png'}
+                  alt={user?.nome || 'Usuário'}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -215,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
 
                 <div className="pb-3 border-b border-slate-100">
                   <div className="font-extrabold text-slate-900 text-sm sm:text-base">
-                    {user.nome}
+                    {user?.nome || 'Usuário'}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">{email}</div>
                   <div className="mt-2 flex items-center justify-between">
