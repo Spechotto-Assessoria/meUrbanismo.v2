@@ -29,11 +29,11 @@ const MainApp: React.FC = () => {
     }
   }, [role, activeTab, canAccessTab]);
 
-  // FUNÇÃO DE RETORNO DIRETO E INCONDICIONAL AO DASHBOARD
-  const handleGoToDashboard = () => {
+  // AÇÃO DIRETA DE RETORNO AO DASHBOARD
+  const handleResetToDashboard = () => {
     setActiveObra(null as any);
     setActiveTab('dashboard');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handleSelectObra = () => {
@@ -48,24 +48,13 @@ const MainApp: React.FC = () => {
 
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin');
 
+  // RENDERIZAÇÃO ESTRITA BASEADA APENAS NO ACTIVETAB
   const renderContent = () => {
-    // Força a renderização do DashboardTab sempre que activeTab for 'dashboard'
-    if (activeTab === 'dashboard') {
-      return (
-        <DashboardTab
-          onSelectObra={handleSelectObra}
-          onSelectAdmin={handleSelectAdmin}
-        />
-      );
-    }
-
-    // Se estiver na aba 'admin'
     if (activeTab === 'admin') {
       return <ConvitesTab />;
     }
 
-    // Se não tiver obra ativa, força Dashboard
-    if (!activeObra) {
+    if (activeTab === 'dashboard' || !activeObra) {
       return (
         <DashboardTab
           onSelectObra={handleSelectObra}
@@ -109,11 +98,8 @@ const MainApp: React.FC = () => {
 
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
         <Header
-          onLogoClick={handleGoToDashboard}
-          onNavigateAdmin={() => {
-            setActiveTab('admin');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          onLogoClick={handleResetToDashboard}
+          onNavigateAdmin={handleSelectAdmin}
         />
 
         <main
@@ -124,7 +110,6 @@ const MainApp: React.FC = () => {
           {renderContent()}
         </main>
 
-        {/* BOTÃO FLUTUANTE DE SIMULAÇÃO */}
         {role !== 'ADMINISTRADOR' && (
           <button
             type="button"
