@@ -137,7 +137,7 @@ export interface DiarioObra {
   clima_manha?: string;
   clima_tarde?: string;
   condicao_solo?: string;
-  efetivo_pessoas: number;
+  efetivo_pessoas?: number;
   efetivo_proprio?: number;
   efetivo_terceirizado?: number;
   equipamentos_ativos?: string[];
@@ -189,10 +189,11 @@ export interface DocumentoObra {
   obra_id: string;
   nome?: string;
   titulo?: string;
+  descricao?: string;
   categoria: 'projetos' | 'licencas' | 'contratos' | 'financeiro' | 'Urbanístico' | 'Licenças Ambientais' | 'Drenagem' | 'Alvarás e Jurídico' | string;
-  url: string;
+  url?: string;
   arquivo_url?: string;
-  data_upload: string;
+  data_upload?: string;
   data_emissao?: string;
   tamanho?: string;
   tamanho_bytes?: number;

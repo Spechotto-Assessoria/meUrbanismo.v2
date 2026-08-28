@@ -1,153 +1,149 @@
-import React, { createContext, useContext, useState } from 'react';
-import { UserRole, Obra, Empresa, TabId, User } from '../types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, UserRole, Obra, Empresa, TabId } from '../types';
+import { apiService } from '../services/supabase';
 
-interface AuthContextType {
-  user: User;
-  role: UserRole;
-  obras: Obra[];
-  empresas: Empresa[];
+export interface AuthContextType {
+  user: User | null;
   activeObra: Obra | null;
   setActiveObra: (obra: Obra | null) => void;
-  addEmpresa: (empresa: Omit<Empresa, 'id'>) => Empresa;
-  addObra: (obra: Omit<Obra, 'id'>) => Obra;
-  switchRole: (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => void;
-  canAccessTab: (tabId: TabId) => boolean;
+  obras: Obra[];
+  empresas: Empresa[];
+  role: UserRole;
   isAdmin: boolean;
-  canViewFinancials: boolean;
   isCorretor: boolean;
+  isPublicView: boolean;
+  canViewFinancials: boolean;
+  canAccessTab: (tabId: TabId) => boolean;
+  switchRole: (newRole: UserRole) => void;
+  addObra: (obra: Omit<Obra, 'id'>) => Promise<Obra>;
+  addEmpresa: (empresa: Omit<Empresa, 'id'>) => Promise<Empresa>;
+  login: (email: string) => Promise<boolean>;
+  logout: () => void;
 }
-
-const MOCK_USER: User = {
-  id: 'usr_1',
-  nome: 'Rennan Spechotto',
-  email: 'rennan_seidl@hotmail.com',
-  role: 'ADMINISTRADOR',
-  avatar_url: '/logo-meurbanismo.png'
-};
-
-const MOCK_EMPRESAS: Empresa[] = [
-  {
-    id: 'emp-001',
-    nome: 'Conecta Urbanismo',
-    cnpj: '12.345.678/0001-90',
-    email: 'contato@conectaurbanismo.com.br'
-  },
-  {
-    id: 'emp-002',
-    nome: 'Linkage Empreendimentos',
-    cnpj: '98.765.432/0001-10',
-    email: 'contato@linkage.com.br'
-  }
-];
-
-const MOCK_OBRAS: Obra[] = [
-  {
-    id: 'obra-001',
-    nome: 'Residencial Reserva dos Ipês',
-    empresaId: 'emp-001',
-    empresaNome: 'Conecta Urbanismo',
-    cidade: 'Mirassol',
-    uf: 'SP',
-    tipo: 'Loteamento Fechado',
-    foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
-  },
-  {
-    id: 'obra-002',
-    nome: 'Villa Bella Urban Park',
-    empresaId: 'emp-002',
-    empresaNome: 'Linkage Empreendimentos',
-    cidade: 'São José do Rio Preto',
-    uf: 'SP',
-    tipo: 'Loteamento Aberto',
-    foto_capa: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800'
-  }
-];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user] = useState<User>(MOCK_USER);
-  const [role, setRole] = useState<UserRole>('ADMINISTRADOR');
-  const [empresas, setEmpresas] = useState<Empresa[]>(MOCK_EMPRESAS);
-  const [obras, setObras] = useState<Obra[]>(MOCK_OBRAS);
-  const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0]);
+  const [user, setUser] = useState<User | null>(null);
+  const [activeObra, setActiveObra] = useState<Obra | null>(null);
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [currentRole, setCurrentRole] = useState<UserRole>('ADMINISTRADOR');
 
-  const setActiveObra = (obra: Obra | null) => {
-    setActiveObraState(obra);
-  };
+  useEffect(() => {
+    carregarDadosIniciais();
+  }, []);
 
-  const addEmpresa = (novaData: Omit<Empresa, 'id'>): Empresa => {
-    const novaEmpresa: Empresa = {
-      ...novaData,
-      id: `emp-${Date.now()}`
-    };
-    setEmpresas(prev => [novaEmpresa, ...prev]);
-    return novaEmpresa;
-  };
+  const carregarDadosIniciais = async () => {
+    try {
+      const [obrasData, empresasData, usersData] = await Promise.all([
+        apiService.getObras(),
+        apiService.getEmpresas(),
+        apiService.getUsers()
+      ]);
 
-  const addObra = (novaData: Omit<Obra, 'id'>): Obra => {
-    const novaObra: Obra = {
-      ...novaData,
-      id: `obra-${Date.now()}`
-    };
-    setObras(prev => [novaObra, ...prev]);
-    return novaObra;
-  };
+      setObras(obrasData);
+      setEmpresas(empresasData);
 
-  const switchRole = (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => {
-    switch (newRole) {
-      case 'admin':
-        setRole('ADMINISTRADOR');
-        break;
-      case 'investidor':
-        setRole('PROPRIETARIO_INVESTIDOR');
-        break;
-      case 'corretor':
-        setRole('CORRETOR');
-        break;
-      case 'cliente':
-        setRole('CLIENTE_COMPRADOR');
-        break;
+      if (obrasData.length > 0) {
+        setActiveObra(obrasData[0]);
+      }
+      if (usersData.length > 0) {
+        setUser(usersData[0]);
+        setCurrentRole(usersData[0].role || 'ADMINISTRADOR');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do contexto de autenticação:', error);
     }
   };
 
+  const role: UserRole = currentRole || user?.role || 'ADMINISTRADOR';
   const isAdmin = role === 'ADMINISTRADOR';
+  const isCorretor = role === 'CORRETOR';
+  const isPublicView = role === 'CLIENTE_COMPRADOR' || role === 'PROPRIETARIO_INVESTIDOR';
   const canViewFinancials = role === 'ADMINISTRADOR' || role === 'PROPRIETARIO_INVESTIDOR';
-  const isCorretor = role === 'CORRETOR' || role === 'ADMINISTRADOR';
 
   const canAccessTab = (tabId: TabId): boolean => {
-    if (tabId === 'dashboard' || tabId === 'nova-empresa' || tabId === 'nova-obra') return true;
-
-    switch (role) {
-      case 'ADMINISTRADOR':
+    if (isAdmin) return true;
+    switch (tabId) {
+      case 'dashboard':
+      case 'andamento':
+      case 'cronograma':
+      case 'acompanhamento':
+      case 'documentos':
+      case 'relatorios':
         return true;
-      case 'PROPRIETARIO_INVESTIDOR':
-        return ['andamento', 'orcamento', 'cronograma', 'viabilidade', 'acompanhamento', 'documentos', 'relatorios', 'mapa', 'vendas'].includes(tabId);
-      case 'CORRETOR':
-        return ['andamento', 'vendas', 'mapa', 'documentos', 'acompanhamento'].includes(tabId);
-      case 'CLIENTE_COMPRADOR':
-        return ['andamento', 'mapa', 'documentos', 'acompanhamento'].includes(tabId);
+      case 'mapa':
+      case 'vendas':
+        return role !== 'CLIENTE_COMPRADOR';
+      case 'orcamento':
+      case 'viabilidade':
+        return canViewFinancials;
+      case 'admin':
+      case 'nova-empresa':
+      case 'nova-obra':
+        return isAdmin;
       default:
-        return false;
+        return true;
     }
+  };
+
+  const switchRole = (newRole: UserRole) => {
+    setCurrentRole(newRole);
+    if (user) {
+      setUser({ ...user, role: newRole });
+    }
+  };
+
+  const addObra = async (novaObraData: Omit<Obra, 'id'>): Promise<Obra> => {
+    const criada = await apiService.saveObra(novaObraData);
+    const atualizadas = await apiService.getObras();
+    setObras(atualizadas);
+    setActiveObra(criada);
+    return criada;
+  };
+
+  const addEmpresa = async (novaEmpresaData: Omit<Empresa, 'id'>): Promise<Empresa> => {
+    const criada = await apiService.saveEmpresa(novaEmpresaData);
+    const atualizadas = await apiService.getEmpresas();
+    setEmpresas(atualizadas);
+    return criada;
+  };
+
+  const login = async (email: string): Promise<boolean> => {
+    const usersData = await apiService.getUsers();
+    const found = usersData.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (found) {
+      setUser(found);
+      setCurrentRole(found.role);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setUser(null);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        role,
-        obras,
-        empresas,
         activeObra,
         setActiveObra,
-        addEmpresa,
-        addObra,
-        switchRole,
-        canAccessTab,
+        obras,
+        empresas,
+        role,
         isAdmin,
+        isCorretor,
+        isPublicView,
         canViewFinancials,
-        isCorretor
+        canAccessTab,
+        switchRole,
+        addObra,
+        addEmpresa,
+        login,
+        logout
       }}
     >
       {children}

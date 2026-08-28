@@ -95,6 +95,11 @@ class LocalStorageService {
     return novo;
   }
 
+  // Alias para retrocompatibilidade do componente OrcamentoTab
+  async saveOrcamentoItem(item: Omit<OrcamentoItem, 'id'>): Promise<OrcamentoItem> {
+    return this.saveOrcamento(item);
+  }
+
   // CRONOGRAMA
   async getCronograma(obraId: string): Promise<CronogramaItem[]> {
     const local = this.getItem<CronogramaItem[]>('cronograma', MOCK_CRONOGRAMAS);

@@ -1,169 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import React, { useState } from 'react';
+import { useAuth } from './contexts/AuthContext';
 import { Header } from './components/layout/Header';
+import { Sidebar } from './components/layout/Sidebar';
 import { BottomNav } from './components/layout/BottomNav';
-import { SplashScreen } from './components/layout/SplashScreen';
+import { TabId } from './types';
 
+// Importação das Abas
 import { DashboardTab } from './components/tabs/Dashboard';
-import { ConvitesTab } from './components/tabs/ConvitesTab';
-import { NovaEmpresaTab } from './components/tabs/NovaEmpresaTab';
-import { NovaObraTab } from './components/tabs/NovaObraTab';
-import { AndamentoTab } from './components/tabs/AndamentoTab';
-import { OrcamentoTab } from './components/tabs/OrcamentoTab';
 import { CronogramaTab } from './components/tabs/CronogramaTab';
+import { OrcamentoTab } from './components/tabs/OrcamentoTab';
+import { ViabilidadeTab } from './components/tabs/ViabilidadeTab';
 import { AcompanhamentoTab } from './components/tabs/AcompanhamentoTab';
 import { DocumentosTab } from './components/tabs/DocumentosTab';
-import { ViabilidadeTab } from './components/tabs/ViabilidadeTab';
-import { MapaDisponibilidadeTab } from './components/tabs/MapaDisponibilidadeTab';
-import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
-import { TabId } from './types';
-import { ShieldAlert } from 'lucide-react';
+import { MapaDisponibilidadeTab } from './components/tabs/MapaDisponibilidadeTab';
+import { AdminTab } from './components/tabs/AdminTab';
+import { NovaEmpresaTab } from './components/tabs/NovaEmpresaTab';
+import { NovaObraTab } from './components/tabs/NovaObraTab';
 
-const MainApp: React.FC = () => {
-  const { canAccessTab, role, activeObra, setActiveObra, switchRole } = useAuth();
+export const App: React.FC = () => {
+  const { canAccessTab, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const [showSplash, setShowSplash] = useState<boolean>(true);
-  const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (activeTab !== 'dashboard' && activeTab !== 'admin' && activeTab !== 'nova-empresa' && activeTab !== 'nova-obra' && !canAccessTab(activeTab)) {
-      setActiveTab('dashboard');
-    }
-  }, [role, activeTab, canAccessTab]);
-
-  const handleResetToDashboard = () => {
-    setActiveObra(null as any);
-    setActiveTab('dashboard');
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  };
-
-  const handleSelectObra = () => {
-    setActiveTab('andamento');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleSelectAdmin = () => {
-    setActiveTab('admin');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra';
-  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin' && !isFormPage);
 
   const renderContent = () => {
-    if (activeTab === 'nova-empresa') {
+    if (!canAccessTab(activeTab)) {
       return (
-        <NovaEmpresaTab
-          onBack={() => setActiveTab('dashboard')}
-          onSuccess={(empresaId) => {
-            setLastEmpresaCreatedId(empresaId);
-            setActiveTab('nova-obra');
-          }}
-        />
-      );
-    }
-
-    if (activeTab === 'nova-obra') {
-      return (
-        <NovaObraTab
-          onBack={() => setActiveTab('dashboard')}
-          onGoToNovaEmpresa={() => setActiveTab('nova-empresa')}
-          preSelectedEmpresaId={lastEmpresaCreatedId}
-        />
-      );
-    }
-
-    if (activeTab === 'admin') {
-      return <ConvitesTab />;
-    }
-
-    if (activeTab === 'dashboard' || !activeObra) {
-      return (
-        <DashboardTab
-          onSelectObra={handleSelectObra}
-          onSelectAdmin={handleSelectAdmin}
-          onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
-          onNavigateToNovaObra={() => setActiveTab('nova-obra')}
-        />
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6 bg-slate-900/40 rounded-2xl border border-slate-800">
+          <h3 className="text-xl font-bold text-white mb-2">Acesso Restrito</h3>
+          <p className="text-slate-400 max-w-md text-sm mb-6">
+            Sua conta atual não possui permissão para visualizar o conteúdo desta seção.
+          </p>
+          <button
+            onClick={() => switchRole('ADMINISTRADOR')}
+            className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold rounded-xl text-sm transition-colors"
+          >
+            Alternar para Administrador
+          </button>
+        </div>
       );
     }
 
     switch (activeTab) {
+      case 'dashboard':
+        return <DashboardTab onNavigate={(tab: TabId) => setActiveTab(tab)} />;
+      case 'cronograma':
       case 'andamento':
-        return <AndamentoTab />;
+        return <CronogramaTab />;
       case 'orcamento':
         return <OrcamentoTab />;
-      case 'cronograma':
-        return <CronogramaTab />;
+      case 'viabilidade':
+        return <ViabilidadeTab />;
       case 'acompanhamento':
         return <AcompanhamentoTab />;
       case 'documentos':
         return <DocumentosTab />;
-      case 'viabilidade':
-        return <ViabilidadeTab />;
-      case 'mapa':
-        return <MapaDisponibilidadeTab />;
-      case 'vendas':
-        return <VendasTab />;
       case 'relatorios':
         return <RelatoriosTab />;
+      case 'mapa':
+      case 'vendas':
+        return <MapaDisponibilidadeTab />;
+      case 'admin':
+        return <AdminTab />;
+      case 'nova-empresa':
+        return <NovaEmpresaTab onSuccess={() => setActiveTab('admin')} />;
+      case 'nova-obra':
+        return <NovaObraTab onSuccess={() => setActiveTab('dashboard')} />;
       default:
-        return (
-          <DashboardTab
-            onSelectObra={handleSelectObra}
-            onSelectAdmin={handleSelectAdmin}
-            onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
-            onNavigateToNovaObra={() => setActiveTab('nova-obra')}
-          />
-        );
+        return <DashboardTab onNavigate={(tab: TabId) => setActiveTab(tab)} />;
     }
   };
 
   return (
-    <>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
-        <Header
-          onLogoClick={handleResetToDashboard}
-          onNavigateAdmin={handleSelectAdmin}
-        />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        <main
-          id="tab-content-container"
-          className={`flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 transition-all ${showBottomNav ? 'pb-24 sm:pb-28' : 'pb-6'
-            }`}
-        >
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 mb-16 md:mb-0">
           {renderContent()}
         </main>
-
-        {role !== 'ADMINISTRADOR' && (
-          <button
-            type="button"
-            onClick={() => switchRole('admin')}
-            className="fixed top-16 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 cursor-pointer animate-bounce"
-            title="Voltar ao modo Administrador"
-          >
-            <ShieldAlert className="w-4 h-4" />
-            <span>Voltar p/ Admin</span>
-          </button>
-        )}
-
-        {showBottomNav && (
-          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-        )}
       </div>
-    </>
+
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+    </div>
   );
 };
-
-export function App() {
-  return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
-  );
-}
 
 export default App;

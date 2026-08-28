@@ -1,250 +1,193 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { DocumentoObra } from '../../types';
 import { apiService } from '../../services/supabase';
-import { SkeletonTable } from '../common/SkeletonLoader';
-import { 
-  FolderGit2, 
-  FileText, 
-  Download, 
-  Eye, 
-  EyeOff, 
-  Plus, 
-  Filter, 
-  CheckCircle, 
-  X,
-  FileCode2,
-  FileSpreadsheet,
-  FileCheck
+import { DocumentoObra } from '../../types';
+import {
+  FileText,
+  Download,
+  Plus,
+  Eye,
+  EyeOff,
+  FileCheck,
+  FileCode
 } from 'lucide-react';
 
 export const DocumentosTab: React.FC = () => {
-  const { activeObra, isAdmin, canViewFinancials } = useAuth();
+  const auth = useAuth();
+  const activeObra = auth.activeObra;
+  const isPublicView = auth.isPublicView ?? false;
+
   const [documentos, setDocumentos] = useState<DocumentoObra[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const [novoDoc, setNovoDoc] = useState({
     titulo: '',
-    categoria: 'Urbanístico' as any,
-    codigo_revisao: 'R01',
-    tipo_extensao: 'PDF' as any,
-    responsavel_tecnico: 'Eng. Rennan Spechotto (CREA 5069248190)',
-    descricao: '',
-    visivel_convidados: true
+    categoria: 'Urbanístico',
+    codigo_revisao: 'R-01',
+    tipo_extensao: 'pdf',
+    tamanho_bytes: 2097152,
+    responsavel_tecnico: '',
+    visivel_convidados: true,
+    descricao: ''
   });
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (activeObra) {
+      carregarDocumentos();
+    }
+  }, [activeObra, isPublicView]);
+
+  const carregarDocumentos = async () => {
     if (!activeObra) return;
     setLoading(true);
-    // Usuários sem acesso a dados internos (corretores e clientes) veem apenas documentos públicos
-    const apenasConvidados = !canViewFinancials;
-    const data = await apiService.getDocumentos(activeObra.id, apenasConvidados);
-    setDocumentos(data);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [activeObra?.id, canViewFinancials]);
-
-  const handleToggleVisibilidade = async (doc: DocumentoObra) => {
-    if (!isAdmin) return;
-    const atualizado: DocumentoObra = {
-      ...doc,
-      visivel_convidados: !doc.visivel_convidados
-    };
-    await apiService.saveDocumento(atualizado);
-    setToastMessage(`Visibilidade alterada para ${atualizado.visivel_convidados ? '🌐 Convidados' : '🔒 Admin'}`);
-    setTimeout(() => setToastMessage(null), 2500);
-    await loadData();
+    try {
+      const data = await apiService.getDocumentos(activeObra.id, isPublicView);
+      setDocumentos(data);
+    } catch (err) {
+      console.error('Erro ao carregar documentos:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSalvarDocumento = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeObra || !novoDoc.titulo) return;
 
-    const item: DocumentoObra = {
-      id: `doc-${Date.now()}`,
-      obra_id: activeObra.id,
-      titulo: novoDoc.titulo,
-      categoria: novoDoc.categoria,
-      codigo_revisao: novoDoc.codigo_revisao || 'R01',
-      data_emissao: new Date().toISOString().split('T')[0],
-      tamanho_bytes: 8500000,
-      tipo_extensao: novoDoc.tipo_extensao,
-      arquivo_url: '#',
-      visivel_convidados: novoDoc.visivel_convidados,
-      responsavel_tecnico: novoDoc.responsavel_tecnico,
-      descricao: novoDoc.descricao
-    };
+    try {
+      const item: DocumentoObra = {
+        id: `doc-${Date.now()}`,
+        obra_id: activeObra.id,
+        titulo: novoDoc.titulo,
+        nome: novoDoc.titulo,
+        categoria: novoDoc.categoria,
+        codigo_revisao: novoDoc.codigo_revisao,
+        data_emissao: new Date().toISOString().split('T')[0],
+        data_upload: new Date().toISOString().split('T')[0],
+        tamanho_bytes: Number(novoDoc.tamanho_bytes),
+        tamanho: `${(Number(novoDoc.tamanho_bytes) / 1024 / 1024).toFixed(1)} MB`,
+        tipo_extensao: novoDoc.tipo_extensao,
+        url: '#',
+        arquivo_url: '#',
+        visivel_convidados: novoDoc.visivel_convidados,
+        responsavel_tecnico: novoDoc.responsavel_tecnico || 'Equipe Técnica',
+        descricao: novoDoc.descricao
+      };
 
-    await apiService.saveDocumento(item);
-    await loadData();
-    setShowAddModal(false);
-    setNovoDoc({
-      titulo: '',
-      categoria: 'Urbanístico',
-      codigo_revisao: 'R01',
-      tipo_extensao: 'PDF',
-      responsavel_tecnico: 'Eng. Rennan Spechotto (CREA 5069248190)',
-      descricao: '',
-      visivel_convidados: true
-    });
+      await apiService.saveDocumento(item);
+      setShowModal(false);
+      setNovoDoc({
+        titulo: '',
+        categoria: 'Urbanístico',
+        codigo_revisao: 'R-01',
+        tipo_extensao: 'pdf',
+        tamanho_bytes: 2097152,
+        responsavel_tecnico: '',
+        visivel_convidados: true,
+        descricao: ''
+      });
+      carregarDocumentos();
+    } catch (err) {
+      console.error('Erro ao salvar documento:', err);
+    }
   };
 
-  const categorias = ['TODAS', ...Array.from(new Set(documentos.map(d => d.categoria)))];
-  const docsFiltrados = categoriaFiltro === 'TODAS'
-    ? documentos
-    : documentos.filter(d => d.categoria === categoriaFiltro);
-
-  const getExtensaoIcon = (ext: string) => {
+  const getExtensaoIcon = (extensao?: string) => {
+    const ext = extensao?.toLowerCase();
     switch (ext) {
-      case 'DWG':
-        return <FileCode2 className="w-5 h-5 text-amber-400" />;
-      case 'XLSX':
-        return <FileSpreadsheet className="w-5 h-5 text-emerald-400" />;
+      case 'dwg':
+        return <FileCode className="w-5 h-5 text-amber-400" />;
+      case 'pdf':
+        return <FileCheck className="w-5 h-5 text-rose-400" />;
       default:
-        return <FileText className="w-5 h-5 text-brand-400" />;
+        return <FileText className="w-5 h-5 text-cyan-400" />;
     }
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-full overflow-x-hidden">
-      
-      {/* HEADER DA ABA */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 p-6 rounded-2xl border border-slate-800 backdrop-blur-xs">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <FolderGit2 className="w-5 h-5 text-brand-400" />
-            Repositório de Projetos e Documentos
-          </h3>
-          <p className="text-xs text-slate-400">
-            Arquivos técnicos aprovados, memoriais, alvarás e licenças ambientais
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <FileText className="w-6 h-6 text-brand-400" />
+            Repositório de Documentos e Projetos
+          </h2>
+          <p className="text-slate-400 text-sm mt-1">
+            Projetos executivos aprovados, licenças ambientais e alvarás oficiais.
           </p>
         </div>
 
-        {isAdmin && (
+        {!isPublicView && (
           <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 active:scale-95 text-xs font-semibold text-white shadow-glow transition-all"
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl transition-colors shadow-lg shadow-brand-500/10 text-sm"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             Novo Documento
           </button>
         )}
       </div>
 
-      {/* TOAST DE FEEDBACK DE VISIBILIDADE */}
-      {toastMessage && (
-        <div className="p-3 rounded-2xl bg-brand-500/20 border border-brand-500/40 text-brand-300 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
-          <CheckCircle className="w-4 h-4 text-brand-400" />
-          {toastMessage}
-        </div>
-      )}
-
-      {/* FILTRO DE CATEGORIAS */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-        <span className="text-xs text-slate-400 flex items-center gap-1 font-semibold pl-1">
-          <Filter className="w-3.5 h-3.5" />
-        </span>
-        {categorias.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setCategoriaFiltro(cat)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-              categoriaFiltro === cat
-                ? 'bg-brand-500 text-white shadow-glow-sm'
-                : 'bg-navy-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* LISTA COMPACTA SEM ESTOURO HORIZONTAL (OVERFLOW-X-HIDDEN COM 2 LINHAS) */}
       {loading ? (
-        <SkeletonTable rows={4} />
+        <div className="text-center py-12 text-slate-400">Carregando acervo documental...</div>
+      ) : documentos.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 bg-slate-900/30 rounded-2xl border border-slate-800">
+          Nenhum documento cadastrado para este empreendimento.
+        </div>
       ) : (
-        <div className="space-y-2.5">
-          {docsFiltrados.map((doc) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {documentos.map((doc) => (
             <div
               key={doc.id}
-              className="p-3.5 sm:p-4 rounded-2xl bg-navy-900/90 border border-slate-800 hover:border-slate-700 transition-all space-y-2 max-w-full overflow-x-hidden"
+              className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all group"
             >
-              {/* LINHA 1: ÍCONE, TÍTULO, BADGE DE CATEGORIA E TOGGLE VISIBILIDADE */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  <div className="p-2 rounded-xl bg-navy-950 border border-slate-800 shrink-0 mt-0.5">
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700">
                     {getExtensaoIcon(doc.tipo_extensao)}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xs sm:text-sm font-bold text-white truncate leading-snug">
-                      {doc.titulo}
-                    </h4>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="px-2 py-0.5 rounded-md bg-brand-500/10 text-brand-300 text-[10px] font-semibold border border-brand-500/20">
-                        {doc.categoria}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+                      {doc.codigo_revisao || 'v1.0'}
+                    </span>
+                    {!isPublicView && (
+                      <span className={`p-1.5 rounded-md border ${doc.visivel_convidados ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
+                        {doc.visivel_convidados ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {doc.codigo_revisao}
-                      </span>
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                {/* BOTÃO TOGGLE VISIBILIDADE (ADMIN) OU BADGE INFORMATIVO */}
-                {isAdmin ? (
-                  <button
-                    onClick={() => handleToggleVisibilidade(doc)}
-                    className={`shrink-0 px-2.5 py-1 rounded-xl text-[10px] font-black flex items-center gap-1 border transition-colors ${
-                      doc.visivel_convidados
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                        : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
-                    }`}
-                    title="Alternar visibilidade para Convidados"
-                  >
-                    {doc.visivel_convidados ? (
-                      <>
-                        <Eye className="w-3 h-3 text-emerald-400" />
-                        <span>🌐 Convidados</span>
-                      </>
-                    ) : (
-                      <>
-                        <EyeOff className="w-3 h-3 text-amber-400" />
-                        <span>🔒 Admin</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <span className="shrink-0 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold flex items-center gap-1">
-                    <CheckCircle className="w-2.5 h-2.5" /> Público
-                  </span>
+                <h3 className="font-bold text-white text-base leading-snug group-hover:text-brand-300 transition-colors">
+                  {doc.titulo || doc.nome}
+                </h3>
+
+                <span className="text-xs font-semibold text-brand-400 block mt-1">
+                  {doc.categoria}
+                </span>
+
+                {doc.descricao && (
+                  <p className="text-slate-400 text-xs mt-2 line-clamp-2">
+                    {doc.descricao}
+                  </p>
                 )}
               </div>
 
-              {/* LINHA 2: DETALHES, RESPONSÁVEL TÉCNICO E BOTÕES DE AÇÃO */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-[11px] text-slate-400">
-                <div className="truncate max-w-[70%] text-slate-400">
-                  <span className="text-slate-500">Resp.:</span> {doc.responsavel_tecnico}
+              <div className="mt-5 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                <div>
+                  <span className="text-slate-500">Resp.:</span> {doc.responsavel_tecnico || 'N/A'}
+                  <div className="text-[11px] text-slate-500 mt-0.5">
+                    {doc.tamanho || (doc.tamanho_bytes ? `${(doc.tamanho_bytes / 1024 / 1024).toFixed(1)} MB` : 'PDF')}
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500">
-                    {(doc.tamanho_bytes / 1024 / 1024).toFixed(1)} MB
-                  </span>
-                  
-                  <button
-                    onClick={() => alert(`Download iniciado para: ${doc.titulo}`)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-navy-950 hover:bg-brand-500/20 text-slate-200 hover:text-brand-300 border border-slate-700 hover:border-brand-500/40 font-semibold text-[10px] transition-colors"
-                  >
-                    <Download className="w-3 h-3" />
-                    Baixar
-                  </button>
-                </div>
+                <button
+                  onClick={() => alert(`Download iniciado para: ${doc.titulo || doc.nome}`)}
+                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-brand-500 text-slate-300 hover:text-slate-950 transition-colors border border-slate-700 hover:border-brand-500"
+                  title="Baixar Documento"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -252,121 +195,109 @@ export const DocumentosTab: React.FC = () => {
       )}
 
       {/* MODAL NOVO DOCUMENTO */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-lg rounded-3xl bg-navy-900 border border-slate-700 p-6 shadow-2xl space-y-4">
-            <button 
-              onClick={() => setShowAddModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <h3 className="text-base font-bold text-white">Cadastrar Projeto / Documento</h3>
-
-            <form onSubmit={handleSalvarDocumento} className="space-y-3 text-xs">
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-4">Adicionar Novo Documento</h3>
+            <form onSubmit={handleSalvarDocumento} className="space-y-4">
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Título do Documento</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Título do Documento</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Projeto Executivo de Redes de Água e Esgoto"
                   value={novoDoc.titulo}
                   onChange={e => setNovoDoc({ ...novoDoc, titulo: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
+                  placeholder="Ex: Projeto Executivo de Drenagem"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-hidden focus:border-brand-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Categoria Técnica</label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Categoria</label>
                   <select
                     value={novoDoc.categoria}
-                    onChange={e => setNovoDoc({ ...novoDoc, categoria: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
+                    onChange={e => setNovoDoc({ ...novoDoc, categoria: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-hidden focus:border-brand-500"
                   >
                     <option value="Urbanístico">Urbanístico</option>
-                    <option value="Arquitetônico">Arquitetônico</option>
-                    <option value="Estrutural">Estrutural</option>
-                    <option value="Drenagem">Drenagem</option>
-                    <option value="Elétrico">Elétrico</option>
-                    <option value="Hidrossanitário">Hidrossanitário</option>
                     <option value="Licenças Ambientais">Licenças Ambientais</option>
+                    <option value="Drenagem">Drenagem</option>
                     <option value="Alvarás e Jurídico">Alvarás e Jurídico</option>
+                    <option value="projetos">Projetos</option>
+                    <option value="licencas">Licenças</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Formato</label>
-                  <select
-                    value={novoDoc.tipo_extensao}
-                    onChange={e => setNovoDoc({ ...novoDoc, tipo_extensao: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
-                  >
-                    <option value="PDF">PDF</option>
-                    <option value="DWG">DWG (AutoCAD)</option>
-                    <option value="XLSX">XLSX (Planilha)</option>
-                    <option value="ZIP">ZIP</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Revisão</label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Código Revisão</label>
                   <input
                     type="text"
                     value={novoDoc.codigo_revisao}
                     onChange={e => setNovoDoc({ ...novoDoc, codigo_revisao: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-hidden focus:border-brand-500"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Responsável Técnico</label>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Extensão</label>
+                  <select
+                    value={novoDoc.tipo_extensao}
+                    onChange={e => setNovoDoc({ ...novoDoc, tipo_extensao: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-hidden focus:border-brand-500"
+                  >
+                    <option value="pdf">PDF</option>
+                    <option value="dwg">DWG (AutoCAD)</option>
+                    <option value="zip">ZIP</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Resp. Técnico</label>
                   <input
                     type="text"
                     value={novoDoc.responsavel_tecnico}
                     onChange={e => setNovoDoc({ ...novoDoc, responsavel_tecnico: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
+                    placeholder="Eng. Responsável"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-hidden focus:border-brand-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Descrição / Finalidade</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Descrição</label>
                 <textarea
                   rows={2}
                   value={novoDoc.descricao}
                   onChange={e => setNovoDoc({ ...novoDoc, descricao: e.target.value })}
-                  placeholder="Informações adicionais da aprovação..."
-                  className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-white"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-hidden focus:border-brand-500"
                 />
               </div>
 
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-navy-950 border border-slate-800">
+              <div className="flex items-center gap-2 pt-2">
                 <input
                   type="checkbox"
-                  id="docVisivelCheck"
+                  id="visivel_doc"
                   checked={novoDoc.visivel_convidados}
                   onChange={e => setNovoDoc({ ...novoDoc, visivel_convidados: e.target.checked })}
-                  className="w-4 h-4 rounded text-brand-500"
+                  className="rounded-md border-slate-700 text-brand-500 focus:ring-brand-500 bg-slate-800"
                 />
-                <label htmlFor="docVisivelCheck" className="text-xs text-slate-300 font-semibold">
-                  Visível para Convidados e Clientes (🌐 Convidados)
+                <label htmlFor="visivel_doc" className="text-xs text-slate-300">
+                  Visível para investidores e clientes convidados
                 </label>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-brand-500 text-white font-semibold shadow-glow"
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-brand-500 hover:bg-brand-600 text-slate-950 transition-colors"
                 >
                   Salvar Documento
                 </button>
@@ -375,7 +306,6 @@ export const DocumentosTab: React.FC = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };

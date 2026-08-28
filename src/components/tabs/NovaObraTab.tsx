@@ -1,318 +1,179 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building, PlusCircle, Save, Upload, ArrowLeft } from 'lucide-react';
+import { Building, Save } from 'lucide-react';
 
 interface NovaObraTabProps {
-    onBack?: () => void;
-    onGoToNovaEmpresa?: () => void;
-    preSelectedEmpresaId?: string;
+    onSuccess?: () => void;
 }
 
-export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onBack, onGoToNovaEmpresa, preSelectedEmpresaId }) => {
+export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onSuccess }) => {
     const { empresas, addObra, setActiveObra } = useAuth();
+    const [loading, setLoading] = useState(false);
 
-    const [nome, setNome] = useState('');
-    const [empresaId, setEmpresaId] = useState(preSelectedEmpresaId || (empresas[0]?.id || ''));
-    const [status, setStatus] = useState('Planejamento');
-    const [tipo, setTipo] = useState('Loteamento Fechado');
-    const [descricao, setDescricao] = useState('');
-    const [endereco, setEndereco] = useState('');
-    const [cidade, setCidade] = useState('');
-    const [uf, setUf] = useState('SP');
-    const [areaM2, setAreaM2] = useState('');
-    const [valorGlobal, setValorGlobal] = useState('');
-    const [qtdLotes, setQtdLotes] = useState('');
-    const [metragemPadraoLote, setMetragemPadraoLote] = useState('');
-    const [dataInicio, setDataInicio] = useState('');
-    const [dataEntrega, setDataEntrega] = useState('');
+    const [formData, setFormData] = useState({
+        nome: '',
+        empresa_id: empresas[0]?.id || '',
+        cidade: '',
+        uf: 'SP',
+        tipo: 'Loteamento Fechado',
+        status: 'Em Andamento',
+        area_total_m2: 85000,
+        valor_vgv: 25000000,
+        total_lotes: 150,
+        custo_orcado: 10000000,
+        data_inicio: new Date().toISOString().split('T')[0],
+        data_previsao: '2026-12-31'
+    });
 
-    const handleEmpresaSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const val = e.target.value;
-        if (val === 'NOVA_EMPRESA') {
-            if (onGoToNovaEmpresa) {
-                onGoToNovaEmpresa();
-            }
-        } else {
-            setEmpresaId(val);
-        }
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.nome) return;
 
-        if (!nome.trim()) {
-            alert('Informe o Nome da Obra.');
-            return;
-        }
+        setLoading(true);
+        try {
+            const selecionadaEmpresa = empresas.find(e => e.id === formData.empresa_id);
 
-        if (!empresaId) {
-            alert('Selecione uma Empresa ou crie uma nova antes de continuar.');
-            return;
-        }
+            const nova = await addObra({
+                ...formData,
+                empresaId: formData.empresa_id,
+                empresa_nome: selecionadaEmpresa?.nome || 'Empresa Urbanizadora',
+                empresaNome: selecionadaEmpresa?.nome || 'Empresa Urbanizadora',
+                areaM2: Number(formData.area_total_m2),
+                valorGlobal: Number(formData.valor_vgv),
+                qtdLotes: Number(formData.total_lotes),
+                lotes_vendidos: 0,
+                lotes_disponiveis: Number(formData.total_lotes),
+                percentual_concluido: 0,
+                custo_realizado: 0,
+                foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
+            });
 
-        const emp = empresas.find(e => e.id === empresaId);
-
-        const nova = addObra({
-            nome: nome.trim(),
-            empresaId,
-            empresaNome: emp?.nome || 'Empresa',
-            cidade: cidade.trim() || 'Chapada dos Guimarães',
-            uf: uf.trim() || 'MT',
-            tipo,
-            status,
-            descricao,
-            endereco,
-            areaM2: parseFloat(areaM2) || 0,
-            valorGlobal: parseFloat(valorGlobal) || 0,
-            qtdLotes: parseInt(qtdLotes) || 0,
-            metragemPadraoLote: parseFloat(metragemPadraoLote) || 0,
-            dataInicio,
-            dataEntrega,
-            foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
-        });
-
-        setActiveObra(nova);
-        alert('Nova Obra cadastrada com sucesso!');
-
-        if (onBack) {
-            onBack();
+            setActiveObra(nova);
+            if (onSuccess) {
+                onSuccess();
+            }
+        } catch (error) {
+            console.error('Erro ao cadastrar obra:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div className="max-w-3xl mx-auto space-y-6 pb-12">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    {onBack && (
-                        <button
-                            type="button"
-                            onClick={onBack}
-                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                    )}
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <Building className="w-6 h-6 text-blue-600" /> Nova Obra
-                        </h1>
-                        <p className="text-xs text-slate-500">Informações principais da obra e vínculo com a empresa.</p>
-                    </div>
-                </div>
+            <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Building className="w-6 h-6 text-brand-400" />
+                    Cadastrar Novo Empreendimento
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">
+                    Adicione um novo loteamento ou obra de infraestrutura urbana ao sistema.
+                </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <form onSubmit={handleSubmit} className="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 space-y-4">
                 <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nome da Obra *</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Nome do Empreendimento *</label>
                     <input
                         type="text"
                         required
-                        value={nome}
-                        onChange={e => setNome(e.target.value)}
-                        placeholder="Ex: Condomínio Reserva dos Ipês"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
+                        value={formData.nome}
+                        onChange={e => setFormData({ ...formData, nome: e.target.value })}
+                        placeholder="Ex: Residencial Parque dos Ipês"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                     />
-                </div>
-
-                {/* SELETOR DE EMPRESA COM ATALHO DE CRIAR NOVA */}
-                <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-semibold text-slate-700">Empresa / Incorporadora *</label>
-                        {onGoToNovaEmpresa && (
-                            <button
-                                type="button"
-                                onClick={onGoToNovaEmpresa}
-                                className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                            >
-                                <PlusCircle className="w-3.5 h-3.5" /> + Criar Nova Empresa
-                            </button>
-                        )}
-                    </div>
-                    <select
-                        value={empresaId}
-                        onChange={handleEmpresaSelectChange}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white font-medium text-slate-800"
-                        required
-                    >
-                        {empresas.length === 0 && <option value="">Nenhuma empresa cadastrada</option>}
-                        {empresas.map(e => (
-                            <option key={e.id} value={e.id}>{e.nome}</option>
-                        ))}
-                        <option value="NOVA_EMPRESA" className="font-bold text-blue-600">
-                            ➕ Cadastrar nova empresa...
-                        </option>
-                    </select>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Tipo de Empreendimento</label>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Empresa / SPE</label>
                         <select
-                            value={tipo}
-                            onChange={e => setTipo(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                            value={formData.empresa_id}
+                            onChange={e => setFormData({ ...formData, empresa_id: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
+                        >
+                            {empresas.map(emp => (
+                                <option key={emp.id} value={emp.id}>{emp.nome}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Tipo de Empreendimento</label>
+                        <select
+                            value={formData.tipo}
+                            onChange={e => setFormData({ ...formData, tipo: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                         >
                             <option value="Loteamento Fechado">Loteamento Fechado</option>
                             <option value="Loteamento Aberto">Loteamento Aberto</option>
                             <option value="Condomínio de Casas">Condomínio de Casas</option>
-                            <option value="Edifício Residencial">Edifício Residencial</option>
                         </select>
                     </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-                        <select
-                            value={status}
-                            onChange={e => setStatus(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                        >
-                            <option value="Planejamento">Planejamento</option>
-                            <option value="Em Andamento">Em Andamento</option>
-                            <option value="Concluída">Concluída</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Descrição</label>
-                    <textarea
-                        rows={2}
-                        value={descricao}
-                        onChange={e => setDescricao(e.target.value)}
-                        placeholder="Breve resumo sobre o empreendimento"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500"
-                    />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-1">
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Endereço</label>
+                    <div className="sm:col-span-2">
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Cidade</label>
                         <input
                             type="text"
-                            value={endereco}
-                            onChange={e => setEndereco(e.target.value)}
-                            placeholder="Rua, Av, Rodovia..."
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Cidade</label>
-                        <input
-                            type="text"
-                            value={cidade}
-                            onChange={e => setCidade(e.target.value)}
+                            required
+                            value={formData.cidade}
+                            onChange={e => setFormData({ ...formData, cidade: e.target.value })}
                             placeholder="Ex: Mirassol"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                         />
                     </div>
-
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Estado (UF)</label>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">UF</label>
                         <input
                             type="text"
-                            value={uf}
-                            onChange={e => setUf(e.target.value)}
-                            placeholder="SP"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                            required
+                            value={formData.uf}
+                            onChange={e => setFormData({ ...formData, uf: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                         />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Área Total (m²)</label>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Área Total (m²)</label>
                         <input
                             type="number"
-                            value={areaM2}
-                            onChange={e => setAreaM2(e.target.value)}
-                            placeholder="Ex: 50000"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                            value={formData.area_total_m2}
+                            onChange={e => setFormData({ ...formData, area_total_m2: Number(e.target.value) })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                         />
                     </div>
-
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Valor Global / VGV (R$)</label>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">Total de Lotes</label>
                         <input
                             type="number"
-                            value={valorGlobal}
-                            onChange={e => setValorGlobal(e.target.value)}
-                            placeholder="Ex: 20000000"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                            value={formData.total_lotes}
+                            onChange={e => setFormData({ ...formData, total_lotes: Number(e.target.value) })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                         />
                     </div>
-
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Quantidade de Lotes</label>
+                        <label className="block text-xs font-semibold text-slate-300 mb-1">VGV Previsto (R$)</label>
                         <input
                             type="number"
-                            value={qtdLotes}
-                            onChange={e => setQtdLotes(e.target.value)}
-                            placeholder="Ex: 186"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Metragem Padrão do Lote (m²)</label>
-                        <input
-                            type="number"
-                            value={metragemPadraoLote}
-                            onChange={e => setMetragemPadraoLote(e.target.value)}
-                            placeholder="Ex: 300"
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Data de Início</label>
-                        <input
-                            type="date"
-                            value={dataInicio}
-                            onChange={e => setDataInicio(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Data de Entrega Prevista</label>
-                        <input
-                            type="date"
-                            value={dataEntrega}
-                            onChange={e => setDataEntrega(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
+                            value={formData.valor_vgv}
+                            onChange={e => setFormData({ ...formData, valor_vgv: Number(e.target.value) })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
                         />
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Imagem / Logo Específica da Obra</label>
-                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center bg-slate-50">
-                        <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                        <button
-                            type="button"
-                            className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs cursor-pointer hover:bg-slate-50"
-                        >
-                            Escolher imagem
-                        </button>
-                    </div>
-                </div>
-
-                <div className="pt-4 flex gap-3">
-                    {onBack && (
-                        <button
-                            type="button"
-                            onClick={onBack}
-                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs cursor-pointer"
-                        >
-                            Cancelar
-                        </button>
-                    )}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                     <button
                         type="submit"
-                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                        disabled={loading}
+                        className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition-colors text-sm shadow-lg shadow-brand-500/10"
                     >
-                        <Save className="w-4 h-4" /> Cadastrar Obra
+                        <Save className="w-4 h-4" />
+                        {loading ? 'Cadastrando...' : 'Cadastrar Empreendimento'}
                     </button>
                 </div>
             </form>
