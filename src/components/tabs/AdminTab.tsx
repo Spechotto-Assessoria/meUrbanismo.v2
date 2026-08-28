@@ -46,7 +46,7 @@ export const AdminTab: React.FC = () => {
   const [filterRole, setFilterRole] = useState<string>('TODOS');
   const [filterObra, setFilterObra] = useState<string>('TODOS');
 
-  // Cópia de link feedback
+  // Feedback de cópia
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Lista Mock de Convites
@@ -149,7 +149,7 @@ export const AdminTab: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Disparar WhatsApp com Mensagem Personalizada
+  // Disparar WhatsApp
   const handleSendWhatsapp = (c: ConviteItem) => {
     const nomePessoa = c.nome ? c.nome : 'Olá';
     const link = getInviteLink(c);
@@ -163,7 +163,7 @@ export const AdminTab: React.FC = () => {
     window.open(url, '_blank');
   };
 
-  // Disparar E-mail Padrão
+  // Disparar E-mail
   const handleSendEmail = (c: ConviteItem) => {
     const assunto = `Acesso à Plataforma meUrbanismo - ${c.obraNome}`;
     const link = getInviteLink(c);
@@ -276,7 +276,6 @@ export const AdminTab: React.FC = () => {
             </div>
           </div>
 
-          {/* BADGES DAS ABAS LIBERADAS */}
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5 mt-2">
             <div className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
               <Shield className="w-3.5 h-3.5 text-blue-600" /> Abas que ficarão visíveis para este perfil:
@@ -299,7 +298,7 @@ export const AdminTab: React.FC = () => {
         </form>
       </div>
 
-      {/* FILTROS E PESQUISA DA LISTA */}
+      {/* FILTROS E PESQUISA */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
@@ -340,7 +339,7 @@ export const AdminTab: React.FC = () => {
           </div>
         </div>
 
-        {/* LISTA DE CARDS DOS CONVITES */}
+        {/* LISTA DE CONVITES */}
         <div className="space-y-3">
           {convitesFiltrados.map((c) => (
             <div key={c.id} className={`p-4 rounded-2xl bg-white border transition-all ${c.ativo ? 'border-slate-200 shadow-xs' : 'border-red-200 bg-red-50/20 opacity-75'
@@ -362,14 +361,13 @@ export const AdminTab: React.FC = () => {
                     </span>
                     <span>• Criado em: {c.dataCriacao}</span>
                     {c.telefone && (
-                      <span className="flex items-center gap-0.5">
-                        • <Phone className="w-3 h-3 text-emerald-600 ml-1 inline" /> {c.telefone}
+                      <span className="flex items-center gap-1">
+                        • <Phone className="w-3 h-3 text-emerald-600" /> {c.telefone}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* CONTROLE DE PERFIL E BLOQUEIO DA CONTA */}
                 <div className="flex items-center gap-2 shrink-0">
                   <select
                     value={c.role}
@@ -395,7 +393,6 @@ export const AdminTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* ABAS LIBERADAS PARA ESTE REGISTRO */}
               <div className="py-2.5 border-b border-slate-100">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                   Abas Ativas no Perfil:
@@ -409,7 +406,6 @@ export const AdminTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* BOTÕES DE AÇÃO RÁPIDA */}
               <div className="pt-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <button

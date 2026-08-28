@@ -16,9 +16,10 @@ import { UserRole } from '../../types';
 
 interface HeaderProps {
   onLogoClick?: () => void;
+  onNavigateAdmin?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
+export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) => {
   const {
     user,
     role,
@@ -121,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                     key={o.id}
                     type="button"
                     onClick={() => {
-                      setActiveObra(o);
+                      setActiveObra(o as any);
                       setShowObraMenu(false);
                     }}
                     className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${activeObra?.id === o.id
@@ -204,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
             {showProfileDropdown && (
               <div className="absolute right-0 mt-2 w-80 sm:w-84 rounded-2xl bg-white border border-slate-200 shadow-2xl p-4 z-50 animate-fadeIn text-xs max-h-[80vh] overflow-y-auto">
 
-                {/* DADOS CADASTRAIS (EXIBIDO PARA TODOS) */}
+                {/* DADOS CADASTRAIS */}
                 <div className="pb-3 border-b border-slate-100">
                   <div className="font-extrabold text-slate-900 text-sm sm:text-base">
                     {user.nome}
@@ -265,7 +266,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
                   </form>
                 )}
 
-                {/* PAINEL DE SIMULAÇÃO */}
+                {/* SIMULADOR DE PERFIS */}
                 {role !== 'ADMINISTRADOR' && (
                   <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
                     <span className="text-[11px] text-emerald-900 font-semibold">Modo Simulador Ativo</span>

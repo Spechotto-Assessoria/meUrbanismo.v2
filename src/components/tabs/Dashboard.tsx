@@ -12,9 +12,10 @@ import {
 
 interface DashboardTabProps {
   onSelectObra?: () => void;
+  onSelectAdmin?: () => void;
 }
 
-export const DashboardTab: React.FC<DashboardTabProps> = ({ onSelectObra }) => {
+export const DashboardTab: React.FC<DashboardTabProps> = ({ onSelectObra, onSelectAdmin }) => {
   const { user, role, obras, setActiveObra } = useAuth();
 
   const isAdmin = role === 'ADMINISTRADOR';
@@ -118,9 +119,14 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({ onSelectObra }) => {
               <span>Nova Obra</span>
             </button>
 
+            {/* BOTÃO ENVIAR CONVITES CONECTADO À ABA DE GESTÃO */}
             <button
               type="button"
-              onClick={() => alert('Em breve: Gestão de Convites')}
+              onClick={() => {
+                if (onSelectAdmin) {
+                  onSelectAdmin();
+                }
+              }}
               className="p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2.5 font-medium text-xs text-slate-800 shadow-xs transition-colors cursor-pointer"
             >
               <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">

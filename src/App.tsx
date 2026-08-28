@@ -5,6 +5,7 @@ import { BottomNav } from './components/layout/BottomNav';
 import { SplashScreen } from './components/layout/SplashScreen';
 
 import { DashboardTab } from './components/tabs/Dashboard';
+import { ConvitesTab } from './components/tabs/ConvitesTab';
 import { AndamentoTab } from './components/tabs/AndamentoTab';
 import { OrcamentoTab } from './components/tabs/OrcamentoTab';
 import { CronogramaTab } from './components/tabs/CronogramaTab';
@@ -38,13 +39,23 @@ const MainApp: React.FC = () => {
     setActiveTab('andamento');
   };
 
+  const handleSelectAdmin = () => {
+    setActiveTab('admin');
+  };
+
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard');
 
   const renderContent = () => {
-    // Permite abrir a aba Admin mesmo sem obra selecionada.
-    // Para as demais abas operacionais, exige uma obra ativa ou redireciona para o Dashboard.
-    if (activeTab === 'dashboard' || (!activeObra && activeTab !== 'admin')) {
-      return <DashboardTab onSelectObra={handleSelectObra} />;
+    if (activeTab === 'dashboard' || !activeObra) {
+      if (activeTab === 'admin') {
+        return <ConvitesTab />;
+      }
+      return (
+        <DashboardTab
+          onSelectObra={handleSelectObra}
+          onSelectAdmin={handleSelectAdmin}
+        />
+      );
     }
 
     switch (activeTab) {
@@ -67,9 +78,14 @@ const MainApp: React.FC = () => {
       case 'relatorios':
         return <RelatoriosTab />;
       case 'admin':
-        return <AdminTab />;
+        return <ConvitesTab />;
       default:
-        return <DashboardTab onSelectObra={handleSelectObra} />;
+        return (
+          <DashboardTab
+            onSelectObra={handleSelectObra}
+            onSelectAdmin={handleSelectAdmin}
+          />
+        );
     }
   };
 
@@ -78,7 +94,10 @@ const MainApp: React.FC = () => {
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
-        <Header onLogoClick={handleGoToDashboard} onNavigateAdmin={() => setActiveTab('admin')} />
+        <Header
+          onLogoClick={handleGoToDashboard}
+          onNavigateAdmin={() => setActiveTab('admin')}
+        />
 
         <main
           id="tab-content-container"
