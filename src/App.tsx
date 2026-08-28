@@ -18,14 +18,14 @@ import { MapaDisponibilidadeTab } from './components/tabs/MapaDisponibilidadeTab
 import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
 import { TabId } from './types';
-import { ShieldAlert } from 'lucide-react';
 
 const MainApp: React.FC = () => {
-  const { canAccessTab, role, activeObra, setActiveObra, switchRole } = useAuth();
+  const { canAccessTab, role, activeObra, setActiveObra } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
 
+  // Redireciona para dashboard se a aba ativa não for acessível pelo role atual
   useEffect(() => {
     if (
       activeTab !== 'dashboard' &&
@@ -40,7 +40,7 @@ const MainApp: React.FC = () => {
   }, [role, activeTab, canAccessTab]);
 
   const handleResetToDashboard = () => {
-    setActiveObra(null as any);
+    setActiveObra(null);
     setActiveTab('dashboard');
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -144,18 +144,6 @@ const MainApp: React.FC = () => {
         >
           {renderContent()}
         </main>
-
-        {role !== 'ADMINISTRADOR' && (
-          <button
-            type="button"
-            onClick={() => switchRole && switchRole('ADMINISTRADOR' as any)}
-            className="fixed top-16 right-4 z-50 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-full shadow-lg border border-emerald-400 flex items-center gap-1.5 cursor-pointer animate-bounce"
-            title="Voltar ao modo Administrador"
-          >
-            <ShieldAlert className="w-4 h-4" />
-            <span>Voltar p/ Admin</span>
-          </button>
-        )}
 
         {showBottomNav && (
           <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

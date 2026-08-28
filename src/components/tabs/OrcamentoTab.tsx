@@ -97,7 +97,7 @@ export const OrcamentoTab: React.FC = () => {
       data_atualizacao: new Date().toISOString().split('T')[0]
     };
 
-    await apiService.saveOrcamentoItem(itemSalvo);
+    await apiService.saveOrcamento(itemSalvo);
     await loadData();
     setShowAddModal(false);
     setNovoItem({

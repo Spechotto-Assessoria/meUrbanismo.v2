@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { UserRole, Obra, Empresa, TabId, User } from '../types';
+import { UserRole, SwitchRoleParam, Obra, Empresa, TabId, User } from '../types';
 
 interface AuthContextType {
   user: User;
@@ -10,7 +10,7 @@ interface AuthContextType {
   setActiveObra: (obra: Obra | null) => void;
   addEmpresa: (empresa: Omit<Empresa, 'id'>) => Empresa;
   addObra: (obra: Omit<Obra, 'id'>) => Obra;
-  switchRole: (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => void;
+  switchRole: (newRole: SwitchRoleParam) => void;
   canAccessTab: (tabId: TabId) => boolean;
   isAdmin: boolean;
   canViewFinancials: boolean;
@@ -19,8 +19,8 @@ interface AuthContextType {
 
 const MOCK_USER: User = {
   id: 'usr_1',
-  nome: 'Rennan Spechotto',
-  email: 'rennan_seidl@hotmail.com',
+  nome: 'Administrador',
+  email: 'admin@meurbanismo.com.br',
   role: 'ADMINISTRADOR',
   avatar_url: '/logo-meurbanismo.png'
 };
@@ -44,7 +44,9 @@ const MOCK_OBRAS: Obra[] = [
   {
     id: 'obra-001',
     nome: 'Residencial Reserva dos Ipês',
+    empresa_id: 'emp-001',
     empresaId: 'emp-001',
+    empresa_nome: 'Conecta Urbanismo',
     empresaNome: 'Conecta Urbanismo',
     cidade: 'Mirassol',
     uf: 'SP',
@@ -54,7 +56,9 @@ const MOCK_OBRAS: Obra[] = [
   {
     id: 'obra-002',
     nome: 'Villa Bella Urban Park',
+    empresa_id: 'emp-002',
     empresaId: 'emp-002',
+    empresa_nome: 'Linkage Empreendimentos',
     empresaNome: 'Linkage Empreendimentos',
     cidade: 'São José do Rio Preto',
     uf: 'SP',
@@ -94,21 +98,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return novaObra;
   };
 
-  const switchRole = (newRole: 'admin' | 'investidor' | 'corretor' | 'cliente') => {
-    switch (newRole) {
-      case 'admin':
-        setRole('ADMINISTRADOR');
-        break;
-      case 'investidor':
-        setRole('PROPRIETARIO_INVESTIDOR');
-        break;
-      case 'corretor':
-        setRole('CORRETOR');
-        break;
-      case 'cliente':
-        setRole('CLIENTE_COMPRADOR');
-        break;
-    }
+  // Mapeia roles simplificadas (usadas no simulador de perfil) para roles internas
+  const switchRole = (newRole: SwitchRoleParam) => {
+    const roleMap: Record<SwitchRoleParam, UserRole> = {
+      admin: 'ADMINISTRADOR',
+      investidor: 'PROPRIETARIO_INVESTIDOR',
+      corretor: 'CORRETOR',
+      cliente: 'CLIENTE_COMPRADOR'
+    };
+    setRole(roleMap[newRole]);
   };
 
   const isAdmin = role === 'ADMINISTRADOR';
