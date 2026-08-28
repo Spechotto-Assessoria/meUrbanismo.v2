@@ -33,6 +33,9 @@ export const MOCK_EMPRESAS: Empresa[] = [
   }
 ];
 
+// Alias para retrocompatibilidade do Supabase service
+export const MOCK_EMPRESA = MOCK_EMPRESAS;
+
 export const MOCK_OBRAS: Obra[] = [
   {
     id: 'obra-001',
@@ -234,6 +237,9 @@ export const MOCK_CRONOGRAMAS: CronogramaItem[] = [
   { id: 'cr-10', obra_id: 'obra-001', mes_ano: '2024-12', mes_label: 'Dez/24', percentual_previsto_mes: 6.0, percentual_realizado_mes: 0, percentual_previsto_acumulado: 100.0, percentual_realizado_acumulado: 64.5, valor_previsto_mes: 891000, valor_realizado_mes: 0, valor_previsto_acumulado: 14850000, valor_realizado_acumulado: 9580000, status: 'planejado' }
 ];
 
+// Alias para retrocompatibilidade do Supabase service
+export const MOCK_CRONOGRAMA = MOCK_CRONOGRAMAS;
+
 export const MOCK_DIARIOS: DiarioObra[] = [
   {
     id: 'diario-1',
@@ -242,7 +248,12 @@ export const MOCK_DIARIOS: DiarioObra[] = [
     clima: 'ensolarado',
     clima_manha: 'Ensolarado',
     clima_tarde: 'Ensolarado',
+    condicao_solo: 'Seco e Firme',
     efetivo_pessoas: 38,
+    efetivo_proprio: 12,
+    efetivo_terceirizado: 26,
+    equipamentos_ativos: ['Escavadeira H-12', 'Motoniveladora', 'Rolo Compactador'],
+    responsavel_nome: 'Eng. Rennan Spechotto',
     equipes_presentes: ['Terraplanagem', 'Drenagem', 'Topografia'],
     atividades_realizadas: 'Assentamento de tubos de concreto PA-1 na Alameda A. Terraplanagem na Quadra C com nivelamento e compactação do subleito.',
     ocorrencias: 'Nenhuma ocorrência registrada. Trabalho transcorreu dentro da normalidade.',
@@ -259,7 +270,12 @@ export const MOCK_DIARIOS: DiarioObra[] = [
     clima: 'nublado',
     clima_manha: 'Nublado',
     clima_tarde: 'Chuva Leve',
+    condicao_solo: 'Úmido',
     efetivo_pessoas: 24,
+    efetivo_proprio: 8,
+    efetivo_terceirizado: 16,
+    equipamentos_ativos: ['Caminhão Muck', 'Retroescavadeira'],
+    responsavel_nome: 'Eng. Rennan Spechotto',
     equipes_presentes: ['Eléctrica', 'Muro Periférico'],
     atividades_realizadas: 'Abertura de valas para eletrodutos subterrâneos da rede de iluminação. Execução de alvenaria do muro periférico do setor norte.',
     ocorrencias: 'Paralisação parcial das máquinas às 15h devido à chuva fraca na região.',
@@ -274,8 +290,15 @@ export const MOCK_MEDICOES: MedicaoItem[] = [
     numero_medicao: 6,
     data_medicao: '2024-08-20',
     periodo_referencia: '01/08/2024 a 15/08/2024',
+    periodo_inicio: '2024-08-01',
+    periodo_fim: '2024-08-15',
     valor_medido: 1245800,
+    valor_medicao: 1245800,
+    valor_acumulado: 9580000,
     percentual_periodo: 8.3,
+    percentual_medido_acumulado: 64.5,
+    fornecedor_empreiteiro: 'Pavimentadora Triângulo Ltda',
+    servico_executado: 'Imprimação asfáltica e assentamento de meio-fio extrusado',
     status: 'aprovado',
     resumo_atividades: 'Início da imprimação asfáltica e assentamento de meio-fio extrusado na Avenida Principal.',
     link_relatorio_pdf: '#',
@@ -287,8 +310,15 @@ export const MOCK_MEDICOES: MedicaoItem[] = [
     numero_medicao: 7,
     data_medicao: '2024-08-27',
     periodo_referencia: '16/08/2024 a 26/08/2024',
+    periodo_inicio: '2024-08-16',
+    periodo_fim: '2024-08-26',
     valor_medido: 980000,
+    valor_medicao: 980000,
+    valor_acumulado: 10560000,
     percentual_periodo: 6.6,
+    percentual_medido_acumulado: 71.1,
+    fornecedor_empreiteiro: 'Construtora Drenar S/A',
+    servico_executado: 'Lançamento de camada BGS e poços de visita (PV)',
     status: 'rascunho',
     resumo_atividades: 'Lançamento de camada BGS de sub-base e montagem de poços de visita (PV) na drenagem.',
     visivel_convidados: false
@@ -302,6 +332,8 @@ export const MOCK_FOTOS: FotoObra[] = [
     url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186a5b2?w=800',
     titulo: 'Vista Aérea da Alameda Principal - Pavimentação',
     data: '2024-08-24',
+    data_registro: '2024-08-24',
+    autor_nome: 'Eng. Rennan Spechotto',
     categoria: 'pavimentacao',
     descricao: 'Aplicação do CBUQ concluída na extensão de 800m.',
     etapa_relacionada: 'Sub-base e Pavimentação Asfáltica',
@@ -313,6 +345,8 @@ export const MOCK_FOTOS: FotoObra[] = [
     url: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800',
     titulo: 'Assentamento de Tubulações de Drenagem',
     data: '2024-08-22',
+    data_registro: '2024-08-22',
+    autor_nome: 'Técnico de Obras',
     categoria: 'drenagem',
     descricao: 'Tubos PA-1 DN 800mm instalados com berço de areia.',
     etapa_relacionada: 'Drenagem e Galerias Pluviais',
@@ -324,6 +358,8 @@ export const MOCK_FOTOS: FotoObra[] = [
     url: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800',
     titulo: 'Obras de Estrutura da Portaria Social',
     data: '2024-08-18',
+    data_registro: '2024-08-18',
+    autor_nome: 'Eng. Rennan Spechotto',
     categoria: 'portaria',
     descricao: 'Concretagem dos pilares principais da guarita.',
     etapa_relacionada: 'Portaria, Muros e Paisagismo',
@@ -335,6 +371,8 @@ export const MOCK_FOTOS: FotoObra[] = [
     url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800',
     titulo: 'Panorama Geral da Quadra B',
     data: '2024-08-10',
+    data_registro: '2024-08-10',
+    autor_nome: 'Topógrafo',
     categoria: 'geral',
     descricao: 'Demarcação topográfica dos lotes residenciais.',
     etapa_relacionada: 'Serviços Preliminares',
@@ -351,6 +389,7 @@ export const MOCK_DOCUMENTOS: DocumentoObra[] = [
     categoria: 'projetos',
     url: '#',
     data_upload: '2024-02-15',
+    data_emissao: '2024-02-10',
     tamanho: '18.4 MB',
     tamanho_bytes: 19293798,
     tipo_extensao: 'pdf',
@@ -366,6 +405,7 @@ export const MOCK_DOCUMENTOS: DocumentoObra[] = [
     categoria: 'licencas',
     url: '#',
     data_upload: '2024-01-20',
+    data_emissao: '2024-01-15',
     tamanho: '4.2 MB',
     tamanho_bytes: 4404019,
     tipo_extensao: 'pdf',
@@ -381,6 +421,7 @@ export const MOCK_DOCUMENTOS: DocumentoObra[] = [
     categoria: 'projetos',
     url: '#',
     data_upload: '2024-03-05',
+    data_emissao: '2024-03-01',
     tamanho: '28.1 MB',
     tamanho_bytes: 29464371,
     tipo_extensao: 'dwg',
@@ -396,6 +437,7 @@ export const MOCK_DOCUMENTOS: DocumentoObra[] = [
     categoria: 'licencas',
     url: '#',
     data_upload: '2024-02-28',
+    data_emissao: '2024-02-25',
     tamanho: '2.8 MB',
     tamanho_bytes: 2936012,
     tipo_extensao: 'pdf',

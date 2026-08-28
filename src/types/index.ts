@@ -103,6 +103,7 @@ export interface OrcamentoItem {
   percentual_executado?: number;
   categoria?: string;
   codigo_sinapi?: string;
+  data_atualizacao?: string;
 }
 
 export interface CronogramaItem {
@@ -134,7 +135,12 @@ export interface DiarioObra {
   clima?: 'ensolarado' | 'chuvoso' | 'nublado' | string;
   clima_manha?: string;
   clima_tarde?: string;
+  condicao_solo?: string;
   efetivo_pessoas: number;
+  efetivo_proprio?: number;
+  efetivo_terceirizado?: number;
+  equipamentos_ativos?: string[];
+  responsavel_nome?: string;
   atividades_realizadas: string;
   ocorrencias?: string;
   fotos?: string[];
@@ -148,9 +154,16 @@ export interface MedicaoItem {
   numero_medicao: number;
   data_medicao: string;
   valor_medido: number;
+  valor_medicao?: number;
+  valor_acumulado?: number;
   percentual_periodo: number;
-  status: 'rascunho' | 'aprovado' | 'pago' | 'Aprovada' | 'Em Análise' | string;
+  percentual_medido_acumulado?: number;
   periodo_referencia?: string;
+  periodo_inicio?: string;
+  periodo_fim?: string;
+  fornecedor_empreiteiro?: string;
+  servico_executado?: string;
+  status: 'rascunho' | 'aprovado' | 'pago' | 'Aprovada' | 'Em Análise' | string;
   resumo_atividades?: string;
   link_relatorio_pdf?: string;
   visivel_convidados?: boolean;
@@ -162,6 +175,8 @@ export interface FotoObra {
   url: string;
   titulo: string;
   data: string;
+  data_registro?: string;
+  autor_nome?: string;
   categoria: 'geral' | 'pavimentacao' | 'drenagem' | 'eletrica' | 'portaria' | 'Aéreo / Drone' | 'Drenagem' | 'Pavimentação' | string;
   descricao?: string;
   etapa_relacionada?: string;
@@ -176,6 +191,7 @@ export interface DocumentoObra {
   categoria: 'projetos' | 'licencas' | 'contratos' | 'financeiro' | 'Urbanístico' | 'Licenças Ambientais' | 'Drenagem' | 'Alvarás e Jurídico' | string;
   url: string;
   data_upload: string;
+  data_emissao?: string;
   tamanho?: string;
   tamanho_bytes?: number;
   tipo_extensao?: string;
