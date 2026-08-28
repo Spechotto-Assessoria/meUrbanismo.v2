@@ -197,3 +197,4 @@ class LocalStorageService {
 }
 
 export const dataService = new LocalStorageService();
+export const apiService = dataService;

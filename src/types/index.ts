@@ -91,7 +91,7 @@ export interface MacroEtapa {
 export interface OrcamentoItem {
   id: string;
   obra_id: string;
-  macro_etapa_id: string;
+  macro_etapa_id?: string;
   macro_etapa_nome?: string;
   descricao: string;
   unidade: string;
@@ -132,6 +132,7 @@ export interface DiarioObra {
   id: string;
   obra_id: string;
   data: string;
+  created_at?: string;
   clima?: 'ensolarado' | 'chuvoso' | 'nublado' | string;
   clima_manha?: string;
   clima_tarde?: string;
@@ -153,10 +154,10 @@ export interface MedicaoItem {
   obra_id: string;
   numero_medicao: number;
   data_medicao: string;
-  valor_medido: number;
+  valor_medido?: number;
   valor_medicao?: number;
   valor_acumulado?: number;
-  percentual_periodo: number;
+  percentual_periodo?: number;
   percentual_medido_acumulado?: number;
   periodo_referencia?: string;
   periodo_inicio?: string;
@@ -174,7 +175,7 @@ export interface FotoObra {
   obra_id: string;
   url: string;
   titulo: string;
-  data: string;
+  data?: string;
   data_registro?: string;
   autor_nome?: string;
   categoria: 'geral' | 'pavimentacao' | 'drenagem' | 'eletrica' | 'portaria' | 'Aéreo / Drone' | 'Drenagem' | 'Pavimentação' | string;
@@ -190,6 +191,7 @@ export interface DocumentoObra {
   titulo?: string;
   categoria: 'projetos' | 'licencas' | 'contratos' | 'financeiro' | 'Urbanístico' | 'Licenças Ambientais' | 'Drenagem' | 'Alvarás e Jurídico' | string;
   url: string;
+  arquivo_url?: string;
   data_upload: string;
   data_emissao?: string;
   tamanho?: string;
