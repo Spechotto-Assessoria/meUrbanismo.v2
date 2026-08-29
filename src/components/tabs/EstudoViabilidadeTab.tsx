@@ -3,7 +3,7 @@ import {
     Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, X
 } from 'lucide-react';
 
-// IMPORTAÇÃO CORINGA UNIVERSAL PARA SUPABASE (Funciona com qualquer formato de exportação)
+// IMPORTAÇÃO CORINGA BLINDADA CONTRA ERROS DE EXPORTAÇÃO ESTÁTICA DO ROLLUP
 import * as SupabaseModule from '../../services/supabase';
 const supabase = (SupabaseModule as any).supabase || (SupabaseModule as any).default || SupabaseModule;
 
@@ -15,7 +15,6 @@ import {
 } from '../../lib/viabilidade-inicial';
 import { EstudoRow, EstudoStatus, STATUS_PIPELINE, normalizeStatus, rowToInput } from '../viabilidade/EstudoCard';
 
-// --- FUNÇÕES EMBUTIDAS PARA EVITAR ERRO DE BUILD ---
 const formatDecimal = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const maskDecimal = (val: string) => {
     let v = val.replace(/\D/g, '');
@@ -57,7 +56,6 @@ const downloadViabilidadeInicialCsv = (input: ViabilidadeInicialInput, result: V
     link.click();
     link.remove();
 };
-// -------------------------------------------------------------
 
 interface Props {
     onBack: () => void;
@@ -91,6 +89,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     const [previewAberto, setPreviewAberto] = useState(false);
 
     const buscarEstudos = async () => {
+        if (!supabase || typeof supabase.from !== 'function') return;
         setCarregando(true);
         const { data, error } = await supabase
             .from('viabilidade_inicial_estudos')
@@ -139,6 +138,11 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
             setMensagemErro("Informe o Nome do Empreendimento.");
             return;
         }
+        if (!supabase || typeof supabase.from !== 'function') {
+            setMensagemErro("Erro crítico: Cliente Supabase não inicializado.");
+            return;
+        }
+
         setSalvando(true);
         try {
             const payload = {
@@ -185,6 +189,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     };
 
     const handleExcluir = async (id: string) => {
+        if (!supabase || typeof supabase.from !== 'function') return;
         const { error } = await supabase.from('viabilidade_inicial_estudos').delete().eq('id', id);
         if (!error) {
             setMensagemSucesso("Estudo excluído.");
