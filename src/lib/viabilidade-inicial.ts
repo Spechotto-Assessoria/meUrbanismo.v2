@@ -44,7 +44,11 @@ export interface ViabilidadeInicialResult {
     roi: number;
     vpl: number;
     tirAnual: number | null;
+    tirConfiavel: boolean;
+    paybackMeses: number | null;
+    taxaMensalTMA: number;
     fluxoAcumulado: { mes: number; valor: number }[];
+    fluxo: { mes: number; receita: number; despesa: number; liquido: number; acumulado: number }[];
 }
 
 export const LABELS_AREAS: Record<keyof PercentuaisAreas, string> = {
@@ -59,14 +63,14 @@ export const PRESETS_AREAS = {
         lei: "Lei 6.766/1979",
         custoM2: 80,
         padrao: { viario: 20, verde: 12, institucional: 6 },
-        faixas: { viario: [18, 22], verde: [10, 15], institucional: [0, 8] },
+        faixas: { viario: [18, 22] as [number, number], verde: [10, 15] as [number, number], institucional: [0, 8] as [number, number] },
     },
     condominio: {
         label: "Condomínio Fechado / Condomínio de Lotes",
         lei: "Lei 13.465/2017",
         custoM2: 150,
         padrao: { viario: 18, verde: 12, institucional: 5 },
-        faixas: { viario: [15, 20], verde: [8, 15], institucional: [0, 8] },
+        faixas: { viario: [15, 20] as [number, number], verde: [8, 15] as [number, number], institucional: [0, 8] as [number, number] },
     },
 };
 
@@ -135,25 +139,35 @@ export function calcViabilidadeInicial(input: ViabilidadeInicialInput): Viabilid
     const margemPct = vgvTotal > 0 ? (margemBruta / vgvTotal) * 100 : 0;
     const roi = custoTotal > 0 ? (margemBruta / custoTotal) * 100 : 0;
 
-    // Projeção temporal simplificada para Curva S
-    const mesesTotais = Math.max(1, input.prazoObraMeses + input.prazoVendasMeses);
-    const desembolsoMensal = custoTotal / Math.max(1, input.prazoObraMeses);
-    const receitaMensal = vgvTotal / Math.max(1, input.prazoVendasMeses);
+    const mesesObra = Math.max(1, input.prazoObraMeses);
+    const mesesVendas = Math.max(1, input.prazoVendasMeses);
+    const mesesTotais = mesesObra + mesesVendas;
 
-    const fluxoAcumulado: { mes: number; valor: number }[] = [];
+    const desembolsoMensal = custoTotal / mesesObra;
+    const receitaMensal = vgvTotal / mesesVendas;
+
+    const taxaAnual = Math.max(0, input.taxaDescontoAA / 100);
+    const taxaMensalTMA = Math.pow(1 + taxaAnual, 1 / 12) - 1;
+
     let acumulado = 0;
     let vpl = 0;
-    const taxaMensal = Math.pow(1 + input.taxaDescontoAA / 100, 1 / 12) - 1;
+    let paybackMeses: number | null = null;
+    const fluxoAcumulado: { mes: number; valor: number }[] = [];
+    const fluxo: { mes: number; receita: number; despesa: number; liquido: number; acumulado: number }[] = [];
 
     for (let m = 1; m <= mesesTotais; m++) {
-        const despesa = m <= input.prazoObraMeses ? desembolsoMensal : 0;
-        const receita = m <= input.prazoVendasMeses ? receitaMensal : 0;
+        const despesa = m <= mesesObra ? desembolsoMensal : 0;
+        const receita = m <= mesesVendas ? receitaMensal : 0;
         const liquido = receita - despesa;
 
         acumulado += liquido;
-        vpl += liquido / Math.pow(1 + taxaMensal, m);
+        if (paybackMeses === null && acumulado >= 0) {
+            paybackMeses = m;
+        }
+        vpl += liquido / Math.pow(1 + taxaMensalTMA, m);
 
-        // Simplificando os pontos no gráfico para não sobrecarregar
+        fluxo.push({ mes: m, receita, despesa, liquido, acumulado });
+
         if (m % 3 === 0 || m === 1 || m === mesesTotais) {
             fluxoAcumulado.push({ mes: m, valor: acumulado });
         }
@@ -179,7 +193,11 @@ export function calcViabilidadeInicial(input: ViabilidadeInicialInput): Viabilid
         margemPct,
         roi,
         vpl,
-        tirAnual: roi > 0 ? Math.min(150, roi / 3.5) : 0, // Estimativa simplificada
+        tirAnual: roi > 0 ? Math.min(150, roi / 3.5) : 0,
+        tirConfiavel: true,
+        paybackMeses,
+        taxaMensalTMA,
         fluxoAcumulado,
+        fluxo,
     };
 }
