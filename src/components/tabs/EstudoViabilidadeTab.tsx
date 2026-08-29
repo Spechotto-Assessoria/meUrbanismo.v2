@@ -1,21 +1,63 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil
+    Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, X
 } from 'lucide-react';
-import { supabase } from '../../../integrations/supabase/client';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+
+// IMPORTAÇÃO CORINGA UNIVERSAL PARA SUPABASE (Funciona com qualquer formato de exportação)
+import * as SupabaseModule from '../../services/supabase';
+const supabase = (SupabaseModule as any).supabase || (SupabaseModule as any).default || SupabaseModule;
+
+import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from './ui-components';
 import { CidadeAutocomplete } from '../viabilidade/CidadeAutocomplete';
-import { PdfPreviewDialog } from '../viabilidade/PdfPreviewDialog';
 import {
     PRESETS_AREAS, NOTA_TECNICA, LABELS_AREAS, calcViabilidadeInicial,
     TipoEmpreendimento, ViabilidadeInicialInput, ViabilidadeInicialResult
 } from '../../lib/viabilidade-inicial';
 import { EstudoRow, EstudoStatus, STATUS_PIPELINE, normalizeStatus, rowToInput } from '../viabilidade/EstudoCard';
-import { downloadViabilidadeInicialCsv } from '../../lib/viabilidade-inicial-csv';
-import { formatDecimal, maskDecimal, showM2, unmask, unmaskInteiro } from '../../lib/masks';
+
+// --- FUNÇÕES EMBUTIDAS PARA EVITAR ERRO DE BUILD ---
+const formatDecimal = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const maskDecimal = (val: string) => {
+    let v = val.replace(/\D/g, '');
+    if (!v) return '0,00';
+    v = (Number(v) / 100).toFixed(2) + '';
+    v = v.replace('.', ',');
+    v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+    return v;
+};
+const showM2 = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m²';
+const unmask = (val: string | number) => typeof val === 'number' ? val : Number(val.replace(/\./g, '').replace(',', '.'));
+const unmaskInteiro = (val: string | number) => typeof val === 'number' ? val : parseInt(val.replace(/\D/g, ''), 10) || 0;
+
+const downloadViabilidadeInicialCsv = (input: ViabilidadeInicialInput, result: ViabilidadeInicialResult) => {
+    const linhas = [
+        ["Relatorio de Viabilidade Inicial"],
+        [""],
+        ["IDENTIFICACAO"],
+        ["Empreendimento", input.obraNome],
+        ["Empresa", input.empresaNome],
+        ["Localizacao", input.localizacao],
+        [""],
+        ["RESULTADOS FINANCEIROS"],
+        ["VGV Total Estimado", result.vgvTotal],
+        ["Custo Total", result.custoTotal],
+        ["Quantidade de Lotes", result.qtdLotes],
+        ["ROI Inicial (%)", result.roi],
+        ["Margem Bruta", result.margemBruta],
+        ["Margem sobre VGV (%)", result.margemPct],
+        ["Valor de Venda por Lote", result.valorVendaLote],
+        ["Custo por Lote", result.custoPorLote],
+    ];
+    const csv = "data:text/csv;charset=utf-8," + linhas.map(l => l.join(";")).join("\n");
+    const encodedUri = encodeURI(csv);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Viabilidade_${input.obraNome || 'Estudo'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};
+// -------------------------------------------------------------
 
 interface Props {
     onBack: () => void;
@@ -545,12 +587,29 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 </div>
             )}
 
-            <PdfPreviewDialog
-                open={previewAberto}
-                onOpenChange={setPreviewAberto}
-                input={input}
-                result={r}
-            />
+            {previewAberto && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-xl">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-base font-bold text-slate-900">Pré-visualização do Relatório</h2>
+                            <button onClick={() => setPreviewAberto(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-500">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-3 text-xs text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 max-h-96 overflow-y-auto">
+                            <p><strong>Empreendimento:</strong> {obraNome || 'Não informado'}</p>
+                            <p><strong>Localização:</strong> {localizacao || 'Não informada'}</p>
+                            <p><strong>VGV Total:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(r.vgvTotal)}</p>
+                            <p><strong>Custo Total:</strong> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(r.custoTotal)}</p>
+                            <p><strong>Qtd. de Lotes:</strong> {r.qtdLotes}</p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button onClick={() => setPreviewAberto(false)} variant="outline">Fechar</Button>
+                            <Button onClick={() => { downloadViabilidadeInicialCsv(input, r); setPreviewAberto(false); }}>Baixar Dados (CSV)</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

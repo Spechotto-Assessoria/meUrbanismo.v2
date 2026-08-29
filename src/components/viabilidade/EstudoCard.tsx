@@ -1,13 +1,48 @@
+import React from "react";
 import { FileDown, Loader2, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { brlShort, pctBR } from "@/lib/viabilidade";
 import {
     PRESETS_AREAS,
     calcViabilidadeInicial,
     type TipoEmpreendimento,
     type ViabilidadeInicialInput,
-} from "@/lib/viabilidade-inicial";
+} from "../../lib/viabilidade-inicial";
+
+// --- FORMATADORES E UI EMBUTIDOS PARA EVITAR ERROS DE BUILD ---
+const brlShort = (val: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        notation: 'compact',
+        maximumFractionDigits: 2
+    }).format(val);
+};
+
+const pctBR = (val: number) => {
+    return `${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+};
+
+const Button = ({ children, className = '', variant = 'default', size = 'default', ...props }: any) => {
+    let base = "inline-flex items-center justify-center rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 ";
+    if (variant === 'outline') base += "border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 ";
+    else if (variant === 'ghost') base += "hover:bg-slate-100 text-slate-700 ";
+    else if (variant === 'secondary') base += "bg-slate-100 hover:bg-slate-200 text-slate-700 ";
+    else base += "bg-purple-600 hover:bg-purple-700 text-white ";
+
+    if (size === 'icon') base += "h-7 w-7 p-0 flex items-center justify-center ";
+    else if (size === 'sm') base += "h-7 px-2.5 text-[10px] ";
+    else base += "h-9 px-4 py-2 ";
+
+    return <button className={`${base} ${className}`} {...props}>{children}</button>;
+};
+
+const Card = ({ className = '', children, ...props }: any) => (
+    <div className={`rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm ${className}`} {...props}>{children}</div>
+);
+
+const CardContent = ({ className = '', children, ...props }: any) => (
+    <div className={`${className}`} {...props}>{children}</div>
+);
+// --------------------------------------------------------------
 
 export const STATUS_PIPELINE = [
     { id: "rascunho", label: "Rascunho / Em Estudo" },
@@ -100,7 +135,7 @@ export function EstudoCard({
     return (
         <Card
             draggable={draggable}
-            onDragStart={(ev) => ev.dataTransfer.setData("text/plain", estudo.id)}
+            onDragStart={(ev: any) => ev.dataTransfer.setData("text/plain", estudo.id)}
             className={`bg-white rounded-2xl border border-slate-200 shadow-2xs ${ativo ? "border-purple-500 ring-1 ring-purple-200" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""
                 }`}
         >
