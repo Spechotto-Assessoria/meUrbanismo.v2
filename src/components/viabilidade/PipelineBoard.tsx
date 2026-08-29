@@ -1,15 +1,30 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { normalizar } from "@/lib/cidades-br";
 import {
     EstudoCard,
     STATUS_PIPELINE,
     normalizeStatus,
     type EstudoRow,
     type EstudoStatus,
-} from "@/components/viabilidade/EstudoCard";
+} from "./EstudoCard";
+
+// --- UI E HELPERS EMBUTIDOS PARA GARANTIR O BUILD ---
+const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
+
+const Button = React.forwardRef(({ className = '', variant = 'default', children, ...props }: any, ref: any) => {
+    let base = "inline-flex items-center justify-center rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 h-9 px-4 py-2 ";
+    if (variant === 'outline') base += "border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 ";
+    else if (variant === 'ghost') base += "hover:bg-slate-100 text-slate-700 ";
+    else base += "bg-purple-600 hover:bg-purple-700 text-white ";
+    return <button ref={ref} className={cn(base, className)} {...props}>{children}</button>;
+});
+
+const Input = React.forwardRef(({ className = '', ...props }: any, ref: any) => (
+    <input ref={ref} className={cn("flex h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm shadow-2xs outline-none focus:ring-1 focus:ring-purple-500", className)} {...props} />
+));
+
+const normalizar = (str: string) => (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// ----------------------------------------------------
 
 const CORES: Record<EstudoStatus, string> = {
     rascunho: "bg-slate-100 text-slate-700 border border-slate-200",
@@ -35,107 +50,88 @@ export function PipelineBoard({
     onExcluir: (e: EstudoRow) => void;
     onStatus: (e: EstudoRow, s: EstudoStatus) => void;
 }) {
-    const [over, setOver] = useState<EstudoStatus | null>(null);
     const [busca, setBusca] = useState("");
-    const [filtro, setFiltro] = useState<EstudoStatus | "todos">("todos");
 
-    const filtrados = useMemo(() => {
-        const q = normalizar(busca);
-        if (!q) return estudos;
-        return estudos.filter((e) =>
-            [e.titulo, e.empresa_nome, e.localizacao].some((v) => v && normalizar(v).includes(q)),
+    const estudosFiltrados = useMemo(() => {
+        const termo = normalizar(busca);
+        if (!termo) return estudos;
+        return estudos.filter(
+            (e) =>
+                normalizar(e.titulo).includes(termo) ||
+                normalizar(e.localizacao ?? "").includes(termo) ||
+                normalizar(e.empresa_nome ?? "").includes(termo)
         );
     }, [estudos, busca]);
 
-    const colunas = STATUS_PIPELINE.filter((c) => filtro === "todos" || c.id === filtro);
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, novoStatus: EstudoStatus) => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData("text/plain");
+        const estudoAlvo = estudos.find((x) => x.id === id);
+        if (estudoAlvo && normalizeStatus(estudoAlvo.status) !== novoStatus) {
+            onStatus(estudoAlvo, novoStatus);
+        }
+    };
 
     return (
-        <section className="space-y-4">
-            <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <div className="space-y-4">
+            <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input
                         value={busca}
-                        onChange={(e) => setBusca(e.target.value)}
-                        placeholder="Buscar por Empreendimento / Empresa..."
-                        className="pl-9 bg-slate-50 border-slate-200 rounded-xl"
+                        onChange={(e: any) => setBusca(e.target.value)}
+                        placeholder="Buscar por empreendimento, local ou empresa..."
+                        className="pl-9"
                     />
-                </div>
-                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                    {(["todos", ...STATUS_PIPELINE.map((s) => s.id)] as const).map((id) => {
-                        const label = id === "todos" ? "Todos" : STATUS_PIPELINE.find((s) => s.id === id)!.label;
-                        return (
-                            <Button
-                                key={id}
-                                size="sm"
-                                variant={filtro === id ? "default" : "outline"}
-                                className={`shrink-0 rounded-xl text-xs font-bold ${filtro === id ? "bg-purple-600 hover:bg-purple-700 text-white" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                                    }`}
-                                onClick={() => setFiltro(id as EstudoStatus | "todos")}
-                            >
-                                {label}
-                            </Button>
-                        );
-                    })}
                 </div>
             </div>
 
-            <div className="flex w-full snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4">
-                {colunas.map((col) => {
-                    const itens = filtrados.filter((e) => normalizeStatus(e.status) === col.id);
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {STATUS_PIPELINE.map((col) => {
+                    const itens = estudosFiltrados.filter(
+                        (e) => normalizeStatus(e.status) === col.id
+                    );
                     return (
                         <div
                             key={col.id}
-                            onDragOver={(ev) => {
-                                ev.preventDefault();
-                                setOver(col.id);
-                            }}
-                            onDragLeave={() => setOver((o) => (o === col.id ? null : o))}
-                            onDrop={(ev) => {
-                                ev.preventDefault();
-                                setOver(null);
-                                const id = ev.dataTransfer.getData("text/plain");
-                                const alvo = estudos.find((e) => e.id === id);
-                                if (alvo && normalizeStatus(alvo.status) !== col.id) onStatus(alvo, col.id);
-                            }}
-                            className={`flex min-h-[300px] w-[280px] shrink-0 snap-start flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 transition-colors sm:w-[320px] ${over === col.id ? "border-purple-500 bg-purple-50/50" : ""
-                                }`}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => handleDrop(e, col.id)}
+                            className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 min-h-[400px] flex flex-col"
                         >
-                            <div className="flex items-center justify-between gap-2 px-1">
-                                <h3 className="truncate text-xs font-bold uppercase tracking-wider text-slate-600">
+                            <div className="flex justify-between items-center px-1">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
                                     {col.label}
                                 </h3>
-                                <span
-                                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold tabular-nums ${CORES[col.id]}`}
-                                >
+                                <span className="bg-white px-2 py-0.5 rounded-full text-xs font-bold text-slate-700 border border-slate-200">
                                     {itens.length}
                                 </span>
                             </div>
 
-                            {itens.length === 0 ? (
-                                <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-8 text-center text-xs text-slate-400">
-                                    {busca ? "Nenhum estudo encontrado." : "Sem estudos nesta etapa"}
-                                </div>
-                            ) : (
-                                itens.map((e) => (
-                                    <EstudoCard
-                                        key={e.id}
-                                        estudo={e}
-                                        compact
-                                        draggable
-                                        ativo={e.id === estudoId}
-                                        gerando={false}
-                                        onEditar={() => onEditar(e)}
-                                        onPdf={() => onPdf(e)}
-                                        onExcluir={() => onExcluir(e)}
-                                        onStatus={(s) => onStatus(e, s)}
-                                    />
-                                ))
-                            )}
+                            <div className="space-y-3 flex-1">
+                                {itens.length === 0 ? (
+                                    <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400">
+                                        Nenhum estudo nesta etapa
+                                    </div>
+                                ) : (
+                                    itens.map((estudo) => (
+                                        <EstudoCard
+                                            key={estudo.id}
+                                            estudo={estudo}
+                                            ativo={estudo.id === estudoId}
+                                            gerando={gerandoCard === estudo.id}
+                                            draggable={true}
+                                            onEditar={() => onEditar(estudo)}
+                                            onPdf={() => onPdf(estudo)}
+                                            onExcluir={() => onExcluir(estudo)}
+                                            onStatus={(s) => onStatus(estudo, s)}
+                                        />
+                                    ))
+                                )}
+                            </div>
                         </div>
                     );
                 })}
             </div>
-        </section>
+        </div>
     );
 }
