@@ -1,12 +1,27 @@
-export type TipoEmpreendimento = "loteamento" | "condominio";
+export type TipoEmpreendimento = 'loteamento' | 'condominio';
 
-export type PercentuaisAreas = {
-    viario: number;
-    verde: number;
-    institucional: number;
+export const PRESETS_AREAS = {
+    loteamento: {
+        label: "Loteamento Aberto",
+        lei: "Lei 6.766/1979",
+        custoM2: 80.00,
+        padrao: { viario: 22, verde: 12, institucional: 6 },
+    },
+    condominio: {
+        label: "Condominio Fechado / Condominio de Lotes",
+        lei: "Lei 13.465/2017",
+        custoM2: 150.00,
+        padrao: { viario: 20, verde: 12, institucional: 6 },
+    }
 };
 
-export interface ViabilidadeInicialInput {
+export const LABELS_AREAS = {
+    viario: "Sistema Viário (faixa 18%~22%)",
+    verde: "Áreas Verdes e Lazer (faixa 10%~15%)",
+    institucional: "Áreas Institucionais (faixa 0%~8%)",
+};
+
+export type ViabilidadeInicialInput = {
     obraNome: string;
     empresaNome: string;
     cnpj: string;
@@ -15,189 +30,155 @@ export interface ViabilidadeInicialInput {
     tipo: TipoEmpreendimento;
     areaTerreno: number;
     areaApp: number;
-    percentuais: PercentuaisAreas;
+    percentuais: { viario: number; verde: number; institucional: number };
     loteMedio: number;
     custoM2Privativo: number;
+    valorVendaM2: number;
     taxaDescontoAA: number;
     prazoObraMeses: number;
     prazoVendasMeses: number;
-}
+};
 
-export interface ViabilidadeInicialResult {
+export type GraficoPonto = { mes: number; fcl: number; acumulado: number };
+
+export type ViabilidadeInicialResult = {
     areaBase: number;
-    areaApp: number;
-    areaViario: number;
-    areaVerde: number;
-    areaInstitucional: number;
-    areaVendavel: number;
     pctVendavel: number;
-    aproveitamentoPct: number;
+    areaVendavel: number;
     qtdLotes: number;
-    custoPorM2: number;
-    valorM2Privativo: number;
-    custoPorLote: number;
-    valorVendaLote: number;
-    custoTotal: number;
     vgvTotal: number;
+    custoTotal: number;
+    valorVendaLote: number;
+    custoPorLote: number;
     margemBruta: number;
     margemPct: number;
+    aproveitamentoPct: number;
     roi: number;
-    vpl: number;
     tirAnual: number | null;
-    tirConfiavel: boolean;
-    paybackMeses: number | null;
-    taxaMensalTMA: number;
-    fluxoAcumulado: { mes: number; valor: number }[];
-    fluxo: { mes: number; receita: number; despesa: number; liquido: number; acumulado: number }[];
+    vpl: number;
+    exposicaoMaxima: number;
+    mesBreakEven: number | null;
+    graficoFluxo: GraficoPonto[];
+};
+
+// Algoritmo de Interpolação para Eficiência Viária Dinâmica
+export function calcularEficienciaViaria(loteMedio: number): number {
+    if (loteMedio <= 250) return 24.00;
+    if (loteMedio >= 1500) return 13.00;
+    return 24.00 - (11.00 * ((loteMedio - 250) / 1250));
 }
 
-export const LABELS_AREAS: Record<keyof PercentuaisAreas, string> = {
-    viario: "Sistema Viário",
-    verde: "Áreas Verdes e Lazer",
-    institucional: "Áreas Institucionais",
-};
+// Algoritmo Newton-Raphson para aproximação da Taxa Interna de Retorno (TIR)
+function calcularTIR(fluxo: number[], guess = 0.01): number | null {
+    const maxIter = 1000;
+    const tol = 1e-6;
+    let rate = guess;
 
-export const PRESETS_AREAS = {
-    loteamento: {
-        label: "Loteamento Aberto",
-        lei: "Lei 6.766/1979",
-        custoM2: 80,
-        padrao: { viario: 20, verde: 12, institucional: 6 },
-        faixas: { viario: [18, 22] as [number, number], verde: [10, 15] as [number, number], institucional: [0, 8] as [number, number] },
-    },
-    condominio: {
-        label: "Condomínio Fechado / Condomínio de Lotes",
-        lei: "Lei 13.465/2017",
-        custoM2: 150,
-        padrao: { viario: 18, verde: 12, institucional: 5 },
-        faixas: { viario: [15, 20] as [number, number], verde: [8, 15] as [number, number], institucional: [0, 8] as [number, number] },
-    },
-};
+    for (let i = 0; i < maxIter; i++) {
+        let npv = 0;
+        let dNpv = 0;
+        for (let t = 0; t < fluxo.length; t++) {
+            npv += fluxo[t] / Math.pow(1 + rate, t);
+            if (t > 0) dNpv -= (t * fluxo[t]) / Math.pow(1 + rate, t + 1);
+        }
+        if (Math.abs(dNpv) < 1e-12) return null; // Prevenção de divisão por zero
+        const newRate = rate - npv / dNpv;
+        if (Math.abs(newRate - rate) < tol) return newRate;
+        rate = newRate;
+    }
+    return null;
+}
 
-export const CARTA_APRESENTACAO = [
-    "Em atendimento a vossa solicitação, apresentamos a seguir o Estudo de Viabilidade Inicial do empreendimento descrito abaixo.",
-    "Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.",
-    "Agradecemos desde já a confiança depositada e nos colocamos à vossa inteira disposição para os esclarecimentos que se fizerem necessários."
-];
+export function calcViabilidadeInicial(input: ViabilidadeInicialInput): ViabilidadeInicialResult {
+    const areaBase = input.areaTerreno - input.areaApp;
+    const somaPct = (input.percentuais.viario + input.percentuais.verde + input.percentuais.institucional);
+    const pctVendavel = Math.max(0, 100 - somaPct);
+    const areaVendavel = areaBase * (pctVendavel / 100);
 
-export const CONSIDERACOES_INICIAIS = [
-    "O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações contidas na matrícula enviada.",
-    "Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de APP na área. Quando houver, recomenda-se que a área de doação obrigatória seja adquirida externamente ao empreendimento, de modo a não reduzir a área vendável.",
-    "Como infraestrutura básica, o empreendimento deverá contemplar: rede de drenagem, dreno de bordo nas ruas, rede de abastecimento de água, tratamento de esgoto, pavimentação asfáltica, rede de energia e iluminação, garantindo qualidade superior ao produto final.",
-    "Demais definições deverão ser tomadas ao longo do desenvolvimento do projeto."
-];
+    const qtdLotes = input.loteMedio > 0 ? Math.floor(areaVendavel / input.loteMedio) : 0;
+    const vgvTotal = areaVendavel * input.valorVendaM2;
+    const custoTotal = areaVendavel * input.custoM2Privativo;
+
+    const margemBruta = vgvTotal - custoTotal;
+    const margemPct = vgvTotal > 0 ? (margemBruta / vgvTotal) * 100 : 0;
+    const roi = custoTotal > 0 ? ((vgvTotal - custoTotal) / custoTotal) * 100 : 0;
+    const aproveitamentoPct = input.areaTerreno > 0 ? (areaVendavel / input.areaTerreno) * 100 : 0;
+
+    const valorVendaLote = qtdLotes > 0 ? vgvTotal / qtdLotes : 0;
+    const custoPorLote = qtdLotes > 0 ? custoTotal / qtdLotes : 0;
+
+    // GERADOR DE FLUXO DE CAIXA: Curva S + Efeito Escadinha
+    const prazoObra = input.prazoObraMeses || 1;
+    const prazoVendas = input.prazoVendasMeses || 1;
+    const prazoFinanciamento = 60; // Padrão de 60 meses de parcelamento pós-entrada
+    const mesesTotais = Math.max(prazoObra, prazoVendas + prazoFinanciamento) + 1;
+    const fluxoCaixa = Array(mesesTotais).fill(0);
+
+    // 1. Curva S - Desembolso de Obra
+    for (let t = 1; t <= prazoObra; t++) {
+        const xAtual = t / prazoObra;
+        const xAnt = (t - 1) / prazoObra;
+        const sAtual = 3 * Math.pow(xAtual, 2) - 2 * Math.pow(xAtual, 3);
+        const sAnt = 3 * Math.pow(xAnt, 2) - 2 * Math.pow(xAnt, 3);
+        fluxoCaixa[t] -= custoTotal * (sAtual - sAnt);
+    }
+
+    // 2. Receitas - Entrada + Escadinha de Parcelamento
+    if (vgvTotal > 0 && prazoVendas > 0) {
+        const vgvMensal = vgvTotal / prazoVendas;
+        const pctEntrada = 0.10;
+        const pctParcelado = 0.90;
+
+        for (let v = 1; v <= prazoVendas; v++) {
+            fluxoCaixa[v] += (vgvMensal * pctEntrada);
+            const parcela = (vgvMensal * pctParcelado) / prazoFinanciamento;
+            for (let p = 1; p <= prazoFinanciamento; p++) {
+                if (v + p < fluxoCaixa.length) {
+                    fluxoCaixa[v + p] += parcela;
+                }
+            }
+        }
+    }
+
+    // 3. Indicadores Avançados (VPL, TIR, Exposição, Payback)
+    const tmaMes = Math.pow(1 + (input.taxaDescontoAA / 100), 1 / 12) - 1;
+    let vpl = 0;
+    let acumulado = 0;
+    let exposicaoMaxima = 0;
+    let mesBreakEven = null;
+    const graficoFluxo: GraficoPonto[] = [];
+
+    for (let t = 0; t < fluxoCaixa.length; t++) {
+        const fcl = fluxoCaixa[t];
+        vpl += fcl / Math.pow(1 + tmaMes, t);
+        acumulado += fcl;
+
+        if (acumulado < exposicaoMaxima) exposicaoMaxima = acumulado;
+        if (mesBreakEven === null && t > 0 && acumulado >= 0 && fluxoCaixa.slice(0, t).reduce((a, b) => a + b, 0) < 0) {
+            mesBreakEven = t;
+        }
+
+        graficoFluxo.push({ mes: t, fcl, acumulado });
+    }
+
+    const tirMensal = calcularTIR(fluxoCaixa);
+    const tirAnual = tirMensal !== null ? (Math.pow(1 + tirMensal, 12) - 1) * 100 : null;
+
+    return {
+        areaBase, pctVendavel, areaVendavel, qtdLotes,
+        vgvTotal, custoTotal, valorVendaLote, custoPorLote,
+        margemBruta, margemPct, aproveitamentoPct, roi,
+        tirAnual, vpl, exposicaoMaxima, mesBreakEven, graficoFluxo
+    };
+}
 
 export const NOTA_TECNICA = [
     {
         titulo: "1. Loteamentos Abertos (Lei 6.766/1979) — Eficiência Média: 50% a 58%",
-        paragrafos: [
-            "As vias, praças e áreas institucionais são obrigatoriamente doadas ao município. As exigências de caixas de rua (largura mínima das vias) e recuos municipais costumam ser mais rígidas, o que aumenta a proporção gasta com o sistema viário."
-        ]
+        paragrafos: ["As vias, praças e áreas institucionais são obrigatoriamente doadas ao município. As exigências de caixas de rua (largura mínima das vias) e recuos municipais costumam ser mais rígidas, o que aumenta a proporção gasta com o sistema viário."]
     },
     {
         titulo: "2. Condomínios de Lotes / Fechados (Lei 13.465/2017) — Eficiência Média: 58% a 68%",
-        paragrafos: [
-            "As vias internas e áreas de lazer são áreas comuns privativas dos condôminos. O projetista consegue otimizar o desenho urbanístico com ruas mais estreitas, utilização de cul-de-sacs (ruas sem saída com balão de retorno) e redução de sobras de terreno, aumentando a área privativa comercializável."
-        ]
-    },
-    {
-        titulo: "Fatores que Reduzem ou Ampliam a Eficiência",
-        paragrafos: [
-            "Fatores que REDUZEM a área vendável (< 50%): presença de córregos, nascentes, declividades acentuadas (> 30%) ou APPs que não podem ser contadas como área verde útil; formato irregular do terreno (glebas afuniladas geram mais perdas viárias); exigências municipais de doação de áreas institucionais acima do padrão.",
-            "Fatores que AMPLIAM a área vendável (> 65%): terrenos planos e de formato retangular/regular; lotes maiores (ex.: 1.000 m² ou mais), pois exigem menos ruas e interseções por hectare em comparação a loteamentos populares de lotes pequenos (125 m² a 200 m²)."
-        ]
+        paragrafos: ["As vias internas e áreas de lazer são áreas comuns privativas dos condôminos. O projetista consegue otimizar o desenho urbanístico com ruas mais estreitas, utilização de cul-de-sacs (ruas sem saída com balão de retorno) e redução de sobras de terreno, aumentando a área privativa comercializável."]
     }
 ];
-
-export function calcViabilidadeInicial(input: ViabilidadeInicialInput): ViabilidadeInicialResult {
-    const areaBase = Math.max(0, input.areaTerreno - input.areaApp);
-
-    const pctViario = input.percentuais.viario / 100;
-    const pctVerde = input.percentuais.verde / 100;
-    const pctInstitucional = input.percentuais.institucional / 100;
-
-    const areaViario = areaBase * pctViario;
-    const areaVerde = areaBase * pctVerde;
-    const areaInstitucional = areaBase * pctInstitucional;
-
-    const areaVendavel = Math.max(0, areaBase - (areaViario + areaVerde + areaInstitucional));
-    const pctVendavel = areaBase > 0 ? (areaVendavel / areaBase) * 100 : 0;
-    const aproveitamentoPct = input.areaTerreno > 0 ? (areaVendavel / input.areaTerreno) * 100 : 0;
-
-    const qtdLotes = input.loteMedio > 0 ? Math.floor(areaVendavel / input.loteMedio) : 0;
-
-    const custoPorM2 = input.custoM2Privativo;
-    const valorM2Privativo = custoPorM2 * 4; // Premissa: Custo representa 25% do valor de venda
-
-    const custoTotal = areaVendavel * custoPorM2;
-    const vgvTotal = areaVendavel * valorM2Privativo;
-
-    const custoPorLote = qtdLotes > 0 ? custoTotal / qtdLotes : 0;
-    const valorVendaLote = qtdLotes > 0 ? vgvTotal / qtdLotes : 0;
-
-    const margemBruta = vgvTotal - custoTotal;
-    const margemPct = vgvTotal > 0 ? (margemBruta / vgvTotal) * 100 : 0;
-    const roi = custoTotal > 0 ? (margemBruta / custoTotal) * 100 : 0;
-
-    const mesesObra = Math.max(1, input.prazoObraMeses);
-    const mesesVendas = Math.max(1, input.prazoVendasMeses);
-    const mesesTotais = mesesObra + mesesVendas;
-
-    const desembolsoMensal = custoTotal / mesesObra;
-    const receitaMensal = vgvTotal / mesesVendas;
-
-    const taxaAnual = Math.max(0, input.taxaDescontoAA / 100);
-    const taxaMensalTMA = Math.pow(1 + taxaAnual, 1 / 12) - 1;
-
-    let acumulado = 0;
-    let vpl = 0;
-    let paybackMeses: number | null = null;
-    const fluxoAcumulado: { mes: number; valor: number }[] = [];
-    const fluxo: { mes: number; receita: number; despesa: number; liquido: number; acumulado: number }[] = [];
-
-    for (let m = 1; m <= mesesTotais; m++) {
-        const despesa = m <= mesesObra ? desembolsoMensal : 0;
-        const receita = m <= mesesVendas ? receitaMensal : 0;
-        const liquido = receita - despesa;
-
-        acumulado += liquido;
-        if (paybackMeses === null && acumulado >= 0) {
-            paybackMeses = m;
-        }
-        vpl += liquido / Math.pow(1 + taxaMensalTMA, m);
-
-        fluxo.push({ mes: m, receita, despesa, liquido, acumulado });
-
-        if (m % 3 === 0 || m === 1 || m === mesesTotais) {
-            fluxoAcumulado.push({ mes: m, valor: acumulado });
-        }
-    }
-
-    return {
-        areaBase,
-        areaApp: input.areaApp,
-        areaViario,
-        areaVerde,
-        areaInstitucional,
-        areaVendavel,
-        pctVendavel,
-        aproveitamentoPct,
-        qtdLotes,
-        custoPorM2,
-        valorM2Privativo,
-        custoPorLote,
-        valorVendaLote,
-        custoTotal,
-        vgvTotal,
-        margemBruta,
-        margemPct,
-        roi,
-        vpl,
-        tirAnual: roi > 0 ? Math.min(150, roi / 3.5) : 0,
-        tirConfiavel: true,
-        paybackMeses,
-        taxaMensalTMA,
-        fluxoAcumulado,
-        fluxo,
-    };
-}
