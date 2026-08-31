@@ -345,11 +345,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       if (error) {
-        return { success: false, error: error.message };
+        const msg = error.message || '';
+        if (
+          msg.toLowerCase().includes('provider is not enabled') ||
+          msg.toLowerCase().includes('unsupported provider') ||
+          msg.toLowerCase().includes('not enabled')
+        ) {
+          return {
+            success: false,
+            error: 'O login com Google não está habilitado no servidor Supabase. Por favor, utilize seu e-mail e senha cadastrados.'
+          };
+        }
+        return { success: false, error: msg };
       }
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Erro ao iniciar login social Google.' };
+      const msg = err?.message || String(err);
+      if (
+        msg.toLowerCase().includes('provider is not enabled') ||
+        msg.toLowerCase().includes('unsupported provider') ||
+        msg.toLowerCase().includes('not enabled')
+      ) {
+        return {
+          success: false,
+          error: 'O login com Google não está habilitado no servidor Supabase. Por favor, utilize seu e-mail e senha cadastrados.'
+        };
+      }
+      return { success: false, error: 'Falha temporária ao conectar com o Google OAuth. Utilize e-mail e senha.' };
     }
   };
 

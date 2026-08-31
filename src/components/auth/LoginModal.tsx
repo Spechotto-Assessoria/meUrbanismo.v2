@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import { useAuth, DEMO_USERS } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   Lock,
   Mail,
   KeyRound,
   ShieldCheck,
-  Building2,
-  Sparkles,
-  ArrowRight,
   X,
-  UserCheck,
   CheckCircle2,
-  Briefcase
+  AlertCircle
 } from 'lucide-react';
-import { UserRole } from '../../types';
 
-export const LoginModal: React.FC = () => {
-  const { showLoginModal, setShowLoginModal, loginWithEmail, loginWithGoogle, loginAsProfile, user, isMasterAdmin } = useAuth();
+interface LoginModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+  const { loginWithEmail, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +24,7 @@ export const LoginModal: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  if (!showLoginModal) return null;
+  if (isOpen === false) return null;
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,16 +33,16 @@ export const LoginModal: React.FC = () => {
     try {
       const res = await loginWithEmail(email, password);
       if (res.success) {
-        setSuccess('Login realizado com sucesso!');
+        setSuccess('Autenticado com sucesso!');
         setTimeout(() => {
           setSuccess(null);
-          setShowLoginModal(false);
+          if (onClose) onClose();
         }, 800);
       } else {
-        setError(res.error || 'Falha ao autenticar.');
+        setError(res.error || 'Credenciais inválidas.');
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao conectar ao servidor.');
+      setError(err.message || 'Erro ao conectar ao servidor de autenticação.');
     } finally {
       setLoading(false);
     }
@@ -50,27 +50,19 @@ export const LoginModal: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
-      await loginWithGoogle();
-      setSuccess('Autenticado via Google OAuth!');
-      setTimeout(() => {
-        setSuccess(null);
-        setShowLoginModal(false);
-      }, 800);
+      const res = await loginWithGoogle();
+      if (!res.success) {
+        setError(res.error || 'Login com Google temporariamente indisponível no servidor.');
+      } else {
+        setSuccess('Autenticado via Google OAuth!');
+      }
     } catch (err: any) {
-      setError('Erro no login social Google.');
+      setError('Login com Google indisponível no momento. Utilize e-mail e senha.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSelectDemoProfile = (role: UserRole) => {
-    loginAsProfile(role);
-    setSuccess(`Acessando como ${DEMO_USERS[role].nome}`);
-    setTimeout(() => {
-      setSuccess(null);
-      setShowLoginModal(false);
-    }, 600);
   };
 
   return (
@@ -78,35 +70,37 @@ export const LoginModal: React.FC = () => {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden relative">
         
         {/* CABEÇALHO */}
-        <div className="bg-gradient-to-r from-blue-900 to-blue-950 p-6 text-white text-center relative">
-          <button
-            type="button"
-            onClick={() => setShowLoginModal(false)}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 p-6 text-white text-center relative">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 backdrop-blur-md p-2 flex items-center justify-center border border-white/20 mb-3">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 backdrop-blur-md p-2 flex items-center justify-center border border-white/20 mb-3 shadow-inner">
             <img src="/logo-meurbanismo.png" alt="meUrbanismo" className="w-full h-full object-contain" />
           </div>
 
           <h2 className="text-xl font-black tracking-tight">meUrbanismo</h2>
-          <p className="text-xs text-blue-200 mt-0.5">Gestão Inteligente & Engenharia Urbana</p>
+          <p className="text-xs text-blue-200 mt-0.5">Autenticação Segura & Gestão de Obras</p>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 sm:p-8 space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2">
-              <X className="w-4 h-4 text-red-500 shrink-0" />
-              {error}
+            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-start gap-2 animate-fadeIn">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
+            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              {success}
+              <span>{success}</span>
             </div>
           )}
 
@@ -120,10 +114,11 @@ export const LoginModal: React.FC = () => {
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
+                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ex: seu.email@exemplo.com"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -136,10 +131,11 @@ export const LoginModal: React.FC = () => {
                 <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -147,24 +143,25 @@ export const LoginModal: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer mt-1"
             >
               <Lock className="w-4 h-4" />
-              {loading ? 'Verificando Credenciais...' : 'Entrar na Plataforma'}
+              {loading ? 'Verificando...' : 'Entrar'}
             </button>
           </form>
 
           {/* SOCIAL GOOGLE LOGIN */}
-          <div className="relative my-4">
+          <div className="relative my-3">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
             <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
-              <span className="bg-white px-2">Ou autentique com</span>
+              <span className="bg-white px-2">Ou acesse com</span>
             </div>
           </div>
 
           <button
             type="button"
             onClick={handleGoogleLogin}
+            disabled={loading}
             className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-xs"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -173,64 +170,15 @@ export const LoginModal: React.FC = () => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
             </svg>
-            Entrar com Google
+            Entrar com Google OAuth
           </button>
 
-          {/* ALTERNADOR RÁPIDO DE PERFIS (DEMO & TESTES) */}
-          <div className="pt-2 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-purple-600" /> Acesso Rápido por Papel
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleSelectDemoProfile('ADMINISTRADOR')}
-                className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/80 text-left transition-colors cursor-pointer"
-              >
-                <div className="text-[11px] font-bold text-blue-900 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" /> Administrador Master
-                </div>
-                <div className="text-[9px] text-blue-700/80 truncate">rennan.spechotto@gmail.com</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectDemoProfile('PROPRIETARIO_INVESTIDOR')}
-                className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-left transition-colors cursor-pointer"
-              >
-                <div className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                  <Briefcase className="w-3.5 h-3.5 text-blue-600" /> Investidor
-                </div>
-                <div className="text-[9px] text-slate-500 truncate">Proprietário Gleba</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectDemoProfile('CORRETOR')}
-                className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-left transition-colors cursor-pointer"
-              >
-                <div className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                  <UserCheck className="w-3.5 h-3.5 text-amber-600" /> Corretor
-                </div>
-                <div className="text-[9px] text-slate-500 truncate">Vendas & Mapa</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectDemoProfile('CLIENTE_COMPRADOR')}
-                className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-left transition-colors cursor-pointer"
-              >
-                <div className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                  <Building2 className="w-3.5 h-3.5 text-emerald-600" /> Adquirente
-                </div>
-                <div className="text-[9px] text-slate-500 truncate">Cliente Comprador</div>
-              </button>
-            </div>
+          <div className="pt-2 border-t border-slate-100 text-center">
+            <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+              Sessão protegida por criptografia
+            </p>
           </div>
-
         </div>
       </div>
     </div>
