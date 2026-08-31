@@ -45,7 +45,7 @@ const DonutSVG = ({ values, colors }: { values: number[], colors: string[] }) =>
     const total = values.reduce((a, b) => a + b, 0) || 1;
     let offset = 0;
     return (
-        <svg viewBox="0 0 32 32" className="w-32 h-32 transform -rotate-90 mx-auto">
+        <svg viewBox="0 0 32 32" className="w-28 h-28 transform -rotate-90 mx-auto">
             {values.map((v, i) => {
                 const dash = (v / total) * 100;
                 const out = <circle key={i} r="15.915494309" cx="16" cy="16" fill="transparent" stroke={colors[i]} strokeWidth="5" strokeDasharray={`${dash} 100`} strokeDashoffset={-offset} />;
@@ -59,7 +59,7 @@ const DonutSVG = ({ values, colors }: { values: number[], colors: string[] }) =>
 const BarSVG = ({ c, v, m }: { c: number, v: number, m: number }) => {
     const max = Math.max(c, v, m, 1);
     return (
-        <div className="flex items-end justify-center gap-6 h-40 w-full pt-2 border-b-2 border-slate-300">
+        <div className="flex items-end justify-center gap-6 h-36 w-full pt-2 border-b-2 border-slate-300">
             <div className="flex flex-col items-center w-20 justify-end">
                 <span className="text-[9px] font-bold text-slate-800 mb-1">{formatBRL(c).replace(/,00$/, '')}</span>
                 <div style={{ height: `${Math.max(15, (c / max) * 100)}%` }} className="w-full bg-blue-900 rounded-t-sm" />
@@ -88,7 +88,7 @@ const SCurveSVG = ({ data }: { data: { mes: number, acumulado: number }[] }) => 
     const zeroY = 100 - ((0 - min) / range) * 100;
 
     return (
-        <div className="relative w-full h-40 my-2 border-l border-b border-slate-400">
+        <div className="relative w-full h-36 my-2 border-l border-b border-slate-400">
             <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" preserveAspectRatio="none">
                 <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="#94a3b8" strokeDasharray="2" strokeWidth="0.5" />
                 <polyline points={pts} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -620,14 +620,13 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
 
 
                     {/* ============================================================================== */}
-                    {/* === INÍCIO DO RELATÓRIO DE IMPRESSÃO ROBUSTO (4 PÁGINAS ISOLADAS COM CSS FIXO) === */}
+                    {/* === INÍCIO DO RELATÓRIO DE IMPRESSÃO ROBUSTO (4 PÁGINAS EXATAS SEM PÁGINAS VAZIAS) === */}
                     {/* ============================================================================== */}
                     <div className="hidden print:block bg-white text-slate-900 w-full">
 
                         {/* ================= PÁGINA 1: CAPA / APRESENTAÇÃO / CONSIDERAÇÕES ================= */}
-                        <div className="w-full" style={{ pageBreakAfter: 'always', breakAfter: 'page', minHeight: '100vh', padding: '20px' }}>
-                            {/* Cabeçalho Corporativo com Logos Fixas */}
-                            <table style={{ width: '100%', borderBottom: '4px solid #1e3a8a', paddingBottom: '16px', marginBottom: '24px' }}>
+                        <div className="w-full" style={{ pageBreakAfter: 'always', breakAfter: 'page', padding: '15px' }}>
+                            <table style={{ width: '100%', borderBottom: '4px solid #1e3a8a', paddingBottom: '12px', marginBottom: '20px' }}>
                                 <tbody>
                                     <tr>
                                         <td style={{ width: '33%', textAlign: 'left', verticalAlign: 'middle' }}>
@@ -644,80 +643,76 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                 </tbody>
                             </table>
 
-                            {/* Dados de Identificação */}
-                            <div style={{ fontSize: '11px', lineHeight: '1.5', color: '#334155', marginBottom: '20px', textAlign: 'justify' }}>
-                                <div style={{ textAlign: 'right', fontWeight: 'bold', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '11px', lineHeight: '1.4', color: '#334155', marginBottom: '16px', textAlign: 'justify' }}>
+                                <div style={{ textAlign: 'right', fontWeight: 'bold', marginBottom: '10px' }}>
                                     Cuiabá, {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.
                                 </div>
                                 <p><strong>Aos cuidados de:</strong> {destinatario || 'Cliente / Investidor'}</p>
-                                <p style={{ marginTop: '4px' }}><strong>Assunto:</strong> Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'} ({localizacao || 'Cuiabá - MT'})</p>
-                                <p style={{ marginTop: '12px' }}>Prezado(a),</p>
-                                <p style={{ marginTop: '6px' }}>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento denominado <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
-                                <p style={{ marginTop: '6px' }}>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção. Agradecemos desde já a confiança depositada e nos colocamos à vossa inteira disposição para os esclarecimentos que se fizerem necessários.</p>
+                                <p style={{ marginTop: '3px' }}><strong>Assunto:</strong> Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'} ({localizacao || 'Cuiabá - MT'})</p>
+                                <p style={{ marginTop: '10px' }}>Prezado(a),</p>
+                                <p style={{ marginTop: '5px' }}>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento denominado <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
+                                <p style={{ marginTop: '5px' }}>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção. Agradecemos desde já a confiança depositada e nos colocamos à vossa inteira disposição para os esclarecimentos que se fizerem necessários.</p>
                             </div>
 
-                            {/* Considerações Iniciais */}
-                            <div style={{ fontSize: '11px', lineHeight: '1.5', color: '#334155', textAlign: 'justify' }}>
-                                <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>Considerações Iniciais</h3>
-                                <p style={{ marginBottom: '8px' }}>O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações base de metragem. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de Área de Preservação Permanente (APP).</p>
+                            <div style={{ fontSize: '11px', lineHeight: '1.4', color: '#334155', textAlign: 'justify' }}>
+                                <h3 style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '3px', marginBottom: '6px', textTransform: 'uppercase' }}>Considerações Iniciais</h3>
+                                <p style={{ marginBottom: '6px' }}>O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações base de metragem. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de Área de Preservação Permanente (APP).</p>
                                 <p>Quando houver APP, recomenda-se que a área de doação obrigatória seja adquirida externamente ao empreendimento, de modo a não reduzir a área vendável. Como infraestrutura básica, o empreendimento deverá contemplar: rede de drenagem, dreno de bordo nas ruas, rede de abastecimento de água, tratamento de esgoto, pavimentação asfáltica, rede de energia e iluminação, garantindo qualidade superior ao produto final.</p>
                             </div>
                         </div>
 
                         {/* ================= PÁGINA 2: TABELAS (ÁREAS E INDICADORES) ================= */}
-                        <div className="w-full" style={{ pageBreakAfter: 'always', breakAfter: 'page', minHeight: '100vh', padding: '20px' }}>
-                            <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '2px solid #1e3a8a', paddingBottom: '6px', marginBottom: '16px', textTransform: 'uppercase' }}>Sumário Executivo e Métricas Numéricas</h2>
+                        <div className="w-full" style={{ pageBreakAfter: 'always', breakAfter: 'page', padding: '15px' }}>
+                            <h2 style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '2px solid #1e3a8a', paddingBottom: '5px', marginBottom: '14px', textTransform: 'uppercase' }}>Sumário Executivo e Métricas Numéricas</h2>
 
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <tbody>
                                     <tr>
-                                        {/* Quadro de Áreas */}
-                                        <td style={{ width: '48%', verticalAlign: 'top', paddingRight: '15px' }}>
-                                            <h3 style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>Quadro de Áreas</h3>
+                                        <td style={{ width: '48%', verticalAlign: 'top', paddingRight: '12px' }}>
+                                            <h3 style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '3px', marginBottom: '6px', textTransform: 'uppercase' }}>Quadro de Áreas</h3>
                                             <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse', border: '1px solid #cbd5e1' }}>
                                                 <thead>
                                                     <tr style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}>
-                                                        <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>Destinação</th>
-                                                        <th style={{ padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>Área (m²)</th>
-                                                        <th style={{ padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>%</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>Destinação</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>Área (m²)</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>%</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '4px 6px', fontWeight: 'bold' }}>Área total da gleba</td><td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatDecimal(input.areaTerreno)}</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>100%</td></tr>
-                                                    <tr><td style={{ padding: '4px 6px' }}>Área de APP (deduzida)</td><td style={{ padding: '4px 6px', textAlign: 'right', color: '#dc2626' }}>{formatDecimal(input.areaApp)}</td><td style={{ padding: '4px 6px', textAlign: 'right', color: '#dc2626' }}>{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
-                                                    <tr style={{ backgroundColor: '#f1f5f9' }}><td style={{ padding: '4px 6px', fontWeight: 'bold' }}>Área útil (após APP)</td><td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatDecimal(r.areaBase)}</td><td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
-                                                    <tr><td style={{ padding: '4px 6px' }}>Sistema Viário</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                                    <tr><td style={{ padding: '4px 6px' }}>Áreas Verdes e Lazer</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                                    <tr><td style={{ padding: '4px 6px' }}>Áreas Institucionais</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                                    <tr style={{ backgroundColor: '#eff6ff', borderTop: '2px solid #93c5fd' }}><td style={{ padding: '4px 6px', fontWeight: '900', color: '#1e3a8a' }}>Área privativa (Vendável)</td><td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a' }}>{formatDecimal(r.areaVendavel)}</td><td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a' }}>{formatDecimal(r.aproveitamentoPct)}%</td></tr>
-                                                    <tr style={{ backgroundColor: '#ffffff' }}><td style={{ padding: '4px 6px', fontWeight: 'bold' }}>Lotes estimados</td><td style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold' }}>{r.qtdLotes} lotes</td><td style={{ padding: '4px 6px', textAlign: 'right' }}>{formatDecimal(input.loteMedio)} m²</td></tr>
+                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '3px 5px', fontWeight: 'bold' }}>Área total da gleba</td><td style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatDecimal(input.areaTerreno)}</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>100%</td></tr>
+                                                    <tr><td style={{ padding: '3px 5px' }}>Área de APP (deduzida)</td><td style={{ padding: '3px 5px', textAlign: 'right', color: '#dc2626' }}>{formatDecimal(input.areaApp)}</td><td style={{ padding: '3px 5px', textAlign: 'right', color: '#dc2626' }}>{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
+                                                    <tr style={{ backgroundColor: '#f1f5f9' }}><td style={{ padding: '3px 5px', fontWeight: 'bold' }}>Área útil (após APP)</td><td style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatDecimal(r.areaBase)}</td><td style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
+                                                    <tr><td style={{ padding: '3px 5px' }}>Sistema Viário</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                                    <tr><td style={{ padding: '3px 5px' }}>Áreas Verdes e Lazer</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                                    <tr><td style={{ padding: '3px 5px' }}>Áreas Institucionais</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                                    <tr style={{ backgroundColor: '#eff6ff', borderTop: '2px solid #93c5fd' }}><td style={{ padding: '3px 5px', fontWeight: '900', color: '#1e3a8a' }}>Área privativa (Vendável)</td><td style={{ padding: '3px 5px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a' }}>{formatDecimal(r.areaVendavel)}</td><td style={{ padding: '3px 5px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a' }}>{formatDecimal(r.aproveitamentoPct)}%</td></tr>
+                                                    <tr style={{ backgroundColor: '#ffffff' }}><td style={{ padding: '3px 5px', fontWeight: 'bold' }}>Lotes estimados</td><td style={{ padding: '3px 5px', textAlign: 'right', fontWeight: 'bold' }}>{r.qtdLotes} lotes</td><td style={{ padding: '3px 5px', textAlign: 'right' }}>{formatDecimal(input.loteMedio)} m²</td></tr>
                                                 </tbody>
                                             </table>
                                         </td>
 
-                                        {/* Indicadores Financeiros */}
-                                        <td style={{ width: '48%', verticalAlign: 'top', paddingLeft: '15px' }}>
-                                            <h3 style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>Indicadores Financeiros</h3>
+                                        <td style={{ width: '48%', verticalAlign: 'top', paddingLeft: '12px' }}>
+                                            <h3 style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '3px', marginBottom: '6px', textTransform: 'uppercase' }}>Indicadores Financeiros</h3>
                                             <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse', border: '1px solid #cbd5e1' }}>
                                                 <thead>
                                                     <tr style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
-                                                        <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>Métrica</th>
-                                                        <th style={{ padding: '4px 6px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>Valor Estimado</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>Métrica</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>Valor Estimado</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr><td style={{ padding: '3px 6px' }}>Custo Ref. por m² privativo</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(input.custoM2Privativo)}</td></tr>
-                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '3px 6px' }}>Venda Ref. por m² privativo</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(input.valorVendaM2)}</td></tr>
-                                                    <tr><td style={{ padding: '3px 6px' }}>Custo médio por lote</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.custoPorLote)}</td></tr>
-                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '3px 6px' }}>Venda média por lote</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.valorVendaLote)}</td></tr>
-                                                    <tr style={{ backgroundColor: '#fef2f2' }}><td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Custo Total da Obra</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: '900', color: '#b91c1c' }}>{formatBRL(r.custoTotal)}</td></tr>
-                                                    <tr style={{ backgroundColor: '#ecfdf5' }}><td style={{ padding: '3px 6px', fontWeight: 'bold' }}>VGV Total Estimado</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: '900', color: '#047857' }}>{formatBRL(r.vgvTotal)}</td></tr>
-                                                    <tr><td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Margem Bruta (R$)</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.margemBruta)}</td></tr>
-                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Margem sobre VGV (%)</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{r.margemPct.toFixed(2)}%</td></tr>
-                                                    <tr style={{ backgroundColor: '#eff6ff' }}><td style={{ padding: '3px 6px', fontWeight: 'bold', color: '#1e3a8a' }}>ROI Inicial Estimado</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a' }}>{r.roi.toFixed(2)}%</td></tr>
-                                                    <tr><td style={{ padding: '3px 6px' }}>TIR Anual Aproximada</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</td></tr>
-                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '3px 6px' }}>VPL (TMA {input.taxaDescontoAA}% a.a.)</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.vpl)}</td></tr>
-                                                    <tr><td style={{ padding: '3px 6px' }}>Prazos (Obra / Vendas)</td><td style={{ padding: '3px 6px', textAlign: 'right', fontWeight: 'bold' }}>{input.prazoObraMeses} / {input.prazoVendasMeses} meses</td></tr>
+                                                    <tr><td style={{ padding: '2.5px 5px' }}>Custo Ref. por m² privativo</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(input.custoM2Privativo)}</td></tr>
+                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '2.5px 5px' }}>Venda Ref. por m² privativo</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(input.valorVendaM2)}</td></tr>
+                                                    <tr><td style={{ padding: '2.5px 5px' }}>Custo médio por lote</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.custoPorLote)}</td></tr>
+                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '2.5px 5px' }}>Venda média por lote</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.valorVendaLote)}</td></tr>
+                                                    <tr style={{ backgroundColor: '#fef2f2' }}><td style={{ padding: '2.5px 5px', fontWeight: 'bold' }}>Custo Total da Obra</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: '900', color: '#b91c1c' }}>{formatBRL(r.custoTotal)}</td></tr>
+                                                    <tr style={{ backgroundColor: '#ecfdf5' }}><td style={{ padding: '2.5px 5px', fontWeight: 'bold' }}>VGV Total Estimado</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: '900', color: '#047857' }}>{formatBRL(r.vgvTotal)}</td></tr>
+                                                    <tr><td style={{ padding: '2.5px 5px', fontWeight: 'bold' }}>Margem Bruta (R$)</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.margemBruta)}</td></tr>
+                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '2.5px 5px', fontWeight: 'bold' }}>Margem sobre VGV (%)</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{r.margemPct.toFixed(2)}%</td></tr>
+                                                    <tr style={{ backgroundColor: '#eff6ff' }}><td style={{ padding: '2.5px 5px', fontWeight: 'bold', color: '#1e3a8a' }}>ROI Inicial Estimado</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a' }}>{r.roi.toFixed(2)}%</td></tr>
+                                                    <tr><td style={{ padding: '2.5px 5px' }}>TIR Anual Aproximada</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</td></tr>
+                                                    <tr style={{ backgroundColor: '#f8fafc' }}><td style={{ padding: '2.5px 5px' }}>VPL (TMA {input.taxaDescontoAA}% a.a.)</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{formatBRL(r.vpl)}</td></tr>
+                                                    <tr><td style={{ padding: '2.5px 5px' }}>Prazos (Obra / Vendas)</td><td style={{ padding: '2.5px 5px', textAlign: 'right', fontWeight: 'bold' }}>{input.prazoObraMeses} / {input.prazoVendasMeses} meses</td></tr>
                                                 </tbody>
                                             </table>
                                         </td>
@@ -727,19 +722,18 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                         </div>
 
                         {/* ================= PÁGINA 3: GRÁFICOS (USO DO SOLO, CUSTO x VGV, CURVA S) ================= */}
-                        <div className="w-full" style={{ pageBreakAfter: 'always', breakAfter: 'page', minHeight: '100vh', padding: '20px' }}>
-                            <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '2px solid #1e3a8a', paddingBottom: '6px', marginBottom: '16px', textTransform: 'uppercase' }}>Análise Gráfica e Fluxo de Caixa</h2>
+                        <div className="w-full" style={{ pageBreakAfter: 'always', breakAfter: 'page', padding: '15px' }}>
+                            <h2 style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '2px solid #1e3a8a', paddingBottom: '5px', marginBottom: '14px', textTransform: 'uppercase' }}>Análise Gráfica e Fluxo de Caixa</h2>
 
-                            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px' }}>
                                 <tbody>
                                     <tr>
-                                        {/* Gráfico Donut */}
-                                        <td style={{ width: '48%', verticalAlign: 'top', border: '1px solid #cbd5e1', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                                            <h4 style={{ fontSize: '11px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center', textTransform: 'uppercase', marginBottom: '8px' }}>Uso do Solo (Áreas)</h4>
+                                        <td style={{ width: '48%', verticalAlign: 'top', border: '1px solid #cbd5e1', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                                            <h4 style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center', textTransform: 'uppercase', marginBottom: '6px' }}>Uso do Solo (Áreas)</h4>
                                             <div style={{ textAlign: 'center' }}>
                                                 <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
                                             </div>
-                                            <table style={{ width: '100%', marginTop: '10px', fontSize: '9px', color: '#334155' }}>
+                                            <table style={{ width: '100%', marginTop: '8px', fontSize: '9px', color: '#334155' }}>
                                                 <tbody>
                                                     <tr>
                                                         <td style={{ padding: '2px' }}>■ Vendável: <strong>{r.pctVendavel.toFixed(1)}%</strong></td>
@@ -753,25 +747,23 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                             </table>
                                         </td>
                                         <td style={{ width: '4%' }}></td>
-                                        {/* Gráfico Barras */}
-                                        <td style={{ width: '48%', verticalAlign: 'top', border: '1px solid #cbd5e1', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                                            <h4 style={{ fontSize: '11px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center', textTransform: 'uppercase', marginBottom: '8px' }}>Custo × VGV × Margem</h4>
+                                        <td style={{ width: '48%', verticalAlign: 'top', border: '1px solid #cbd5e1', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                                            <h4 style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#0f172a', textAlign: 'center', textTransform: 'uppercase', marginBottom: '6px' }}>Custo × VGV × Margem</h4>
                                             <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
 
-                            {/* Curva S */}
-                            <div style={{ border: '1px solid #cbd5e1', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <h4 style={{ fontSize: '11px', fontWeight: 'bold', color: '#0f172a', textTransform: 'uppercase', margin: 0 }}>Curva S — Fluxo de Caixa Acumulado</h4>
-                                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#7e22ce', backgroundColor: '#f3e8ff', padding: '2px 8px', borderRadius: '4px' }}>
+                            <div style={{ border: '1px solid #cbd5e1', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <h4 style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#0f172a', textTransform: 'uppercase', margin: 0 }}>Curva S — Fluxo de Caixa Acumulado</h4>
+                                    <span style={{ fontSize: '9.5px', fontWeight: 'bold', color: '#7e22ce', backgroundColor: '#f3e8ff', padding: '2px 6px', borderRadius: '4px' }}>
                                         TIR Anual: {r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}
                                     </span>
                                 </div>
                                 <SCurveSVG data={r.graficoFluxo} />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '3px' }}>
                                     <span>Início da Obra</span>
                                     {r.mesBreakEven !== null && <span style={{ color: '#059669' }}>Break-even (Mês {r.mesBreakEven})</span>}
                                     <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
@@ -780,32 +772,31 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                         </div>
 
                         {/* ================= PÁGINA 4: NOTA TÉCNICA E ASSINATURA ================= */}
-                        <div className="w-full" style={{ minHeight: '100vh', padding: '20px' }}>
-                            <h2 style={{ fontSize: '13px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '2px solid #1e3a8a', paddingBottom: '6px', marginBottom: '16px', textTransform: 'uppercase' }}>Fundamentação Técnica</h2>
+                        <div className="w-full" style={{ padding: '15px' }}>
+                            <h2 style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '2px solid #1e3a8a', paddingBottom: '5px', marginBottom: '14px', textTransform: 'uppercase' }}>Fundamentação Técnica</h2>
 
-                            <div style={{ fontSize: '11px', lineHeight: '1.5', color: '#334155', textAlign: 'justify' }}>
-                                <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase' }}>Nota Técnica: Eficiência de Gleba e Tipologia</h3>
+                            <div style={{ fontSize: '10.5px', lineHeight: '1.4', color: '#334155', textAlign: 'justify' }}>
+                                <h3 style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e3a8a', borderBottom: '1px solid #1e3a8a', paddingBottom: '3px', marginBottom: '8px', textTransform: 'uppercase' }}>Nota Técnica: Eficiência de Gleba e Tipologia</h3>
 
-                                <p style={{ marginBottom: '8px' }}><strong>Eficiência Média de Mercado:</strong> Em projetos de urbanismo no Brasil, a proporção média de área vendável em relação à área útil do terreno situa-se historicamente entre <strong>50% e 65%</strong>. A variação exata depende do relevo, formato do polígono e exigências legais do município.</p>
+                                <p style={{ marginBottom: '6px' }}><strong>Eficiência Média de Mercado:</strong> Em projetos de urbanismo no Brasil, a proporção média de área vendável em relação à área útil do terreno situa-se historicamente entre <strong>50% e 65%</strong>. A variação exata depende do relevo, formato do polígono e exigências legais do município.</p>
 
-                                <p style={{ marginBottom: '8px' }}><strong>Loteamento Aberto (Lei 6.766/1979):</strong> Apresenta eficiência média de <strong>50% a 58%</strong>. Neste modelo, vias, praças e áreas institucionais são compulsoriamente doadas ao município. As exigências rígidas de caixa de rua e recuos tendem a consumir maior proporção da gleba com o sistema viário.</p>
+                                <p style={{ marginBottom: '6px' }}><strong>Loteamento Aberto (Lei 6.766/1979):</strong> Apresenta eficiência média de <strong>50% a 58%</strong>. Neste modelo, vias, praças e áreas institucionais são compulsoriamente doadas ao município. As exigências rígidas de caixa de rua e recuos tendem a consumir maior proporção da gleba com o sistema viário.</p>
 
-                                <p style={{ marginBottom: '8px' }}><strong>Condomínio de Lotes / Fechado (Lei 13.465/2017):</strong> Permite eficiência superior, variando de <strong>58% a 68%</strong>. Como as vias internas e áreas de lazer consistem em áreas comuns privativas, o projeto urbano é otimizado através da adoção de vias dimensionadas ao tráfego local e *cul-de-sacs*, minimizando as perdas de terreno.</p>
+                                <p style={{ marginBottom: '6px' }}><strong>Condomínio de Lotes / Fechado (Lei 13.465/2017):</strong> Permite eficiência superior, variando de <strong>58% a 68%</strong>. Como as vias internas e áreas de lazer consistem em áreas comuns privativas, o projeto urbano é otimizado através da adoção de vias dimensionadas ao tráfego local e *cul-de-sacs*, minimizando as perdas de terreno.</p>
 
-                                <p style={{ marginBottom: '12px' }}><strong>Fatores Modificadores:</strong> A eficiência da gleba é diretamente afetada pelo tamanho dos lotes adotados. Lotes amplos (ex: sítios de recreio a partir de 1.000 m²) demandam menos área de circulação por hectare, podendo elevar a eficiência para além de 65%. Em contrapartida, APPs severas, declividades acima de 30% e polígonos irregulares reduzem significativamente o índice de aproveitamento.</p>
+                                <p style={{ marginBottom: '10px' }}><strong>Fatores Modificadores:</strong> A eficiência da gleba é diretamente afetada pelo tamanho dos lotes adotados. Lotes amplos (ex: sítios de recreio a partir de 1.000 m²) demandam menos área de circulação por hectare, podendo elevar a eficiência para além de 65%. Em contrapartida, APPs severas, declividades acima de 30% e polígonos irregulares reduzem significativamente o índice de aproveitamento.</p>
 
-                                <div style={{ backgroundColor: '#f1f5f9', borderLeft: '4px solid #1e3a8a', padding: '10px', margin: '16px 0', fontSize: '10.5px' }}>
+                                <div style={{ backgroundColor: '#f1f5f9', borderLeft: '4px solid #1e3a8a', padding: '8px', margin: '12px 0', fontSize: '10px' }}>
                                     <strong>Parâmetro Adotado Neste Estudo:</strong> {PRESETS_AREAS[input.tipo].label} baseado na {PRESETS_AREAS[input.tipo].lei}, considerando área média de {formatDecimal(input.loteMedio)} m² por lote. Os custos de obra refletem referenciais médios consolidados para esta tipologia construtiva.
                                 </div>
                             </div>
 
-                            {/* Bloco de Assinatura */}
-                            <div style={{ marginTop: '50px', textAlign: 'center', fontSize: '11px', color: '#1e293b' }}>
-                                <div style={{ width: '240px', borderBottom: '2px solid #0f172a', margin: '0 auto 10px auto' }}></div>
-                                <p style={{ fontWeight: '900', fontSize: '12px', textTransform: 'uppercase', margin: 0 }}>Rennan Seidl Spechotto</p>
+                            <div style={{ marginTop: '35px', textAlign: 'center', fontSize: '10.5px', color: '#1e293b' }}>
+                                <div style={{ width: '220px', borderBottom: '2px solid #0f172a', margin: '0 auto 8px auto' }}></div>
+                                <p style={{ fontWeight: '900', fontSize: '11.5px', textTransform: 'uppercase', margin: 0 }}>Rennan Seidl Spechotto</p>
                                 <p style={{ fontWeight: 'bold', color: '#475569', marginTop: '2px', margin: 0 }}>Engenheiro e Especialista em Gerenciamento de Obras</p>
                                 <p style={{ fontWeight: 'bold', color: '#475569', margin: 0 }}>Spechotto Assessoria & Construção</p>
-                                <p style={{ fontSize: '9px', color: '#94a3b8', marginTop: '12px', margin: 0 }}>Documento gerado pela plataforma meUrbanismo • {new Date().getFullYear()}</p>
+                                <p style={{ fontSize: '9px', color: '#94a3b8', marginTop: '10px', margin: 0 }}>Documento gerado pela plataforma meUrbanismo • {new Date().getFullYear()}</p>
                             </div>
                         </div>
 
