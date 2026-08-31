@@ -298,13 +298,13 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     return (
         <div className="space-y-6 pb-12 max-w-7xl mx-auto">
             {mensagemSucesso && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between items-center shadow-sm">
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between items-center shadow-sm print:hidden">
                     <span>{mensagemSucesso}</span>
                     <button onClick={() => setMensagemSucesso(null)} className="text-emerald-900 font-bold ml-2">×</button>
                 </div>
             )}
             {mensagemErro && (
-                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between items-center shadow-sm">
+                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between items-center shadow-sm print:hidden">
                     <span>{mensagemErro}</span>
                     <button onClick={() => setMensagemErro(null)} className="text-red-900 font-bold ml-2">×</button>
                 </div>
@@ -343,7 +343,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* Kanban Horizontal com Altura Dinâmica e Drag-and-Drop corrigido */}
                         <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
                             {STATUS_PIPELINE.map((col) => {
                                 const itens = estudosFiltrados.filter(e => normalizeStatus(e.status) === col.id);
@@ -400,7 +399,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 )
             ) : (
                 <div className="space-y-6">
-                    {/* BARRA DE AÇÕES PERFEITAMENTE ALINHADA */}
                     <div className="flex flex-wrap items-center justify-end gap-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:hidden">
                         <Button onClick={() => handleSalvar(false)} disabled={salvando} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold h-9 px-4">
                             <Save className="w-4 h-4 mr-1.5" /> {estudoId ? "Salvar Estudo Selecionado" : "Salvar Estudo"}
@@ -417,6 +415,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                     </div>
 
                     <div ref={reportRef} className="space-y-6 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+
+                        {/* CABEÇALHO (Visível em Tela e Impressão) */}
                         <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6">
                             <div>
                                 <h2 className="text-xl font-black text-slate-900 tracking-tight">SPECHOTTO</h2>
@@ -431,16 +431,12 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                         <div className="space-y-3 text-xs text-slate-700 leading-relaxed pt-2">
                             <p className="font-bold text-slate-900">Aos cuidados de: <span className="font-normal">{destinatario || 'Cliente / Investidor'}</span></p>
                             <p className="font-bold text-slate-900">Assunto: <span className="font-normal">Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'}</span></p>
-
                             <p className="pt-2">Prezado(a),</p>
-                            <p>
-                                Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.
-                            </p>
-                            <p>
-                                Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.
-                            </p>
+                            <p>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
+                            <p>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.</p>
                         </div>
 
+                        {/* --- INÍCIO DA ÁREA DE FORMULÁRIO (Somente Tela) --- */}
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:hidden">
                             <div className="lg:col-span-5 space-y-6">
                                 <Card className="rounded-2xl border-slate-200 shadow-sm">
@@ -621,19 +617,103 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                         </div>
                                     </div>
                                 </Card>
-
-                                <Card className="rounded-2xl border-slate-200 shadow-sm bg-slate-50">
-                                    <div className="p-5 space-y-4">
-                                        {NOTA_TECNICA.map((n, i) => (
-                                            <div key={i} className="text-xs">
-                                                <h4 className="font-bold text-slate-800 mb-1">{n.titulo}</h4>
-                                                <p className="text-slate-600 leading-relaxed">{n.paragrafos[0]}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
                             </div>
                         </div>
+                        {/* --- FIM DA ÁREA DE FORMULÁRIO --- */}
+
+
+                        {/* --- INÍCIO DO RELATÓRIO DE IMPRESSÃO (Somente PDF) --- */}
+                        <div className="hidden print:block space-y-8 text-slate-900 mt-8 break-inside-avoid">
+
+                            {/* Tabela Quadro de Áreas */}
+                            <div>
+                                <h3 className="text-base font-bold border-b-2 border-slate-900 pb-2 mb-4 uppercase tracking-widest">Quadro de Áreas</h3>
+                                <table className="w-full text-sm text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b-2 border-slate-300">
+                                            <th className="py-2 px-1">Área</th>
+                                            <th className="py-2 px-1 text-right">m²</th>
+                                            <th className="py-2 px-1 text-right">% do terreno</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        <tr><td className="py-2 px-1 font-bold">Área total do terreno</td><td className="py-2 px-1 text-right">{formatDecimal(input.areaTerreno)}</td><td className="py-2 px-1 text-right">100,00%</td></tr>
+                                        <tr><td className="py-2 px-1">Área de APP (deduzida)</td><td className="py-2 px-1 text-right text-red-600">{formatDecimal(input.areaApp)}</td><td className="py-2 px-1 text-right text-red-600">{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr className="bg-slate-50"><td className="py-2 px-1 font-bold text-slate-700">Área útil (após APP)</td><td className="py-2 px-1 text-right font-bold text-slate-700">{formatDecimal(r.areaBase)}</td><td className="py-2 px-1 text-right font-bold text-slate-700">{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr><td className="py-2 px-1">Sistema Viário</td><td className="py-2 px-1 text-right">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td className="py-2 px-1 text-right">{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr><td className="py-2 px-1">Áreas Verdes e Lazer</td><td className="py-2 px-1 text-right">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td className="py-2 px-1 text-right">{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr><td className="py-2 px-1">Áreas Institucionais</td><td className="py-2 px-1 text-right">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td className="py-2 px-1 text-right">{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr className="bg-blue-50 border-blue-200 border-t-2 border-b-2"><td className="py-2 px-1 font-black text-blue-900">Área privativa / vendável</td><td className="py-2 px-1 text-right font-black text-blue-900">{formatDecimal(r.areaVendavel)}</td><td className="py-2 px-1 text-right font-black text-blue-900">{formatDecimal(r.aproveitamentoPct)}%</td></tr>
+                                        <tr><td className="py-2 px-1 font-bold text-slate-600">Lotes estimados</td><td className="py-2 px-1 text-right font-bold text-slate-600">{r.qtdLotes} lotes</td><td className="py-2 px-1 text-right text-slate-600">{formatDecimal(input.loteMedio)} m² por lote</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Tabela Indicadores Financeiros */}
+                            <div className="break-inside-avoid">
+                                <h3 className="text-base font-bold border-b-2 border-slate-900 pb-2 mb-4 uppercase tracking-widest">Indicadores Financeiros</h3>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-0 text-sm">
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Custo por m² privativo</span><span className="font-bold">{formatBRL(input.custoM2Privativo)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Venda por m² privativo</span><span className="font-bold">{formatBRL(input.valorVendaM2)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Custo por lote</span><span className="font-bold">{formatBRL(r.custoPorLote)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Venda por lote</span><span className="font-bold">{formatBRL(r.valorVendaLote)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200 bg-slate-50"><span className="text-slate-900 font-bold">Custo total da obra</span><span className="font-black text-red-600">{formatBRL(r.custoTotal)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200 bg-slate-50"><span className="text-slate-900 font-bold">VGV total estimado</span><span className="font-black text-emerald-600">{formatBRL(r.vgvTotal)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Margem bruta</span><span className="font-bold">{formatBRL(r.margemBruta)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Margem sobre VGV</span><span className="font-bold">{r.margemPct.toFixed(2)}%</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">ROI inicial</span><span className="font-bold text-blue-600">{r.roi.toFixed(2)}%</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">TIR anual estimada</span><span className="font-bold">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">VPL (TMA {input.taxaDescontoAA}% a.a.)</span><span className="font-bold">{formatBRL(r.vpl)}</span></div>
+                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Prazos (obra / vendas)</span><span className="font-bold">{input.prazoObraMeses} / {input.prazoVendasMeses} meses</span></div>
+                                </div>
+                            </div>
+
+                            {/* Gráficos para Impressão */}
+                            <div className="grid grid-cols-2 gap-8 break-inside-avoid">
+                                <div className="border border-slate-200 p-6 rounded-xl text-center flex flex-col items-center justify-center">
+                                    <h4 className="font-bold text-sm mb-6 uppercase tracking-wider text-slate-700">Composição de Áreas</h4>
+                                    <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                    <div className="grid grid-cols-2 gap-2 mt-6 text-[10px] text-slate-600 text-left w-full max-w-[200px]">
+                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável ({r.pctVendavel.toFixed(1)}%)</span>
+                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário</span>
+                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Lazer/Verde</span>
+                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Inst.</span>
+                                    </div>
+                                </div>
+                                <div className="border border-slate-200 p-6 rounded-xl flex flex-col items-center justify-center">
+                                    <h4 className="font-bold text-sm mb-6 uppercase tracking-wider text-slate-700">Custo x VGV x Margem</h4>
+                                    <div className="w-full max-w-[250px]">
+                                        <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Nota Técnica e Assinatura */}
+                            <div className="break-inside-avoid pt-6 border-t-2 border-slate-900">
+                                <h3 className="text-base font-bold pb-2 mb-2 uppercase tracking-widest">Nota Técnica</h3>
+                                <div className="space-y-4 text-xs text-slate-700 text-justify mb-8">
+                                    {NOTA_TECNICA.map((n, i) => (
+                                        <p key={i}><strong>{n.titulo}:</strong> {n.paragrafos[0]}</p>
+                                    ))}
+                                    <p><strong>Parâmetro adotado neste estudo:</strong> {PRESETS_AREAS[input.tipo].label} ({PRESETS_AREAS[input.tipo].lei}), com custo de obra referencial médio adotado para a tipologia.</p>
+                                </div>
+
+                                <h3 className="text-base font-bold pb-2 mb-2 uppercase tracking-widest">Conclusão</h3>
+                                <div className="space-y-2 text-xs text-slate-700 text-justify mb-16">
+                                    <p>Certos de estarmos oferecendo as melhores soluções para a execução dos serviços de engenharia e serviços especializados, com diferenciais de mercado tais como verificação documentada das etapas realizadas, relatórios e acompanhamento constante, despedimo-nos com votos de estima e consideração.</p>
+                                </div>
+
+                                <div className="text-center pt-8 text-xs text-slate-800">
+                                    <div className="w-64 border-b border-slate-900 mx-auto mb-2"></div>
+                                    <p className="font-black text-sm">Rennan Seidl Spechotto</p>
+                                    <p className="font-medium text-slate-600">Gerente de Obras / Especialista em Empreendimentos Horizontais</p>
+                                    <p className="font-medium text-slate-600 mt-2">Spechotto Assessoria & Construção</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Cuiabá - MT • {new Date().getFullYear()}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* --- FIM DO RELATÓRIO DE IMPRESSÃO --- */}
+
                     </div>
                 </div>
             )}
