@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, X } from 'lucide-react';
-
-// IMPORTAÇÃO CORINGA BLINDADA
 import * as SupabaseModule from '../../services/supabase';
 const supabase = (SupabaseModule as any).supabase || (SupabaseModule as any).default || SupabaseModule;
 
@@ -107,8 +105,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     const [estudos, setEstudos] = useState<EstudoRow[]>([]);
     const [carregando, setCarregando] = useState(false);
     const [salvando, setSalvando] = useState(false);
+    const [gerandoPdf, setGerandoPdf] = useState(false);
 
-    // Mensagens de Feedback
     const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
     const [mensagemErro, setMensagemErro] = useState<string | null>(null);
 
@@ -131,6 +129,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     const [prazoVendas, setPrazoVendas] = useState('36');
     const [tma, setTma] = useState(formatDecimal(12));
     const [status, setStatus] = useState<EstudoStatus>('rascunho');
+
+    const reportRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const lote = unmask(loteMedio);
@@ -169,7 +169,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
             return;
         }
         if (!supabase || typeof supabase.from !== 'function') {
-            setMensagemErro("Erro crítico: Falha na conexão com o banco de dados.");
+            setMensagemErro("Erro crítico: Falha na conexão com o Supabase.");
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
@@ -177,29 +177,46 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
         setSalvando(true);
         try {
             const payload = {
-                titulo: obraNome.trim(), empresa_nome: empresaNome || null, destinatario: destinatario || null,
-                cnpj: cnpj || null, localizacao: localizacao || null, tipo,
-                area_terreno: input.areaTerreno, area_app: input.areaApp, pct_vendavel: r.pctVendavel,
-                pct_viario: percentuais.viario, pct_verde: percentuais.verde, pct_institucional: percentuais.institucional,
-                lote_medio: input.loteMedio, custo_m2_privativo: input.custoM2Privativo, custo_total: r.custoTotal,
-                vgv_total: r.vgvTotal, valor_lote: r.valorVendaLote, prazo_obra_meses: input.prazoObraMeses,
-                prazo_vendas_meses: input.prazoVendasMeses, taxa_desconto_aa: input.taxaDescontoAA, status,
+                titulo: obraNome.trim(),
+                empresa_nome: empresaNome || null,
+                destinatario: destinatario || null,
+                cnpj: cnpj || null,
+                localizacao: localizacao || null,
+                tipo,
+                area_terreno: input.areaTerreno,
+                area_app: input.areaApp,
+                pct_vendavel: r.pctVendavel,
+                pct_viario: percentuais.viario,
+                pct_verde: percentuais.verde,
+                pct_institucional: percentuais.institucional,
+                lote_medio: input.loteMedio,
+                custo_m2_privativo: input.custoM2Privativo,
+                custo_total: r.custoTotal,
+                vgv_total: r.vgvTotal,
+                valor_lote: r.valorVendaLote,
+                prazo_obra_meses: input.prazoObraMeses,
+                prazo_vendas_meses: input.prazoVendasMeses,
+                taxa_desconto_aa: input.taxaDescontoAA,
+                status,
             };
 
+            let error = null;
             if (!comoNovo && estudoId) {
-                const { error } = await supabase.from('viabilidade_inicial_estudos').update(payload).eq('id', estudoId);
-                if (error) throw error;
+                const res = await supabase.from('viabilidade_inicial_estudos').update(payload).eq('id', estudoId);
+                error = res.error;
             } else {
-                const { data, error } = await supabase.from('viabilidade_inicial_estudos').insert(payload).select('id').single();
-                if (error) throw error;
-                if (data) setEstudoId(data.id);
+                const res = await supabase.from('viabilidade_inicial_estudos').insert(payload).select('id').single();
+                error = res.error;
+                if (res.data) setEstudoId(res.data.id);
             }
+
+            if (error) throw error;
 
             setMensagemSucesso("Estudo salvo com sucesso!");
             await buscarEstudos();
             setViewMode('pipeline');
         } catch (err: any) {
-            setMensagemErro(err.message || "Ocorreu um erro ao tentar salvar o estudo.");
+            setMensagemErro(err.message || "Erro ao salvar no banco de dados. Verifique a tabela viabilidade_inicial_estudos.");
         } finally {
             setSalvando(false);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -232,7 +249,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
         setLoteMedio(formatDecimal(i.loteMedio));
         setCustoM2(formatDecimal(i.custoM2Privativo));
 
-        // Deduz o valor de venda por M2 recuperado do banco
         const areaBase = i.areaTerreno - i.areaApp;
         const somaPct = i.percentuais.viario + i.percentuais.verde + i.percentuais.institucional;
         const pctVendavel = Math.max(0, 100 - somaPct);
@@ -254,6 +270,15 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
         setViewMode('form');
     };
 
+    // --- GERADOR DE PDF PROFISSIONAL ESTILO SPECHOTTO ---
+    const handleGerarPdf = () => {
+        setGerandoPdf(true);
+        setTimeout(() => {
+            window.print();
+            setGerandoPdf(false);
+        }, 500);
+    };
+
     return (
         <div className="space-y-6 pb-12 max-w-7xl mx-auto">
             {mensagemSucesso && (
@@ -269,14 +294,14 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 </div>
             )}
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:hidden">
                 <div className="flex items-center gap-3">
                     <button onClick={onBack} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors cursor-pointer"><ArrowLeft className="w-5 h-5" /></button>
                     <div>
                         <h1 className="text-xl font-black text-slate-900 flex items-center gap-2">
                             <Calculator className="w-6 h-6 text-purple-600" /> Estudo de Viabilidade Inicial
                         </h1>
-                        <p className="text-xs text-slate-500 mt-0.5">Acompanhe o pipeline em Kanban ou monte uma nova simulação</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Acompanhe o pipeline em Kanban ou monte simulações profissionais</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
@@ -289,7 +314,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 carregando ? (
                     <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden">
                         {STATUS_PIPELINE.map((col) => {
                             const itens = estudos.filter(e => normalizeStatus(e.status) === col.id);
                             return (
@@ -319,210 +344,296 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 )
             ) : (
                 <div className="space-y-6">
-                    <div className="flex flex-wrap gap-2 justify-end bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="flex flex-wrap gap-2 justify-end bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:hidden">
                         <Button onClick={() => handleSalvar(false)} disabled={salvando} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold">
                             <Save className="w-4 h-4 mr-1.5" /> {estudoId ? "Salvar Estudo Selecionado" : "Salvar Estudo"}
                         </Button>
                         <Button onClick={() => handleSalvar(true)} disabled={salvando} variant="outline" className="rounded-xl text-xs font-bold border-slate-200">
                             <FilePlus2 className="w-4 h-4 mr-1.5" /> Salvar como Novo
                         </Button>
+                        <Button onClick={handleGerarPdf} disabled={gerandoPdf} className="rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white">
+                            {gerandoPdf ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <FileDown className="w-4 h-4 mr-1.5" />} Exportar PDF Profissional
+                        </Button>
                         <Button onClick={() => downloadViabilidadeInicialCsv(input, r)} variant="secondary" className="rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700">
                             <Sheet className="w-4 h-4 mr-1.5" /> Exportar Planilha (CSV)
                         </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        <div className="lg:col-span-5 space-y-6">
-                            <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                <CardHeader><CardTitle className="text-sm font-bold">Identificação</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-1">
-                                        <Label className="text-xs font-medium text-slate-500">Nome do Empreendimento *</Label>
-                                        <Input type="text" value={obraNome} onChange={(e) => setObraNome(e.target.value)} placeholder="Obrigatório — vira o título do estudo" className="rounded-xl bg-slate-50 border-slate-200 text-sm" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Empresa</Label><Input type="text" value={empresaNome} onChange={(e) => setEmpresaNome(e.target.value)} className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
-                                        <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Destinatário</Label><Input type="text" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} placeholder="Ex.: Pablo / Thiago" className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-xs font-medium text-slate-500">Localização / Cidade do Brasil</Label>
-                                        <CidadeAutocomplete value={localizacao} onChange={setLocalizacao} />
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                <CardHeader><CardTitle className="text-sm font-bold">Tipo de Empreendimento</CardTitle></CardHeader>
-                                <CardContent className="space-y-2">
-                                    {(['loteamento', 'condominio'] as TipoEmpreendimento[]).map((t) => (
-                                        <button key={t} type="button" onClick={() => setTipo(t)} className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${tipo === t ? 'border-purple-500 bg-purple-50 font-bold text-purple-900' : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-purple-200'}`}>
-                                            <div className="text-xs font-bold">{PRESETS_AREAS[t].label}</div>
-                                            <div className="text-[11px] font-normal mt-0.5 opacity-80">{PRESETS_AREAS[t].lei} • Custo padrão {formatBRL(PRESETS_AREAS[t].custoM2)}/m²</div>
-                                        </button>
-                                    ))}
-                                </CardContent>
-                            </Card>
-
-                            <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                <CardHeader><CardTitle className="text-sm font-bold">Quadro de áreas</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área do Terreno (m²)</Label><Input value={areaTerreno} onChange={(e) => setAreaTerreno(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
-                                        <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área de APP (m²)</Label><Input value={areaApp} onChange={(e) => setAreaApp(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
-                                    </div>
-
-                                    <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs flex justify-between font-bold text-slate-700">
-                                        <span>Área útil após APP:</span><span>{formatDecimal(r.areaBase)} m²</span>
-                                    </div>
-
-                                    <div className="space-y-3 pt-2">
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-600">Sistema Viário <br /><span className="text-[10px] text-slate-400">Auto-ajusta pelo lote médio</span></span>
-                                            <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.viario} onChange={(e) => setPercentuais(p => ({ ...p, viario: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-600">Áreas Verdes e Lazer</span>
-                                            <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.verde} onChange={(e) => setPercentuais(p => ({ ...p, verde: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
-                                        </div>
-                                        <div className="flex justify-between items-center text-xs">
-                                            <span className="text-slate-600">Áreas Institucionais</span>
-                                            <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.institucional} onChange={(e) => setPercentuais(p => ({ ...p, institucional: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs text-center">
-                                        <div className="font-bold text-slate-800">Área privativa / vendável: {formatDecimal(r.areaVendavel)} m²</div>
-                                        <div className="text-[10px] text-slate-500 mt-0.5">{r.pctVendavel.toFixed(2)}% da área útil • {r.aproveitamentoPct.toFixed(2)}% do terreno</div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <Label className="text-xs font-bold text-slate-500">Metragem média dos lotes (m²)</Label>
-                                        <Input value={loteMedio} onChange={(e) => setLoteMedio(maskDecimal(e.target.value))} className="text-right font-bold text-blue-600 bg-blue-50 border-blue-200" />
-                                    </div>
-                                    <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs font-black text-center text-purple-900">
-                                        Quantidade estimada de lotes: {r.qtdLotes} lotes
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                <CardHeader><CardTitle className="text-sm font-bold">Financeiro (custo vs venda)</CardTitle></CardHeader>
-                                <CardContent className="space-y-4 text-xs">
-                                    <div className="space-y-1">
-                                        <Label className="text-xs font-medium text-slate-500">Custo por m² de área privativa</Label>
-                                        <Input value={custoM2} onChange={(e) => setCustoM2(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
-                                    </div>
-                                    <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo total estimado da obra</span><span className="font-bold text-slate-800">{formatBRL(r.custoTotal)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo por lote</span><span className="font-bold text-slate-800">{formatBRL(r.custoPorLote)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Valor de venda por lote (média)</span><span className="font-bold text-emerald-600">{formatBRL(r.valorVendaLote)}</span></div>
-
-                                    <div className="space-y-1 pt-2">
-                                        <Label className="text-xs font-bold text-emerald-700">Valor de venda por m² privativo</Label>
-                                        <Input value={valorVendaM2} onChange={(e) => setValorVendaM2(maskDecimal(e.target.value))} className="text-right font-bold text-emerald-700 bg-emerald-50 border-emerald-200" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                <CardHeader><CardTitle className="text-sm font-bold">Projeção temporal</CardTitle></CardHeader>
-                                <CardContent className="space-y-4 text-xs">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1">
-                                            <Label className="text-slate-500 font-medium">Prazo da obra (meses)</Label>
-                                            <Input value={prazoObra} onChange={(e) => setPrazoObra(e.target.value)} className="text-right bg-slate-50" type="number" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-slate-500 font-medium">Prazo de vendas (meses)</Label>
-                                            <Input value={prazoVendas} onChange={(e) => setPrazoVendas(e.target.value)} className="text-right bg-slate-50" type="number" />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-slate-500 font-medium">Taxa de desconto / TMA (% a.a.)</Label>
-                                        <Input value={tma} onChange={(e) => setTma(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
-                                        <p className="text-[10px] text-slate-400 mt-1">Desconta o fluxo (10% entrada + parcelas pós-venda).</p>
-                                    </div>
-                                    <div className="flex justify-between items-center py-2 bg-slate-100 rounded-xl px-3 font-bold border border-slate-200">
-                                        <span className="text-slate-600">VPL (pela TMA)</span><span className="text-slate-800 text-sm">{formatBRL(r.vpl)}</span>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                    {/* ÁREA DE IMPRESSÃO / PDF PROFISSIONAL (Estilo Spechotto) */}
+                    <div ref={reportRef} className="space-y-6 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+                        {/* CABEÇALHO PADRÃO SPECHOTTO */}
+                        <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900 tracking-tight">SPECHOTTO</h2>
+                                <p className="text-xs font-bold text-slate-600 tracking-widest uppercase">Assessoria & Construção</p>
+                            </div>
+                            <div className="text-right text-xs text-slate-600 space-y-0.5">
+                                <p className="font-bold">Cuiabá, {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                <p>{localizacao || 'Cuiabá - MT'}</p>
+                            </div>
                         </div>
 
-                        <div className="lg:col-span-7 space-y-6">
+                        {/* CORPO DO TEXTO / ENDEREÇAMENTO */}
+                        <div className="space-y-3 text-xs text-slate-700 leading-relaxed pt-2">
+                            <p className="font-bold text-slate-900">Aos cuidados de: <span className="font-normal">{destinatario || 'Cliente / Investidor'}</span></p>
+                            <p className="font-bold text-slate-900">Assunto: <span className="font-normal">Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'}</span></p>
+
+                            <p className="pt-2">Prezado(a),</p>
+                            <p>
+                                Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.
+                            </p>
+                            <p>
+                                Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.
+                            </p>
+
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 mt-4">
+                                <h4 className="font-bold text-slate-900">Considerações iniciais</h4>
+                                <p className="text-[11px] text-slate-600 leading-relaxed">
+                                    O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações fornecidas. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de APP na área. Recomenda-se que eventuais áreas de doação obrigatória sejam adquiridas externamente, de modo a preservar a área vendável.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* FORMULÁRIO (Exibido apenas em modo tela, oculto no PDF impresso) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:hidden">
+                            <div className="lg:col-span-5 space-y-6">
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Identificação</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-medium text-slate-500">Nome do Empreendimento *</Label>
+                                            <Input type="text" value={obraNome} onChange={(e) => setObraNome(e.target.value)} placeholder="Obrigatório — vira o título do estudo" className="rounded-xl bg-slate-50 border-slate-200 text-sm" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Empresa</Label><Input type="text" value={empresaNome} onChange={(e) => setEmpresaNome(e.target.value)} className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Destinatário</Label><Input type="text" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} placeholder="Ex.: Pablo / Thiago" className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-medium text-slate-500">Localização / Cidade do Brasil</Label>
+                                            <CidadeAutocomplete value={localizacao} onChange={setLocalizacao} />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Tipo de Empreendimento</CardTitle></CardHeader>
+                                    <CardContent className="space-y-2">
+                                        {(['loteamento', 'condominio'] as TipoEmpreendimento[]).map((t) => (
+                                            <button key={t} type="button" onClick={() => setTipo(t)} className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${tipo === t ? 'border-purple-500 bg-purple-50 font-bold text-purple-900' : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-purple-200'}`}>
+                                                <div className="text-xs font-bold">{PRESETS_AREAS[t].label}</div>
+                                                <div className="text-[11px] font-normal mt-0.5 opacity-80">{PRESETS_AREAS[t].lei} • Custo padrão {formatBRL(PRESETS_AREAS[t].custoM2)}/m²</div>
+                                            </button>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Quadro de áreas</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área do Terreno (m²)</Label><Input value={areaTerreno} onChange={(e) => setAreaTerreno(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área de APP (m²)</Label><Input value={areaApp} onChange={(e) => setAreaApp(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
+                                        </div>
+
+                                        <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs flex justify-between font-bold text-slate-700">
+                                            <span>Área útil após APP:</span><span>{formatDecimal(r.areaBase)} m²</span>
+                                        </div>
+
+                                        <div className="space-y-3 pt-2">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-600">Sistema Viário <br /><span className="text-[10px] text-slate-400">Auto-ajusta pelo lote médio</span></span>
+                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.viario} onChange={(e) => setPercentuais(p => ({ ...p, viario: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-600">Áreas Verdes e Lazer</span>
+                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.verde} onChange={(e) => setPercentuais(p => ({ ...p, verde: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-600">Áreas Institucionais</span>
+                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.institucional} onChange={(e) => setPercentuais(p => ({ ...p, institucional: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs text-center">
+                                            <div className="font-bold text-slate-800">Área privativa / vendável: {formatDecimal(r.areaVendavel)} m²</div>
+                                            <div className="text-[10px] text-slate-500 mt-0.5">{r.pctVendavel.toFixed(2)}% da área útil • {r.aproveitamentoPct.toFixed(2)}% do terreno</div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-bold text-slate-500">Metragem média dos lotes (m²)</Label>
+                                            <Input value={loteMedio} onChange={(e) => setLoteMedio(maskDecimal(e.target.value))} className="text-right font-bold text-blue-600 bg-blue-50 border-blue-200" />
+                                        </div>
+                                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs font-black text-center text-purple-900">
+                                            Quantidade estimada de lotes: {r.qtdLotes} lotes
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Financeiro (custo vs venda)</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4 text-xs">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-medium text-slate-500">Custo por m² de área privativa</Label>
+                                            <Input value={custoM2} onChange={(e) => setCustoM2(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
+                                        </div>
+                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo total estimado da obra</span><span className="font-bold text-slate-800">{formatBRL(r.custoTotal)}</span></div>
+                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo por lote</span><span className="font-bold text-slate-800">{formatBRL(r.custoPorLote)}</span></div>
+                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Valor de venda por lote (média)</span><span className="font-bold text-emerald-600">{formatBRL(r.valorVendaLote)}</span></div>
+
+                                        <div className="space-y-1 pt-2">
+                                            <Label className="text-xs font-bold text-emerald-700">Valor de venda por m² privativo</Label>
+                                            <Input value={valorVendaM2} onChange={(e) => setValorVendaM2(maskDecimal(e.target.value))} className="text-right font-bold text-emerald-700 bg-emerald-50 border-emerald-200" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Projeção temporal</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4 text-xs">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-slate-500 font-medium">Prazo da obra (meses)</Label>
+                                                <Input value={prazoObra} onChange={(e) => setPrazoObra(e.target.value)} className="text-right bg-slate-50" type="number" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-slate-500 font-medium">Prazo de vendas (meses)</Label>
+                                                <Input value={prazoVendas} onChange={(e) => setPrazoVendas(e.target.value)} className="text-right bg-slate-50" type="number" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-slate-500 font-medium">Taxa de desconto / TMA (% a.a.)</Label>
+                                            <Input value={tma} onChange={(e) => setTma(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 bg-slate-100 rounded-xl px-3 font-bold border border-slate-200">
+                                            <span className="text-slate-600">VPL (pela TMA)</span><span className="text-slate-800 text-sm">{formatBRL(r.vpl)}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="lg:col-span-7 space-y-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
+                                        <CardContent className="p-4">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">VGV Estimado</p>
+                                            <p className="text-base font-black text-slate-900 mt-1">{formatBRL(r.vgvTotal)}</p>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
+                                        <CardContent className="p-4">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custo Total</p>
+                                            <p className="text-base font-black text-red-500 mt-1">{formatBRL(r.custoTotal)}</p>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
+                                        <CardContent className="p-4">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Margem Bruta</p>
+                                            <p className="text-base font-black text-emerald-500 mt-1">{formatBRL(r.margemBruta)}</p>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
+                                        <CardContent className="p-4">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ROI Inicial</p>
+                                            <p className="text-base font-black text-blue-600 mt-1">{r.roi.toFixed(2)}%</p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
+                                        <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Composição de áreas</div>
+                                        <div className="p-6 flex flex-col items-center">
+                                            <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                            <div className="flex flex-wrap justify-center gap-3 mt-6 text-[10px] text-slate-600 font-medium">
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável</span>
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário</span>
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Verde/Lazer</span>
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Institucional</span>
+                                            </div>
+                                        </div>
+                                    </Card>
+
+                                    <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
+                                        <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Custo × VGV × Margem</div>
+                                        <div className="p-6">
+                                            <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
+                                    <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold flex justify-between items-center text-slate-800">
+                                        Curva S — Fluxo de caixa
+                                        <span className="text-[10px] font-normal text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200">TIR Anual: <strong className="text-purple-600">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</strong></span>
+                                    </div>
+                                    <div className="p-6 pt-8">
+                                        <SCurveSVG data={r.graficoFluxo} />
+                                        <div className="flex justify-between mt-3 text-[9px] text-slate-400 font-bold uppercase">
+                                            <span>Início da Obra</span>
+                                            {r.mesBreakEven !== null && <span className="text-emerald-500">Break-even (Mês {r.mesBreakEven})</span>}
+                                            <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm bg-slate-50">
+                                    <div className="p-5 space-y-4">
+                                        {NOTA_TECNICA.map((n, i) => (
+                                            <div key={i} className="text-xs">
+                                                <h4 className="font-bold text-slate-800 mb-1">{n.titulo}</h4>
+                                                <p className="text-slate-600 leading-relaxed">{n.paragrafos[0]}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            </div>
+                        </div>
+
+                        {/* RELATÓRIO EXCLUSIVO PARA IMPRESSÃO / PDF */}
+                        <div className="hidden print:block space-y-6 pt-4">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
-                                    <CardContent className="p-4">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">VGV Estimado</p>
-                                        <p className="text-base font-black text-slate-900 mt-1">{formatBRL(r.vgvTotal)}</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
-                                    <CardContent className="p-4">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custo Total</p>
-                                        <p className="text-base font-black text-red-500 mt-1">{formatBRL(r.custoTotal)}</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
-                                    <CardContent className="p-4">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Margem Bruta</p>
-                                        <p className="text-base font-black text-emerald-500 mt-1">{formatBRL(r.margemBruta)}</p>
-                                    </CardContent>
-                                </Card>
-                                <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
-                                    <CardContent className="p-4">
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ROI Inicial</p>
-                                        <p className="text-base font-black text-blue-600 mt-1">{r.roi.toFixed(2)}%</p>
-                                    </CardContent>
-                                </Card>
+                                <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">VGV Estimado</p><p className="text-sm font-black text-slate-900 mt-1">{formatBRL(r.vgvTotal)}</p></div>
+                                <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">Custo Total</p><p className="text-sm font-black text-red-600 mt-1">{formatBRL(r.custoTotal)}</p></div>
+                                <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">Margem Bruta</p><p className="text-sm font-black text-emerald-600 mt-1">{formatBRL(r.margemBruta)}</p></div>
+                                <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">ROI Inicial</p><p className="text-sm font-black text-blue-600 mt-1">{r.roi.toFixed(2)}%</p></div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
-                                    <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Composição de áreas</div>
-                                    <div className="p-6 flex flex-col items-center">
-                                        <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
-                                        <div className="flex flex-wrap justify-center gap-3 mt-6 text-[10px] text-slate-600 font-medium">
-                                            <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável</span>
-                                            <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário</span>
-                                            <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Verde/Lazer</span>
-                                            <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Institucional</span>
-                                        </div>
-                                    </div>
-                                </Card>
-
-                                <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
-                                    <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Custo × VGV × Margem</div>
-                                    <div className="p-6">
-                                        <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
-                                    </div>
-                                </Card>
+                            <div className="border border-slate-300 rounded-lg p-4 space-y-3">
+                                <h3 className="font-bold text-xs uppercase text-slate-800 border-b pb-1">Quadro de Áreas e Indicadores</h3>
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Área Total do Terreno:</span><span className="font-bold">{formatDecimal(unmask(areaTerreno))} m²</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Área Privativa / Vendável:</span><span className="font-bold">{formatDecimal(r.areaVendavel)} m² ({r.pctVendavel.toFixed(1)}%)</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Quantidade Estimada de Lotes:</span><span className="font-bold">{r.qtdLotes} lotes</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Metragem Média do Lote:</span><span className="font-bold">{loteMedio} m²</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Custo por m² Privativo:</span><span className="font-bold">{formatBRL(unmask(custoM2))}</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Venda por m² Privativo:</span><span className="font-bold">{formatBRL(unmask(valorVendaM2))}</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Custo por Lote:</span><span className="font-bold">{formatBRL(r.custoPorLote)}</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>Venda Média por Lote:</span><span className="font-bold">{formatBRL(r.valorVendaLote)}</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>TIR Anual Estimada:</span><span className="font-bold text-purple-700">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</span></div>
+                                    <div className="flex justify-between py-1 border-b border-dashed border-slate-200"><span>VPL pela TMA ({tma}% a.a.):</span><span className="font-bold">{formatBRL(r.vpl)}</span></div>
+                                </div>
                             </div>
 
-                            <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
-                                <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold flex justify-between items-center text-slate-800">
-                                    Curva S — Fluxo de caixa
-                                    <span className="text-[10px] font-normal text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200">TIR Anual: <strong className="text-purple-600">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</strong></span>
-                                </div>
-                                <div className="p-6 pt-8">
-                                    <SCurveSVG data={r.graficoFluxo} />
-                                    <div className="flex justify-between mt-3 text-[9px] text-slate-400 font-bold uppercase">
-                                        <span>Início da Obra</span>
-                                        {r.mesBreakEven !== null && <span className="text-emerald-500">Break-even (Mês {r.mesBreakEven})</span>}
-                                        <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
+                            <div className="border border-slate-300 rounded-lg p-4 space-y-2">
+                                <h3 className="font-bold text-xs uppercase text-slate-800 border-b pb-1">Nota Técnica e Considerações</h3>
+                                {NOTA_TECNICA.map((n, i) => (
+                                    <div key={i} className="text-[11px] space-y-1">
+                                        <p className="font-bold text-slate-800">{n.titulo}</p>
+                                        <p className="text-slate-600 leading-snug">{n.paragrafos[0]}</p>
                                     </div>
-                                </div>
-                            </Card>
+                                ))}
+                            </div>
 
-                            <Card className="rounded-2xl border-slate-200 shadow-sm bg-slate-50">
-                                <div className="p-5 space-y-4">
-                                    {NOTA_TECNICA.map((n, i) => (
-                                        <div key={i} className="text-xs">
-                                            <h4 className="font-bold text-slate-800 mb-1">{n.titulo}</h4>
-                                            <p className="text-slate-600 leading-relaxed">{n.paragrafos[0]}</p>
-                                        </div>
-                                    ))}
+                            <div className="pt-8 border-t border-slate-300 flex justify-between items-end text-xs text-slate-700">
+                                <div>
+                                    <p className="font-bold text-slate-900">Rennan Seidl Spechotto</p>
+                                    <p className="text-[10px] text-slate-500">Gerente de Obras / Especialista em Empreendimentos Horizontais</p>
+                                    <p className="text-[10px] text-slate-500">WhatsApp: (65) 99608-2107 | spechotto.arq@outlook.com</p>
                                 </div>
-                            </Card>
+                                <div className="text-right text-[10px] text-slate-400">
+                                    Spechotto Assessoria & Construção • meUrbanismo
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
