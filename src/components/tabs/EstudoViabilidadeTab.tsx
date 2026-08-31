@@ -630,7 +630,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                 <img src="/logo-spechotto.png" alt="Spechotto Assessoria & Construção" className="h-16 object-contain" />
                             </div>
                             <div className="text-right flex flex-col items-end">
-                                <img src="/logo-meurbanismo.jpg" alt="meUrbanismo" className="h-10 object-contain mb-1" />
+                                <img src="/logo-meurbanismo.png" alt="meUrbanismo" className="h-10 object-contain mb-1" />
                             </div>
                         </div>
 
