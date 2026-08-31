@@ -8,10 +8,7 @@ import {
   Check,
   MapPin,
   User as UserIcon,
-  Sparkles,
   Save,
-  RotateCcw,
-  LogIn,
   LogOut,
   Lock
 } from 'lucide-react';
@@ -28,10 +25,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
     role,
     activeObra,
     setActiveObra,
-    switchRole,
     getUserObras,
     isMasterAdmin,
-    setShowLoginModal,
     logout
   } = useAuth();
 
@@ -166,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                       <div>
                         <div className="font-semibold text-slate-900">{o.nome}</div>
                         <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-blue-700" /> {o.cidade} - {o.uf} • {o.tipo}
+                          <MapPin className="w-3.5 h-3.5 text-blue-700" /> {o.cidade} - {o.uf} • {o.tipo}
                         </div>
                       </div>
                       {activeObra?.id === o.id && <Check className="w-4 h-4 text-blue-900 shrink-0" />}
@@ -223,7 +218,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                 setShowObraMenu(false);
                 setShowNotifications(false);
               }}
-              className="flex items-center gap-1 p-1 sm:px-2 sm:py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 p-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors shadow-xs cursor-pointer"
             >
               <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-300 shrink-0">
                 <img
@@ -302,103 +297,19 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                   </form>
                 )}
 
-                {/* BOTÕES DE LOGIN / AUTH / LOGOUT */}
-                <div className="mt-3 flex gap-2">
+                {/* BOTÃO DE LOGOUT SEGURO */}
+                <div className="mt-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setShowProfileDropdown(false);
-                      setShowLoginModal(true);
+                      await logout();
                     }}
-                    className="flex-1 py-2 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="w-full py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    title="Encerrar Sessão"
                   >
-                    <LogIn className="w-3.5 h-3.5" /> Autenticar Conta
+                    <LogOut className="w-4 h-4" /> Encerrar Sessão (Sair)
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      logout();
-                    }}
-                    className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-600 font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                    title="Sair da Sessão"
-                  >
-                    <LogOut className="w-3.5 h-3.5" /> Sair
-                  </button>
-                </div>
-
-                {/* ALTERNAR PERFIL DE TESTE */}
-                <div className="mt-3.5 pt-3 border-t border-slate-100">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> ALTERNAR PERFIL DE DEMONSTRAÇÃO:
-                  </div>
-
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
-                        isMasterAdmin
-                          ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold">1. ADMINISTRADOR MASTER</div>
-                        <div className="text-[10px] text-slate-500">rennan.spechotto@gmail.com (Acesso Total)</div>
-                      </div>
-                      {isMasterAdmin && <Check className="w-4 h-4 text-emerald-700 shrink-0" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('investidor'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
-                        role === 'PROPRIETARIO_INVESTIDOR' && !isMasterAdmin
-                          ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold">2. PROPRIETÁRIO / INVESTIDOR</div>
-                        <div className="text-[10px] text-slate-500">Orçamento, Cronograma e Viabilidade</div>
-                      </div>
-                      {role === 'PROPRIETARIO_INVESTIDOR' && !isMasterAdmin && <Check className="w-4 h-4 text-blue-800 shrink-0" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('corretor'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
-                        role === 'CORRETOR' && !isMasterAdmin
-                          ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold">3. CORRETOR DE IMÓVEIS</div>
-                        <div className="text-[10px] text-slate-500">Vendas, Mapa e Propostas</div>
-                      </div>
-                      {role === 'CORRETOR' && !isMasterAdmin && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('cliente'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
-                        role === 'CLIENTE_COMPRADOR' && !isMasterAdmin
-                          ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold">4. CLIENTE / COMPRADOR</div>
-                        <div className="text-[10px] text-slate-500">Andamento, Fotos e Mapa</div>
-                      </div>
-                      {role === 'CLIENTE_COMPRADOR' && !isMasterAdmin && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
-                    </button>
-                  </div>
                 </div>
 
               </div>

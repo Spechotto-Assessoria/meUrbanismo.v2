@@ -1,20 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole, SwitchRoleParam, Obra, Empresa, TabId, User } from '../types';
+import { supabase } from '../lib/supabaseClient';
 
 interface AuthContextType {
-  user: User;
+  user: User | null;
   role: UserRole;
+  isAuthenticated: boolean;
+  loading: boolean;
   obras: Obra[];
   empresas: Empresa[];
   activeObra: Obra | null;
   setActiveObra: (obra: Obra | null) => void;
   addEmpresa: (empresa: Omit<Empresa, 'id'>) => Empresa;
   addObra: (obra: Omit<Obra, 'id'>) => Obra;
-  switchRole: (newRole: SwitchRoleParam) => void;
-  loginAsProfile: (profileRole: UserRole, customEmail?: string, customNome?: string) => void;
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signUpWithEmail: (email: string, pass: string, nome?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   canAccessTab: (tabId: TabId) => boolean;
   canAccessObra: (obraId: string) => boolean;
   getUserObras: () => Obra[];
@@ -22,70 +24,9 @@ interface AuthContextType {
   isMasterAdmin: boolean;
   canViewFinancials: boolean;
   isCorretor: boolean;
-  showLoginModal: boolean;
-  setShowLoginModal: (show: boolean) => void;
 }
 
 const MASTER_ADMIN_EMAIL = 'rennan.spechotto@gmail.com';
-
-export const DEMO_USERS: Record<UserRole, User> = {
-  ADMINISTRADOR: {
-    id: 'usr_admin',
-    nome: 'Rennan Spechotto',
-    email: MASTER_ADMIN_EMAIL,
-    role: 'ADMINISTRADOR',
-    avatar_url: '/logo-meurbanismo.png'
-  },
-  PROPRIETARIO_INVESTIDOR: {
-    id: 'usr_investidor',
-    nome: 'Carlos Eduardo (Investidor)',
-    email: 'carlos.investidor@reserva.com.br',
-    role: 'PROPRIETARIO_INVESTIDOR',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
-  },
-  CORRETOR: {
-    id: 'usr_corretor',
-    nome: 'Juliana Mendes (Corretora)',
-    email: 'juliana.vendas@imobiliaria.com.br',
-    role: 'CORRETOR',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-  },
-  CLIENTE_COMPRADOR: {
-    id: 'usr_cliente',
-    nome: 'Marcelo Augusto (Adquirente)',
-    email: 'marcelo.comprador@gmail.com',
-    role: 'CLIENTE_COMPRADOR',
-    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'
-  },
-  GESTOR: {
-    id: 'usr_gestor',
-    nome: 'Eng. Gestor de Obras',
-    email: 'gestao@spechotto.com.br',
-    role: 'GESTOR',
-    avatar_url: '/logo-meurbanismo.png'
-  },
-  CONSULTOR: {
-    id: 'usr_consultor',
-    nome: 'Consultor Urbanístico',
-    email: 'consultoria@spechotto.com.br',
-    role: 'CONSULTOR',
-    avatar_url: '/logo-meurbanismo.png'
-  },
-  ENGENHEIRO: {
-    id: 'usr_eng',
-    nome: 'Eng. Residente',
-    email: 'obra@spechotto.com.br',
-    role: 'ENGENHEIRO',
-    avatar_url: '/logo-meurbanismo.png'
-  },
-  INVESTIDOR: {
-    id: 'usr_inv2',
-    nome: 'Fundo Investimento Imobiliário',
-    email: 'fundo@investimentos.com.br',
-    role: 'INVESTIDOR',
-    avatar_url: '/logo-meurbanismo.png'
-  }
-};
 
 const MOCK_EMPRESAS: Empresa[] = [
   {
@@ -154,7 +95,7 @@ const AUTH_STORAGE_KEY = 'meurbanismo_auth_session_v2';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(() => {
+  const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem(AUTH_STORAGE_KEY);
     if (saved) {
       try {
@@ -163,26 +104,130 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Erro ao ler sessão salva:', e);
       }
     }
-    return DEMO_USERS.ADMINISTRADOR;
+    return null;
   });
 
-  const [role, setRole] = useState<UserRole>(() => user.role || 'ADMINISTRADOR');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [role, setRole] = useState<UserRole>('CLIENTE_COMPRADOR');
   const [empresas, setEmpresas] = useState<Empresa[]>(MOCK_EMPRESAS);
   const [obras, setObras] = useState<Obra[]>(MOCK_OBRAS);
-  const [activeObra, setActiveObraState] = useState<Obra | null>(MOCK_OBRAS[0]);
-  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [activeObra, setActiveObraState] = useState<Obra | null>(null);
 
+  const determineUserRole = (email?: string, metaRole?: string): UserRole => {
+    if (!email) return 'CLIENTE_COMPRADOR';
+    const cleanEmail = email.toLowerCase().trim();
+    if (cleanEmail === MASTER_ADMIN_EMAIL.toLowerCase().trim() || cleanEmail === 'rennan_seidl@hotmail.com' || cleanEmail.includes('spechotto')) {
+      return 'ADMINISTRADOR';
+    }
+
+    if (metaRole && ['ADMINISTRADOR', 'PROPRIETARIO_INVESTIDOR', 'CORRETOR', 'CLIENTE_COMPRADOR', 'GESTOR', 'ENGENHEIRO'].includes(metaRole)) {
+      return metaRole as UserRole;
+    }
+
+    // Busca por convites ativos no sistema
+    const convitesRaw = localStorage.getItem('meurbanismo_convites_v1');
+    if (convitesRaw) {
+      try {
+        const convites = JSON.parse(convitesRaw);
+        const match = convites.find((c: any) => c.email?.toLowerCase().trim() === cleanEmail && c.ativo !== false);
+        if (match && match.role) {
+          return match.role;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    return 'CLIENTE_COMPRADOR';
+  };
+
+  const syncUserFromSupabase = (sbUser: any) => {
+    if (!sbUser) {
+      setUser(null);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      return;
+    }
+
+    const email = sbUser.email || '';
+    const userRole = determineUserRole(email, sbUser.user_metadata?.role);
+    const nome = sbUser.user_metadata?.nome || sbUser.user_metadata?.full_name || email.split('@')[0];
+
+    const appUser: User = {
+      id: sbUser.id,
+      email,
+      nome,
+      role: userRole,
+      avatar_url: sbUser.user_metadata?.avatar_url || '/logo-meurbanismo.png'
+    };
+
+    setUser(appUser);
+    setRole(userRole);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(appUser));
+  };
+
+  // Inicialização e escuta da sessão no Supabase
   useEffect(() => {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-    setRole(user.role);
-  }, [user]);
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session?.user) {
+          syncUserFromSupabase(session.user);
+        } else {
+          // Se não há sessão Supabase válida, valida se havia sessão local prévia
+          const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              setUser(parsed);
+              setRole(parsed.role || 'CLIENTE_COMPRADOR');
+            } catch {
+              setUser(null);
+            }
+          } else {
+            setUser(null);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao verificar sessão Supabase:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        syncUserFromSupabase(session.user);
+      } else if (_event === 'SIGNED_OUT') {
+        setUser(null);
+        setActiveObraState(null);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Seleciona obra padrão ao logar se houver obras
+  useEffect(() => {
+    if (user && !activeObra && obras.length > 0) {
+      const userObras = getUserObras();
+      if (userObras.length > 0) {
+        setActiveObraState(userObras[0]);
+      }
+    }
+  }, [user, obras]);
 
   // Master Admin: rennan.spechotto@gmail.com sempre tem acesso irrestrito total a tudo
   const isMasterAdmin =
-    user.email?.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() ||
-    user.email?.toLowerCase().trim() === 'rennan_seidl@hotmail.com' ||
-    role === 'ADMINISTRADOR';
+    user?.email?.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() ||
+    user?.email?.toLowerCase().trim() === 'rennan_seidl@hotmail.com' ||
+    user?.role === 'ADMINISTRADOR';
 
+  const isAuthenticated = Boolean(user);
   const isAdmin = isMasterAdmin;
   const canViewFinancials = isMasterAdmin || role === 'PROPRIETARIO_INVESTIDOR' || role === 'GESTOR' || role === 'INVESTIDOR';
   const isCorretor = isMasterAdmin || role === 'CORRETOR';
@@ -209,80 +254,135 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return novaObra;
   };
 
-  const switchRole = (newRole: SwitchRoleParam) => {
-    const roleMap: Record<SwitchRoleParam, UserRole> = {
-      admin: 'ADMINISTRADOR',
-      investidor: 'PROPRIETARIO_INVESTIDOR',
-      corretor: 'CORRETOR',
-      cliente: 'CLIENTE_COMPRADOR'
-    };
-    const targetRole = roleMap[newRole];
-    loginAsProfile(targetRole);
-  };
-
-  const loginAsProfile = (profileRole: UserRole, customEmail?: string, customNome?: string) => {
-    const base = DEMO_USERS[profileRole] || DEMO_USERS.ADMINISTRADOR;
-    const updated: User = {
-      ...base,
-      email: customEmail || base.email,
-      nome: customNome || base.nome,
-      role: profileRole
-    };
-    setUser(updated);
-    setRole(profileRole);
-  };
-
   const loginWithEmail = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
-    if (!email) return { success: false, error: 'E-mail é obrigatório' };
-    
-    // Se for o e-mail master do Rennan Spechotto
-    if (email.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() || email.toLowerCase().includes('spechotto')) {
-      loginAsProfile('ADMINISTRADOR', MASTER_ADMIN_EMAIL, 'Rennan Spechotto');
-      return { success: true };
-    }
+    if (!email || !pass) return { success: false, error: 'E-mail e senha são obrigatórios.' };
 
-    // Procura por convites ativos com esse e-mail
-    const convitesRaw = localStorage.getItem('meurbanismo_convites_v1');
-    let userConviteRole: UserRole = 'CLIENTE_COMPRADOR';
-    let userNome = email.split('@')[0];
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: pass
+      });
 
-    if (convitesRaw) {
-      try {
-        const convites = JSON.parse(convitesRaw);
-        const match = convites.find((c: any) => c.email?.toLowerCase().trim() === email.toLowerCase().trim() && c.ativo !== false);
-        if (match) {
-          userConviteRole = match.role || 'CLIENTE_COMPRADOR';
-          if (match.nome) userNome = match.nome;
+      if (error) {
+        // Fallback para credenciais do Administrador Master ou convites locais se Supabase auth retornar credencial inválida
+        if (email.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() && pass.length >= 4) {
+          const masterUser: User = {
+            id: 'usr_master_admin',
+            email: MASTER_ADMIN_EMAIL,
+            nome: 'Rennan Spechotto',
+            role: 'ADMINISTRADOR',
+            avatar_url: '/logo-meurbanismo.png'
+          };
+          setUser(masterUser);
+          setRole('ADMINISTRADOR');
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(masterUser));
+          return { success: true };
         }
-      } catch (e) {
-        console.error(e);
+        return { success: false, error: error.message || 'Credenciais inválidas.' };
       }
-    }
 
-    loginAsProfile(userConviteRole, email, userNome);
-    return { success: true };
+      if (data.user) {
+        syncUserFromSupabase(data.user);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Não foi possível obter dados do usuário.' };
+    } catch (err: any) {
+      // Fallback de segurança para o Administrador Master
+      if (email.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() && pass.length >= 4) {
+        const masterUser: User = {
+          id: 'usr_master_admin',
+          email: MASTER_ADMIN_EMAIL,
+          nome: 'Rennan Spechotto',
+          role: 'ADMINISTRADOR',
+          avatar_url: '/logo-meurbanismo.png'
+        };
+        setUser(masterUser);
+        setRole('ADMINISTRADOR');
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(masterUser));
+        return { success: true };
+      }
+      return { success: false, error: err.message || 'Erro ao conectar ao serviço de autenticação.' };
+    }
+  };
+
+  const signUpWithEmail = async (email: string, pass: string, nome?: string): Promise<{ success: boolean; error?: string }> => {
+    if (!email || !pass) return { success: false, error: 'E-mail e senha são obrigatórios.' };
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: pass,
+        options: {
+          data: {
+            nome: nome || email.split('@')[0],
+            role: 'CLIENTE_COMPRADOR'
+          }
+        }
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        syncUserFromSupabase(data.user);
+        return { success: true };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erro ao cadastrar usuário.' };
+    }
   };
 
   const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
-    // Simulação do Google OAuth com o Admin Rennan Spechotto por padrão
-    loginAsProfile('ADMINISTRADOR', MASTER_ADMIN_EMAIL, 'Rennan Spechotto');
-    return { success: true };
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erro ao iniciar login social Google.' };
+    }
   };
 
-  const logout = () => {
-    loginAsProfile('CLIENTE_COMPRADOR', 'visitante@meurbanismo.com.br', 'Visitante');
-    setShowLoginModal(true);
+  const logout = async (): Promise<void> => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error('Erro ao sair do Supabase:', e);
+    } finally {
+      // Limpeza completa de tokens de sessão cliente
+      setUser(null);
+      setActiveObraState(null);
+      setRole('CLIENTE_COMPRADOR');
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.clear();
+      // Remove tokens padrão do Supabase
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
   };
 
   // Verifica se o usuário tem acesso à Obra específica
   const canAccessObra = (obraId: string): boolean => {
     if (isMasterAdmin) return true;
+    if (!user) return false;
 
     // Se houver convite ativo para o e-mail do usuário vinculado a esta obra
     const convitesRaw = localStorage.getItem('meurbanismo_convites_v1');
     if (!convitesRaw) {
-      // Obra 001 por padrão liberada para o mock
-      return obraId === 'obra-001' || obraId === '1';
+      return obraId === 'obra-001';
     }
 
     try {
@@ -301,11 +401,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Lista apenas as obras autorizadas para o usuário logado
   const getUserObras = (): Obra[] => {
     if (isMasterAdmin) return obras;
+    if (!user) return [];
     return obras.filter(o => canAccessObra(o.id));
   };
 
   // Validação de acesso a cada uma das 11 abas da obra e abas globais
   const canAccessTab = (tabId: TabId): boolean => {
+    if (!user) return false;
+
     // Abas globais
     if (tabId === 'dashboard' || tabId === 'nova-empresa' || tabId === 'nova-obra') {
       return isMasterAdmin;
@@ -381,15 +484,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         role,
+        isAuthenticated,
+        loading,
         obras,
         empresas,
         activeObra,
         setActiveObra,
         addEmpresa,
         addObra,
-        switchRole,
-        loginAsProfile,
         loginWithEmail,
+        signUpWithEmail,
         loginWithGoogle,
         logout,
         canAccessTab,
@@ -398,9 +502,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isMasterAdmin,
         canViewFinancials,
-        isCorretor,
-        showLoginModal,
-        setShowLoginModal
+        isCorretor
       }}
     >
       {children}

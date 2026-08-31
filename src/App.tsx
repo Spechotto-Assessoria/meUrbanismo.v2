@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
 import { SplashScreen } from './components/layout/SplashScreen';
-import { LoginModal } from './components/auth/LoginModal';
+import { LoginScreen } from './components/auth/LoginScreen';
 
 import { DashboardTab } from './components/tabs/Dashboard';
 import { ConvitesTab } from './components/tabs/ConvitesTab';
@@ -22,12 +22,11 @@ import { RelatoriosTab } from './components/tabs/RelatoriosTab';
 import { PortfolioTab } from './components/tabs/PortfolioTab';
 import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab';
 import { TabId } from './types';
-import { ShieldAlert, ArrowLeft, Building2 } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 
-const MainApp: React.FC = () => {
+const AuthenticatedApp: React.FC = () => {
   const { canAccessTab, canAccessObra, role, activeObra, setActiveObra, isMasterAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId | 'estudo-viabilidade'>('dashboard');
-  const [showSplash, setShowSplash] = useState<boolean>(true);
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -63,7 +62,7 @@ const MainApp: React.FC = () => {
   const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra' || activeTab === 'estudo-viabilidade';
   const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin' && !isFormPage);
 
-  // Verificação de Acesso por Convite da Obra Ativa
+  // Verificação estrita de acesso por convite da obra ativa
   const hasAccessToActiveObra = activeObra ? canAccessObra(activeObra.id) : true;
 
   const renderContent = () => {
@@ -170,37 +169,59 @@ const MainApp: React.FC = () => {
   };
 
   return (
-    <>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
-      <LoginModal />
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
+      <Header
+        onLogoClick={handleResetToDashboard}
+        onNavigateAdmin={handleSelectAdmin}
+      />
 
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 max-w-full overflow-x-hidden relative">
-        <Header
-          onLogoClick={handleResetToDashboard}
-          onNavigateAdmin={handleSelectAdmin}
-        />
+      <main
+        id="tab-content-container"
+        className={`flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 transition-all ${
+          showBottomNav ? 'pb-24 sm:pb-28' : 'pb-6'
+        }`}
+      >
+        {renderContent()}
+      </main>
 
-        <main
-          id="tab-content-container"
-          className={`flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 pt-4 transition-all ${
-            showBottomNav ? 'pb-24 sm:pb-28' : 'pb-6'
-          }`}
-        >
-          {renderContent()}
-        </main>
-
-        {showBottomNav && (
-          <BottomNav activeTab={activeTab as TabId} onTabChange={(t) => setActiveTab(t)} />
-        )}
-      </div>
-    </>
+      {showBottomNav && (
+        <BottomNav activeTab={activeTab as TabId} onTabChange={(t) => setActiveTab(t)} />
+      )}
+    </div>
   );
+};
+
+const AppContent: React.FC = () => {
+  const { isAuthenticated, loading, user } = useAuth();
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <span className="text-xs font-bold text-slate-400">Verificando credenciais seguras...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // PROTEÇÃO CRÍTICA DE ROTAS: Sem sessão válida, bloqueia tudo e exibe a tela de login
+  if (!isAuthenticated || !user) {
+    return <LoginScreen />;
+  }
+
+  return <AuthenticatedApp />;
 };
 
 export function App() {
   return (
     <AuthProvider>
-      <MainApp />
+      <AppContent />
     </AuthProvider>
   );
 }
