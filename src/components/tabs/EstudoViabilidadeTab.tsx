@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, X } from 'lucide-react';
-
-// CORREÇÃO: Apontando para o arquivo correto de serviço (supabase.ts que gerencia o LocalStorage)
+import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, GripVertical, ChevronRight, ChevronLeft } from 'lucide-react';
 import { apiService } from '../../services/supabase';
 
 import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from './ui-components';
@@ -131,6 +129,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     const [tma, setTma] = useState(formatDecimal(12));
     const [status, setStatus] = useState<EstudoStatus>('rascunho');
 
+    const [draggedId, setDraggedId] = useState<string | null>(null);
+
     const reportRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -228,6 +228,12 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
         }
     };
 
+    const handleMudarStatus = (id: string, novoStatus: EstudoStatus) => {
+        const novaLista = estudos.map(e => e.id === id ? { ...e, status: novoStatus, updated_at: new Date().toISOString() } : e);
+        setEstudos(novaLista);
+        localStorage.setItem('meurbanismo_viabilidade_estudos_list', JSON.stringify(novaLista));
+    };
+
     const handleExcluir = async (id: string) => {
         const novaLista = estudos.filter(e => e.id !== id);
         setEstudos(novaLista);
@@ -315,21 +321,65 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                     <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden">
-                        {STATUS_PIPELINE.map((col) => {
+                        {STATUS_PIPELINE.map((col, colIndex) => {
                             const itens = estudos.filter(e => normalizeStatus(e.status) === col.id);
                             return (
-                                <div key={col.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3">
+                                <div
+                                    key={col.id}
+                                    className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 min-h-[400px]"
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={() => {
+                                        if (draggedId) {
+                                            handleMudarStatus(draggedId, col.id as EstudoStatus);
+                                            setDraggedId(null);
+                                        }
+                                    }}
+                                >
                                     <div className="flex justify-between items-center px-1">
                                         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">{col.label}</h3>
                                         <span className="bg-white px-2 py-0.5 rounded-full text-xs font-bold text-slate-700 border border-slate-200">{itens.length}</span>
                                     </div>
                                     {itens.length === 0 ? (
-                                        <div className="bg-white border border-dashed border-slate-200 rounded-xl p-4 text-center text-xs text-slate-400">Nenhum estudo</div>
+                                        <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400">Arraste um estudo para cá</div>
                                     ) : (
                                         itens.map(e => (
-                                            <div key={e.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                                                <p className="font-bold text-xs text-slate-900 truncate">{e.titulo}</p>
+                                            <div
+                                                key={e.id}
+                                                draggable
+                                                onDragStart={() => setDraggedId(e.id)}
+                                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2 cursor-grab active:cursor-grabbing hover:border-purple-300 transition-all"
+                                            >
+                                                <div className="flex items-start justify-between gap-1">
+                                                    <p className="font-bold text-xs text-slate-900 truncate flex-1">{e.titulo}</p>
+                                                    <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
+                                                </div>
                                                 <p className="text-[10px] text-slate-500">{e.localizacao || 'Sem local'}</p>
+
+                                                {/* Botões rápidos para alterar de nível */}
+                                                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                                                    <button
+                                                        disabled={colIndex === 0}
+                                                        onClick={() => handleMudarStatus(e.id, STATUS_PIPELINE[colIndex - 1].id as EstudoStatus)}
+                                                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                                                        title="Mover para fase anterior"
+                                                    >
+                                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                                    </button>
+
+                                                    <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">
+                                                        {col.label}
+                                                    </span>
+
+                                                    <button
+                                                        disabled={colIndex === STATUS_PIPELINE.length - 1}
+                                                        onClick={() => handleMudarStatus(e.id, STATUS_PIPELINE[colIndex + 1].id as EstudoStatus)}
+                                                        className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
+                                                        title="Mover para próxima fase"
+                                                    >
+                                                        <ChevronRight className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+
                                                 <div className="flex gap-1 pt-1">
                                                     <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7" onClick={() => carregarEstudoNoForm(e)}><Pencil className="w-3 h-3 mr-1" /> Editar</Button>
                                                     <Button size="sm" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => handleExcluir(e.id)}><Trash2 className="w-3 h-3" /></Button>
