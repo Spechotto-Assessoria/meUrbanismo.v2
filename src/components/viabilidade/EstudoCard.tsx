@@ -7,7 +7,6 @@ import {
     type ViabilidadeInicialInput,
 } from "../../lib/viabilidade-inicial";
 
-// --- FORMATADORES E UI EMBUTIDOS PARA EVITAR ERROS DE BUILD ---
 const brlShort = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -42,7 +41,6 @@ const Card = ({ className = '', children, ...props }: any) => (
 const CardContent = ({ className = '', children, ...props }: any) => (
     <div className={`${className}`} {...props}>{children}</div>
 );
-// --------------------------------------------------------------
 
 export const STATUS_PIPELINE = [
     { id: "rascunho", label: "Rascunho / Em Estudo" },
@@ -136,43 +134,43 @@ export function EstudoCard({
         <Card
             draggable={draggable}
             onDragStart={(ev: any) => ev.dataTransfer.setData("text/plain", estudo.id)}
-            className={`bg-white rounded-2xl border border-slate-200 shadow-2xs ${ativo ? "border-purple-500 ring-1 ring-purple-200" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""
-                }`}
+            className={`bg-white rounded-2xl border border-slate-200 shadow-2xs ${ativo ? "border-purple-500 ring-1 ring-purple-200" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
-            <CardContent className={`space-y-3 ${compact ? "p-3" : "p-4"}`}>
+            <CardContent className={`space-y-2.5 ${compact ? "p-2.5" : "p-4"}`}>
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                        <p className="truncate font-bold text-slate-900 text-sm">{estudo.titulo}</p>
-                        <p className="truncate text-[11px] text-slate-500">
+                        <p className="truncate font-bold text-slate-900 text-xs sm:text-sm">{estudo.titulo}</p>
+                        <p className="truncate text-[10px] text-slate-500">
                             {[estudo.localizacao, preset.label].filter(Boolean).join(" • ")}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                            {new Date(estudo.updated_at).toLocaleDateString("pt-BR")}
                         </p>
                     </div>
                     <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 shrink-0 text-red-500 hover:bg-red-50"
+                        className="h-6 w-6 shrink-0 text-red-500 hover:bg-red-50"
                         onClick={onExcluir}
                         aria-label="Excluir estudo"
                     >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                    <Mini label="VGV estimado" value={brlShort(r.vgvTotal)} />
-                    <Mini label="Custo total" value={brlShort(r.custoTotal)} />
-                    <Mini label="Qtd. de lotes" value={r.qtdLotes.toLocaleString("pt-BR")} />
-                    <Mini label="ROI" value={pctBR(r.roi)} />
+                <div className="grid grid-cols-2 gap-1.5">
+                    <Mini label="VGV" value={brlShort(r.vgvTotal)} />
+                    <Mini label="Custo" value={brlShort(r.custoTotal)} />
+                    {!compact && (
+                        <>
+                            <Mini label="Qtd. Lotes" value={r.qtdLotes.toLocaleString("pt-BR")} />
+                            <Mini label="ROI" value={pctBR(r.roi)} />
+                        </>
+                    )}
                 </div>
 
                 {onStatus && (
                     <select
                         value={normalizeStatus(estudo.status)}
                         onChange={(ev) => onStatus(ev.target.value as EstudoStatus)}
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-700"
                         aria-label="Situação do estudo"
                     >
                         {STATUS_PIPELINE.map((s) => (
@@ -183,17 +181,12 @@ export function EstudoCard({
                     </select>
                 )}
 
-                <div className="flex flex-wrap gap-2 pt-1">
-                    <Button size="sm" variant="outline" className="flex-1 text-xs rounded-xl" onClick={onEditar}>
-                        <Pencil className="mr-1.5 h-3 w-3" /> Visualizar / Editar
+                <div className="flex gap-1.5 pt-0.5">
+                    <Button size="sm" variant="outline" className="flex-1 text-[11px] h-7 rounded-xl" onClick={onEditar}>
+                        <Pencil className="mr-1 h-3 w-3" /> Editar
                     </Button>
-                    <Button size="sm" variant="secondary" className="flex-1 text-xs rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100" onClick={onPdf} disabled={gerando}>
-                        {gerando ? (
-                            <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                        ) : (
-                            <FileDown className="mr-1.5 h-3 w-3" />
-                        )}
-                        Baixar PDF
+                    <Button size="sm" variant="secondary" className="flex-1 text-[11px] h-7 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100" onClick={onPdf} disabled={gerando}>
+                        {gerando ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <FileDown className="mr-1 h-3 w-3" />} PDF
                     </Button>
                 </div>
             </CardContent>
@@ -203,9 +196,9 @@ export function EstudoCard({
 
 function Mini({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-xl border border-slate-100 bg-slate-50 px-2.5 py-1.5">
-            <p className="text-[9px] uppercase tracking-wide text-slate-400 font-bold">{label}</p>
-            <p className="truncate text-xs font-bold text-slate-800 tabular-nums">{value}</p>
+        <div className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-1">
+            <p className="text-[8px] uppercase tracking-wide text-slate-400 font-bold">{label}</p>
+            <p className="truncate text-[11px] font-bold text-slate-800 tabular-nums">{value}</p>
         </div>
     );
 }

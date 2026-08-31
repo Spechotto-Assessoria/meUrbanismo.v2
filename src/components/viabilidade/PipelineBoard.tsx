@@ -8,30 +8,13 @@ import {
     type EstudoStatus,
 } from "./EstudoCard";
 
-// --- UI E HELPERS EMBUTIDOS PARA GARANTIR O BUILD ---
 const cn = (...classes: any[]) => classes.filter(Boolean).join(' ');
-
-const Button = React.forwardRef(({ className = '', variant = 'default', children, ...props }: any, ref: any) => {
-    let base = "inline-flex items-center justify-center rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 h-9 px-4 py-2 ";
-    if (variant === 'outline') base += "border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 ";
-    else if (variant === 'ghost') base += "hover:bg-slate-100 text-slate-700 ";
-    else base += "bg-purple-600 hover:bg-purple-700 text-white ";
-    return <button ref={ref} className={cn(base, className)} {...props}>{children}</button>;
-});
 
 const Input = React.forwardRef(({ className = '', ...props }: any, ref: any) => (
     <input ref={ref} className={cn("flex h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm shadow-2xs outline-none focus:ring-1 focus:ring-purple-500", className)} {...props} />
 ));
 
 const normalizar = (str: string) => (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-// ----------------------------------------------------
-
-const CORES: Record<EstudoStatus, string> = {
-    rascunho: "bg-slate-100 text-slate-700 border border-slate-200",
-    enviado: "bg-amber-50 text-amber-800 border border-amber-200",
-    aprovado: "bg-emerald-50 text-emerald-800 border border-emerald-200",
-    arquivado: "bg-slate-100 text-slate-500 border border-slate-200",
-};
 
 export function PipelineBoard({
     estudos,
@@ -86,19 +69,22 @@ export function PipelineBoard({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Layout Kanban na Horizontal com Scroll Fluido e Altura Responsiva */}
+            <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
                 {STATUS_PIPELINE.map((col) => {
                     const itens = estudosFiltrados.filter(
                         (e) => normalizeStatus(e.status) === col.id
                     );
+                    const isCompact = itens.length > 3;
+
                     return (
                         <div
                             key={col.id}
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => handleDrop(e, col.id)}
-                            className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 min-h-[400px] flex flex-col"
+                            className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 w-80 shrink-0 snap-start flex flex-col max-h-[75vh]"
                         >
-                            <div className="flex justify-between items-center px-1">
+                            <div className="flex justify-between items-center px-1 shrink-0">
                                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
                                     {col.label}
                                 </h3>
@@ -107,10 +93,10 @@ export function PipelineBoard({
                                 </span>
                             </div>
 
-                            <div className="space-y-3 flex-1">
+                            <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
                                 {itens.length === 0 ? (
                                     <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400">
-                                        Nenhum estudo nesta etapa
+                                        Arraste um estudo para cá
                                     </div>
                                 ) : (
                                     itens.map((estudo) => (
@@ -119,6 +105,7 @@ export function PipelineBoard({
                                             estudo={estudo}
                                             ativo={estudo.id === estudoId}
                                             gerando={gerandoCard === estudo.id}
+                                            compact={isCompact}
                                             draggable={true}
                                             onEditar={() => onEditar(estudo)}
                                             onPdf={() => onPdf(estudo)}
