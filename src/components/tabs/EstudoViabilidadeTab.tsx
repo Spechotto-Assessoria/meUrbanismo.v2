@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, GripVertical, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, Search } from 'lucide-react';
 import { apiService } from '../../services/supabase';
 
 import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from './ui-components';
@@ -8,7 +8,7 @@ import {
     PRESETS_AREAS, NOTA_TECNICA, calcViabilidadeInicial, calcularEficienciaViaria,
     TipoEmpreendimento, ViabilidadeInicialInput, ViabilidadeInicialResult
 } from '../../lib/viabilidade-inicial';
-import { EstudoRow, EstudoStatus, STATUS_PIPELINE, normalizeStatus, rowToInput } from '../viabilidade/EstudoCard';
+import { EstudoCard, EstudoRow, EstudoStatus, STATUS_PIPELINE, normalizeStatus, rowToInput } from '../viabilidade/EstudoCard';
 
 const formatDecimal = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -21,6 +21,8 @@ const maskDecimal = (val: string) => {
     return v;
 };
 const unmask = (val: string | number) => typeof val === 'number' ? val : Number(val.replace(/\./g, '').replace(',', '.'));
+
+const normalizar = (str: string) => (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const downloadViabilidadeInicialCsv = (input: ViabilidadeInicialInput, result: ViabilidadeInicialResult) => {
     const linhas = [
@@ -103,6 +105,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     const [carregando, setCarregando] = useState(false);
     const [salvando, setSalvando] = useState(false);
     const [gerandoPdf, setGerandoPdf] = useState(false);
+    const [busca, setBusca] = useState("");
 
     const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
     const [mensagemErro, setMensagemErro] = useState<string | null>(null);
@@ -127,7 +130,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     const [tma, setTma] = useState(formatDecimal(12));
     const [status, setStatus] = useState<EstudoStatus>('rascunho');
 
-    const [draggedId, setDraggedId] = useState<string | null>(null);
     const reportRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -165,6 +167,17 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     }), [obraNome, empresaNome, cnpj, localizacao, destinatario, tipo, areaTerreno, areaApp, percentuais, loteMedio, custoM2, valorVendaM2, tma, prazoObra, prazoVendas]);
 
     const r: ViabilidadeInicialResult = useMemo(() => calcViabilidadeInicial(input), [input]);
+
+    const estudosFiltrados = useMemo(() => {
+        const termo = normalizar(busca);
+        if (!termo) return estudos;
+        return estudos.filter(
+            (e) =>
+                normalizar(e.titulo).includes(termo) ||
+                normalizar(e.localizacao ?? "").includes(termo) ||
+                normalizar(e.empresa_nome ?? "").includes(termo)
+        );
+    }, [estudos, busca]);
 
     const handleSalvar = async (comoNovo: boolean) => {
         setMensagemErro(null);
@@ -317,85 +330,76 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 carregando ? (
                     <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>
                 ) : (
-                    /* Kanban Horizontal com Altura Responsiva Dinâmica */
-                    <div className="flex gap-4 overflow-x-auto pb-4 print:hidden snap-x">
-                        {STATUS_PIPELINE.map((col, colIndex) => {
-                            const itens = estudos.filter(e => normalizeStatus(e.status) === col.id);
-                            const isCompact = itens.length > 3;
+                    <div className="space-y-4 print:hidden">
+                        <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <Input
+                                    value={busca}
+                                    onChange={(e: any) => setBusca(e.target.value)}
+                                    placeholder="Buscar por empreendimento, local ou empresa..."
+                                    className="pl-9"
+                                />
+                            </div>
+                        </div>
 
-                            return (
-                                <div
-                                    key={col.id}
-                                    className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 w-80 shrink-0 snap-start flex flex-col max-h-[75vh]"
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={() => {
-                                        if (draggedId) {
-                                            handleMudarStatus(draggedId, col.id as EstudoStatus);
-                                            setDraggedId(null);
-                                        }
-                                    }}
-                                >
-                                    <div className="flex justify-between items-center px-1 shrink-0">
-                                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">{col.label}</h3>
-                                        <span className="bg-white px-2 py-0.5 rounded-full text-xs font-bold text-slate-700 border border-slate-200">{itens.length}</span>
-                                    </div>
-                                    <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
-                                        {itens.length === 0 ? (
-                                            <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400">Arraste um estudo para cá</div>
-                                        ) : (
-                                            itens.map(e => (
-                                                <div
-                                                    key={e.id}
-                                                    draggable
-                                                    onDragStart={() => setDraggedId(e.id)}
-                                                    className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-2 cursor-grab active:cursor-grabbing hover:border-purple-300 transition-all"
-                                                >
-                                                    <div className="flex items-start justify-between gap-1">
-                                                        <p className="font-bold text-xs text-slate-900 truncate flex-1">{e.titulo}</p>
-                                                        <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
-                                                    </div>
-                                                    <p className="text-[10px] text-slate-500">{e.localizacao || 'Sem local'}</p>
+                        {/* Kanban Horizontal com Altura Dinâmica e Drag-and-Drop corrigido */}
+                        <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                            {STATUS_PIPELINE.map((col) => {
+                                const itens = estudosFiltrados.filter(e => normalizeStatus(e.status) === col.id);
+                                const isCompact = itens.length > 3;
 
-                                                    <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                                                        <button
-                                                            disabled={colIndex === 0}
-                                                            onClick={() => handleMudarStatus(e.id, STATUS_PIPELINE[colIndex - 1].id as EstudoStatus)}
-                                                            className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
-                                                            title="Mover para fase anterior"
-                                                        >
-                                                            <ChevronLeft className="w-3.5 h-3.5" />
-                                                        </button>
+                                return (
+                                    <div
+                                        key={col.id}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const id = e.dataTransfer.getData("text/plain");
+                                            if (id) {
+                                                handleMudarStatus(id, col.id as EstudoStatus);
+                                            }
+                                        }}
+                                        className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-3 w-80 shrink-0 snap-start flex flex-col max-h-[75vh]"
+                                    >
+                                        <div className="flex justify-between items-center px-1 shrink-0">
+                                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">{col.label}</h3>
+                                            <span className="bg-white px-2 py-0.5 rounded-full text-xs font-bold text-slate-700 border border-slate-200">{itens.length}</span>
+                                        </div>
 
-                                                        <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">
-                                                            {col.label}
-                                                        </span>
-
-                                                        <button
-                                                            disabled={colIndex === STATUS_PIPELINE.length - 1}
-                                                            onClick={() => handleMudarStatus(e.id, STATUS_PIPELINE[colIndex + 1].id as EstudoStatus)}
-                                                            className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 cursor-pointer"
-                                                            title="Mover para próxima fase"
-                                                        >
-                                                            <ChevronRight className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex gap-1 pt-1">
-                                                        <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7" onClick={() => carregarEstudoNoForm(e)}><Pencil className="w-3 h-3 mr-1" /> Editar</Button>
-                                                        <Button size="sm" variant="ghost" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => handleExcluir(e.id)}><Trash2 className="w-3 h-3" /></Button>
-                                                    </div>
+                                        <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
+                                            {itens.length === 0 ? (
+                                                <div className="bg-white border border-dashed border-slate-200 rounded-xl p-6 text-center text-xs text-slate-400">
+                                                    Arraste um estudo para cá
                                                 </div>
-                                            ))
-                                        )}
+                                            ) : (
+                                                itens.map(e => (
+                                                    <EstudoCard
+                                                        key={e.id}
+                                                        estudo={e}
+                                                        ativo={e.id === estudoId}
+                                                        gerando={false}
+                                                        compact={isCompact}
+                                                        draggable={true}
+                                                        onEditar={() => carregarEstudoNoForm(e)}
+                                                        onPdf={() => {
+                                                            carregarEstudoNoForm(e);
+                                                            setTimeout(() => handleGerarPdf(), 300);
+                                                        }}
+                                                        onExcluir={() => handleExcluir(e.id)}
+                                                        onStatus={(s) => handleMudarStatus(e.id, s)}
+                                                    />
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 )
             ) : (
                 <div className="space-y-6">
-                    {/* BARRA DE AÇÕES PERFEITAMENTE ALINHADA */}
                     <div className="flex flex-wrap items-center justify-end gap-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:hidden">
                         <Button onClick={() => handleSalvar(false)} disabled={salvando} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold h-9 px-4">
                             <Save className="w-4 h-4 mr-1.5" /> {estudoId ? "Salvar Estudo Selecionado" : "Salvar Estudo"}
@@ -431,9 +435,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             <p>
                                 Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.
                             </p>
-                            <p>
-                                Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.
-                            </p>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:hidden">
@@ -443,14 +444,14 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                     <CardContent className="space-y-4">
                                         <div className="space-y-1">
                                             <Label className="text-xs font-medium text-slate-500">Nome do Empreendimento *</Label>
-                                            <Input type="text" value={obraNome} onChange={(e) => setObraNome(e.target.value)} placeholder="Obrigatório — vira o título do estudo" className="rounded-xl bg-slate-50 border-slate-200 text-sm" />
+                                            <Input type="text" value={obraNome} onChange={(e) => setObraNome(e.target.value)} placeholder="Obrigatório" className="rounded-xl bg-slate-50 border-slate-200 text-sm" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Empresa</Label><Input type="text" value={empresaNome} onChange={(e) => setEmpresaNome(e.target.value)} className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
-                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Destinatário</Label><Input type="text" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} placeholder="Ex.: Pablo / Thiago" className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Destinatário</Label><Input type="text" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-xs font-medium text-slate-500">Localização / Cidade do Brasil</Label>
+                                            <Label className="text-xs font-medium text-slate-500">Localização / Cidade</Label>
                                             <CidadeAutocomplete value={localizacao} onChange={setLocalizacao} />
                                         </div>
                                     </CardContent>
@@ -465,56 +466,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                                 <div className="text-[11px] font-normal mt-0.5 opacity-80">{PRESETS_AREAS[t].lei} • Custo padrão {formatBRL(PRESETS_AREAS[t].custoM2)}/m²</div>
                                             </button>
                                         ))}
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                    <CardHeader><CardTitle className="text-sm font-bold">Quadro de áreas</CardTitle></CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área do Terreno (m²)</Label><Input value={areaTerreno} onChange={(e) => setAreaTerreno(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
-                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área de APP (m²)</Label><Input value={areaApp} onChange={(e) => setAreaApp(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
-                                        </div>
-
-                                        <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs flex justify-between font-bold text-slate-700">
-                                            <span>Área útil após APP:</span><span>{formatDecimal(r.areaBase)} m²</span>
-                                        </div>
-
-                                        <div className="space-y-3 pt-2">
-                                            <div className="flex justify-between items-center text-xs">
-                                                <span className="text-slate-600">Sistema Viário</span>
-                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.viario} onChange={(e) => setPercentuais(p => ({ ...p, viario: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
-                                            </div>
-                                            <div className="flex justify-between items-center text-xs">
-                                                <span className="text-slate-600">Áreas Verdes e Lazer</span>
-                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.verde} onChange={(e) => setPercentuais(p => ({ ...p, verde: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
-                                            </div>
-                                            <div className="flex justify-between items-center text-xs">
-                                                <span className="text-slate-600">Áreas Institucionais</span>
-                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.institucional} onChange={(e) => setPercentuais(p => ({ ...p, institucional: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <Label className="text-xs font-bold text-slate-500">Metragem média dos lotes (m²)</Label>
-                                            <Input value={loteMedio} onChange={(e) => setLoteMedio(maskDecimal(e.target.value))} className="text-right font-bold text-blue-600 bg-blue-50 border-blue-200" />
-                                        </div>
-                                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs font-black text-center text-purple-900">
-                                            Quantidade estimada de lotes: {r.qtdLotes} lotes
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="rounded-2xl border-slate-200 shadow-sm">
-                                    <CardHeader><CardTitle className="text-sm font-bold">Financeiro</CardTitle></CardHeader>
-                                    <CardContent className="space-y-4 text-xs">
-                                        <div className="space-y-1">
-                                            <Label className="text-xs font-medium text-slate-500">Custo por m² de área privativa</Label>
-                                            <Input value={custoM2} onChange={(e) => setCustoM2(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
-                                        </div>
-                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo total da obra</span><span className="font-bold text-slate-800">{formatBRL(r.custoTotal)}</span></div>
-                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo por lote</span><span className="font-bold text-slate-800">{formatBRL(r.custoPorLote)}</span></div>
-                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Valor de venda por lote</span><span className="font-bold text-emerald-600">{formatBRL(r.valorVendaLote)}</span></div>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -544,19 +495,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                             <p className="text-[10px] font-bold text-slate-500 uppercase">ROI</p>
                                             <p className="text-base font-black text-blue-600 mt-1">{r.roi.toFixed(2)}%</p>
                                         </CardContent>
-                                    </Card>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
-                                        <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Composição de áreas</div>
-                                        <div className="p-6 flex flex-col items-center">
-                                            <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
-                                        </div>
-                                    </Card>
-                                    <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
-                                        <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Custo × VGV × Margem</div>
-                                        <div className="p-6"><BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} /></div>
                                     </Card>
                                 </div>
                             </div>
