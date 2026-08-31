@@ -765,7 +765,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* === QUEBRA DE PÁGINA ANTES DAS NOTAS TÉCNICAS === */}
+                        {/* === QUEBRA DE PÁGINA OBRIGATÓRIA ANTES DAS NOTAS TÉCNICAS (ELIMINA O CORTE) === */}
                         <div className="print:break-before-page pt-4"></div>
 
                         {/* 6. NOTA TÉCNICA (EFICIÊNCIA DE GLEBA E URBANISMO) */}
