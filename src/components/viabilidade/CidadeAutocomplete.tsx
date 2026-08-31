@@ -30,8 +30,8 @@ let pending: Promise<Cidade[]> | null = null;
 async function carregarIbge(): Promise<Cidade[]> {
     if (cacheIbge) return cacheIbge;
     if (!pending) {
-        // CORREÇÃO: URL da API do IBGE consertada (servicosdados)
-        pending = fetch("https://servicosdados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome")
+        // CORREÇÃO DEFINITIVA DA URL: "servicodados" (sem o 's' no meio)
+        pending = fetch("https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome")
             .then((r) => r.json())
             .then((rows: any[]) =>
                 rows.map((m) => ({
