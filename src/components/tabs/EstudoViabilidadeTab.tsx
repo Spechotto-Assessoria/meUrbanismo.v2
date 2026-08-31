@@ -45,10 +45,10 @@ const DonutSVG = ({ values, colors }: { values: number[], colors: string[] }) =>
     const total = values.reduce((a, b) => a + b, 0) || 1;
     let offset = 0;
     return (
-        <svg viewBox="0 0 32 32" className="w-32 h-32 transform -rotate-90">
+        <svg viewBox="0 0 32 32" className="w-full h-full transform -rotate-90">
             {values.map((v, i) => {
                 const dash = (v / total) * 100;
-                const out = <circle key={i} r="15.915494309" cx="16" cy="16" fill="transparent" stroke={colors[i]} strokeWidth="6" strokeDasharray={`${dash} 100`} strokeDashoffset={-offset} />;
+                const out = <circle key={i} r="15.915494309" cx="16" cy="16" fill="transparent" stroke={colors[i]} strokeWidth="5" strokeDasharray={`${dash} 100`} strokeDashoffset={-offset} />;
                 offset += dash;
                 return out;
             })}
@@ -59,18 +59,21 @@ const DonutSVG = ({ values, colors }: { values: number[], colors: string[] }) =>
 const BarSVG = ({ c, v, m }: { c: number, v: number, m: number }) => {
     const max = Math.max(c, v, m, 1);
     return (
-        <div className="flex items-end justify-center gap-6 h-40 w-full pt-4 border-b border-slate-200">
-            <div className="flex flex-col items-center w-12 h-full justify-end group">
-                <div style={{ height: `${(c / max) * 100}%` }} className="w-full bg-blue-800 rounded-t-md transition-all" />
-                <span className="text-[10px] mt-1.5 text-slate-500 font-bold">Custo total</span>
+        <div className="flex items-end justify-center gap-8 h-48 w-full pt-4 border-b-2 border-slate-200">
+            <div className="flex flex-col items-center w-16 h-full justify-end group">
+                <span className="text-[10px] font-bold text-slate-700 mb-1">{formatBRL(c).replace(/,00$/, '')}</span>
+                <div style={{ height: `${(c / max) * 100}%` }} className="w-full bg-blue-900 rounded-t-sm transition-all" />
+                <span className="text-xs mt-2 text-slate-800 font-bold uppercase">Custo</span>
             </div>
-            <div className="flex flex-col items-center w-12 h-full justify-end group">
-                <div style={{ height: `${(v / max) * 100}%` }} className="w-full bg-blue-500 rounded-t-md transition-all" />
-                <span className="text-[10px] mt-1.5 text-slate-500 font-bold">VGV est.</span>
+            <div className="flex flex-col items-center w-16 h-full justify-end group">
+                <span className="text-[10px] font-bold text-slate-700 mb-1">{formatBRL(v).replace(/,00$/, '')}</span>
+                <div style={{ height: `${(v / max) * 100}%` }} className="w-full bg-blue-500 rounded-t-sm transition-all" />
+                <span className="text-xs mt-2 text-slate-800 font-bold uppercase">VGV</span>
             </div>
-            <div className="flex flex-col items-center w-12 h-full justify-end group">
-                <div style={{ height: `${(m / max) * 100}%` }} className="w-full bg-emerald-500 rounded-t-md transition-all" />
-                <span className="text-[10px] mt-1.5 text-slate-500 font-bold">Margem</span>
+            <div className="flex flex-col items-center w-16 h-full justify-end group">
+                <span className="text-[10px] font-bold text-slate-700 mb-1">{formatBRL(m).replace(/,00$/, '')}</span>
+                <div style={{ height: `${(m / max) * 100}%` }} className="w-full bg-emerald-500 rounded-t-sm transition-all" />
+                <span className="text-xs mt-2 text-slate-800 font-bold uppercase">Margem</span>
             </div>
         </div>
     );
@@ -414,9 +417,9 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                         </Button>
                     </div>
 
-                    <div ref={reportRef} className="space-y-6 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+                    {/* === INÍCIO DO FORMULÁRIO (Somente Tela) === */}
+                    <div ref={reportRef} className="space-y-6 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm print:hidden">
 
-                        {/* CABEÇALHO (Visível em Tela e Impressão) */}
                         <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6">
                             <div>
                                 <h2 className="text-xl font-black text-slate-900 tracking-tight">SPECHOTTO</h2>
@@ -428,16 +431,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             </div>
                         </div>
 
-                        <div className="space-y-3 text-xs text-slate-700 leading-relaxed pt-2">
-                            <p className="font-bold text-slate-900">Aos cuidados de: <span className="font-normal">{destinatario || 'Cliente / Investidor'}</span></p>
-                            <p className="font-bold text-slate-900">Assunto: <span className="font-normal">Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'}</span></p>
-                            <p className="pt-2">Prezado(a),</p>
-                            <p>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
-                            <p>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.</p>
-                        </div>
-
-                        {/* --- INÍCIO DA ÁREA DE FORMULÁRIO (Somente Tela) --- */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:hidden">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             <div className="lg:col-span-5 space-y-6">
                                 <Card className="rounded-2xl border-slate-200 shadow-sm">
                                     <CardHeader><CardTitle className="text-sm font-bold">Identificação</CardTitle></CardHeader>
@@ -585,7 +579,9 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                     <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
                                         <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Composição de áreas</div>
                                         <div className="p-6 flex flex-col items-center">
-                                            <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                            <div className="w-32 h-32">
+                                                <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                            </div>
                                             <div className="flex flex-wrap justify-center gap-3 mt-6 text-[10px] text-slate-600 font-medium">
                                                 <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável</span>
                                                 <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário</span>
@@ -619,102 +615,170 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                 </Card>
                             </div>
                         </div>
-                        {/* --- FIM DA ÁREA DE FORMULÁRIO --- */}
+                    </div>
+                    {/* === FIM DO FORMULÁRIO === */}
 
 
-                        {/* --- INÍCIO DO RELATÓRIO DE IMPRESSÃO (Somente PDF) --- */}
-                        <div className="hidden print:block space-y-8 text-slate-900 mt-8 break-inside-avoid">
+                    {/* ============================================================================== */}
+                    {/* === INÍCIO DO RELATÓRIO DE IMPRESSÃO PROFISSIONAL (SOMENTE PDF/IMPRESSÃO) === */}
+                    {/* ============================================================================== */}
+                    <div className="hidden print:block bg-white text-slate-900 w-full min-h-screen">
 
-                            {/* Tabela Quadro de Áreas */}
+                        {/* 1. CABEÇALHO CORPORATIVO */}
+                        <div className="flex justify-between items-center border-b-4 border-blue-900 pb-4 mb-8">
+                            {/* Logo Spechotto Assessoria (SVG Simulando Logo Geométrica) */}
+                            <div className="flex items-center gap-3">
+                                <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M50 10 L10 90 H90 Z" fill="#1e3a8a" opacity="0.9" />
+                                    <path d="M50 30 L25 90 H75 Z" fill="#3b82f6" opacity="0.9" />
+                                    <path d="M50 55 L35 90 H65 Z" fill="#93c5fd" opacity="0.9" />
+                                </svg>
+                                <div>
+                                    <h1 className="text-xl font-black text-blue-900 tracking-tighter leading-none m-0 p-0">SPECHOTTO</h1>
+                                    <p className="text-[9px] font-bold text-slate-500 tracking-[0.25em] uppercase m-0 p-0 mt-0.5">Assessoria & Construção</p>
+                                </div>
+                            </div>
+
+                            {/* Logo meUrbanismo */}
+                            <div className="text-right">
+                                <h1 className="text-lg font-black text-slate-800 tracking-tight leading-none m-0 p-0">me<span className="text-blue-600">Urbanismo</span></h1>
+                                <p className="text-[9px] font-bold text-slate-500 tracking-widest uppercase m-0 p-0 mt-0.5">Planejar • Acompanhar • Realizar</p>
+                            </div>
+                        </div>
+
+                        {/* 2. DADOS DE IDENTIFICAÇÃO E INTRODUÇÃO */}
+                        <div className="mb-8 space-y-4 text-sm leading-relaxed text-justify">
+                            <div className="text-right text-xs text-slate-600 space-y-0.5 mb-6">
+                                <p className="font-bold">Cuiabá, {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.</p>
+                            </div>
+                            <p><strong>Aos cuidados de:</strong> {destinatario || 'Cliente / Investidor'}</p>
+                            <p><strong>Assunto:</strong> Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'} ({localizacao || 'Cuiabá - MT'})</p>
+                            <p className="pt-2">Prezado(a),</p>
+                            <p>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento denominado <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
+                            <p>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção. Agradecemos desde já a confiança depositada e nos colocamos à vossa inteira disposição para os esclarecimentos que se fizerem necessários.</p>
+                        </div>
+
+                        {/* 3. CONSIDERAÇÕES INICIAIS */}
+                        <div className="mb-10 text-sm leading-relaxed text-justify">
+                            <h3 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-3 uppercase tracking-widest">Considerações Iniciais</h3>
+                            <p className="mb-2">O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações base de metragem. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de Área de Preservação Permanente (APP).</p>
+                            <p>Quando houver APP, recomenda-se que a área de doação obrigatória seja adquirida externamente ao empreendimento, de modo a não reduzir a área vendável. Como infraestrutura básica, o empreendimento deverá contemplar: rede de drenagem, dreno de bordo nas ruas, rede de abastecimento de água, tratamento de esgoto, pavimentação asfáltica, rede de energia e iluminação, garantindo qualidade superior ao produto final.</p>
+                        </div>
+
+                        {/* 4. GRÁFICOS (COMPOSIÇÃO E FINANCEIRO) */}
+                        <div className="grid grid-cols-2 gap-8 mb-10 break-inside-avoid">
+                            {/* Gráfico 1: Áreas */}
+                            <div className="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-xl bg-slate-50">
+                                <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-4">Uso do Solo (Áreas)</h4>
+                                <div className="w-32 h-32">
+                                    <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 mt-4 text-[9px] text-slate-700 w-full max-w-[220px]">
+                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Área Vendável: {r.pctVendavel.toFixed(1)}%</span>
+                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Sist. Viário: {input.percentuais.viario.toFixed(1)}%</span>
+                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Áreas Verdes: {input.percentuais.verde.toFixed(1)}%</span>
+                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Áreas Inst.: {input.percentuais.institucional.toFixed(1)}%</span>
+                                </div>
+                            </div>
+
+                            {/* Gráfico 2: Financeiro */}
+                            <div className="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-xl bg-slate-50">
+                                <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-2">Custo × VGV × Margem</h4>
+                                <div className="w-full max-w-[280px]">
+                                    <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ================= QUEBRA DE PÁGINA (OPCIONAL/SUGERIDA) ================= */}
+                        <div className="print:break-before-page"></div>
+
+                        {/* 5. TABELAS (QUADRO DE ÁREAS E INDICADORES) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 mt-10 break-inside-avoid">
+
+                            {/* Quadro de Áreas */}
                             <div>
-                                <h3 className="text-base font-bold border-b-2 border-slate-900 pb-2 mb-4 uppercase tracking-widest">Quadro de Áreas</h3>
-                                <table className="w-full text-sm text-left border-collapse">
+                                <h3 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-3 uppercase tracking-widest">Quadro de Áreas</h3>
+                                <table className="w-full text-xs text-left border-collapse">
                                     <thead>
-                                        <tr className="border-b-2 border-slate-300">
-                                            <th className="py-2 px-1">Área</th>
-                                            <th className="py-2 px-1 text-right">m²</th>
-                                            <th className="py-2 px-1 text-right">% do terreno</th>
+                                        <tr className="bg-blue-900 text-white">
+                                            <th className="py-2 px-2 rounded-tl-md">Destinação</th>
+                                            <th className="py-2 px-2 text-right">Área (m²)</th>
+                                            <th className="py-2 px-2 text-right rounded-tr-md">% do Terreno</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        <tr><td className="py-2 px-1 font-bold">Área total do terreno</td><td className="py-2 px-1 text-right">{formatDecimal(input.areaTerreno)}</td><td className="py-2 px-1 text-right">100,00%</td></tr>
-                                        <tr><td className="py-2 px-1">Área de APP (deduzida)</td><td className="py-2 px-1 text-right text-red-600">{formatDecimal(input.areaApp)}</td><td className="py-2 px-1 text-right text-red-600">{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr className="bg-slate-50"><td className="py-2 px-1 font-bold text-slate-700">Área útil (após APP)</td><td className="py-2 px-1 text-right font-bold text-slate-700">{formatDecimal(r.areaBase)}</td><td className="py-2 px-1 text-right font-bold text-slate-700">{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr><td className="py-2 px-1">Sistema Viário</td><td className="py-2 px-1 text-right">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td className="py-2 px-1 text-right">{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr><td className="py-2 px-1">Áreas Verdes e Lazer</td><td className="py-2 px-1 text-right">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td className="py-2 px-1 text-right">{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr><td className="py-2 px-1">Áreas Institucionais</td><td className="py-2 px-1 text-right">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td className="py-2 px-1 text-right">{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr className="bg-blue-50 border-blue-200 border-t-2 border-b-2"><td className="py-2 px-1 font-black text-blue-900">Área privativa / vendável</td><td className="py-2 px-1 text-right font-black text-blue-900">{formatDecimal(r.areaVendavel)}</td><td className="py-2 px-1 text-right font-black text-blue-900">{formatDecimal(r.aproveitamentoPct)}%</td></tr>
-                                        <tr><td className="py-2 px-1 font-bold text-slate-600">Lotes estimados</td><td className="py-2 px-1 text-right font-bold text-slate-600">{r.qtdLotes} lotes</td><td className="py-2 px-1 text-right text-slate-600">{formatDecimal(input.loteMedio)} m² por lote</td></tr>
+                                    <tbody className="divide-y divide-slate-200 border border-slate-200">
+                                        <tr className="bg-slate-50"><td className="py-2 px-2 font-bold">Área total da gleba</td><td className="py-2 px-2 text-right font-medium">{formatDecimal(input.areaTerreno)}</td><td className="py-2 px-2 text-right">100,00%</td></tr>
+                                        <tr><td className="py-2 px-2">Área de APP (deduzida)</td><td className="py-2 px-2 text-right text-red-600">{formatDecimal(input.areaApp)}</td><td className="py-2 px-2 text-right text-red-600">{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr className="bg-slate-100"><td className="py-2 px-2 font-bold text-slate-700">Área útil (após APP)</td><td className="py-2 px-2 text-right font-bold text-slate-700">{formatDecimal(r.areaBase)}</td><td className="py-2 px-2 text-right font-bold text-slate-700">{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr><td className="py-2 px-2">Sistema Viário</td><td className="py-2 px-2 text-right">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td className="py-2 px-2 text-right">{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr><td className="py-2 px-2">Áreas Verdes e Lazer</td><td className="py-2 px-2 text-right">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td className="py-2 px-2 text-right">{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr><td className="py-2 px-2">Áreas Institucionais</td><td className="py-2 px-2 text-right">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td className="py-2 px-2 text-right">{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                        <tr className="bg-blue-50 border-t border-blue-200"><td className="py-2 px-2 font-black text-blue-900">Área privativa (Vendável)</td><td className="py-2 px-2 text-right font-black text-blue-900">{formatDecimal(r.areaVendavel)}</td><td className="py-2 px-2 text-right font-black text-blue-900">{formatDecimal(r.aproveitamentoPct)}%</td></tr>
+                                        <tr className="bg-white"><td className="py-2 px-2 font-bold text-slate-600">Lotes estimados</td><td className="py-2 px-2 text-right font-bold text-slate-600">{r.qtdLotes} lotes</td><td className="py-2 px-2 text-right text-slate-600">Média: {formatDecimal(input.loteMedio)} m²</td></tr>
                                     </tbody>
                                 </table>
                             </div>
 
-                            {/* Tabela Indicadores Financeiros */}
-                            <div className="break-inside-avoid">
-                                <h3 className="text-base font-bold border-b-2 border-slate-900 pb-2 mb-4 uppercase tracking-widest">Indicadores Financeiros</h3>
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-0 text-sm">
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Custo por m² privativo</span><span className="font-bold">{formatBRL(input.custoM2Privativo)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Venda por m² privativo</span><span className="font-bold">{formatBRL(input.valorVendaM2)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Custo por lote</span><span className="font-bold">{formatBRL(r.custoPorLote)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Venda por lote</span><span className="font-bold">{formatBRL(r.valorVendaLote)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200 bg-slate-50"><span className="text-slate-900 font-bold">Custo total da obra</span><span className="font-black text-red-600">{formatBRL(r.custoTotal)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200 bg-slate-50"><span className="text-slate-900 font-bold">VGV total estimado</span><span className="font-black text-emerald-600">{formatBRL(r.vgvTotal)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Margem bruta</span><span className="font-bold">{formatBRL(r.margemBruta)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Margem sobre VGV</span><span className="font-bold">{r.margemPct.toFixed(2)}%</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">ROI inicial</span><span className="font-bold text-blue-600">{r.roi.toFixed(2)}%</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">TIR anual estimada</span><span className="font-bold">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">VPL (TMA {input.taxaDescontoAA}% a.a.)</span><span className="font-bold">{formatBRL(r.vpl)}</span></div>
-                                    <div className="flex justify-between py-2 border-b border-slate-200"><span className="text-slate-600">Prazos (obra / vendas)</span><span className="font-bold">{input.prazoObraMeses} / {input.prazoVendasMeses} meses</span></div>
-                                </div>
+                            {/* Indicadores Financeiros */}
+                            <div>
+                                <h3 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-3 uppercase tracking-widest">Indicadores Financeiros</h3>
+                                <table className="w-full text-xs text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-800 text-white">
+                                            <th className="py-2 px-2 rounded-tl-md">Métrica</th>
+                                            <th className="py-2 px-2 text-right rounded-tr-md">Valor Estimado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200 border border-slate-200">
+                                        <tr><td className="py-1.5 px-2 text-slate-700">Custo Ref. por m² privativo</td><td className="py-1.5 px-2 text-right font-medium">{formatBRL(input.custoM2Privativo)}</td></tr>
+                                        <tr><td className="py-1.5 px-2 text-slate-700">Venda Ref. por m² privativo</td><td className="py-1.5 px-2 text-right font-medium">{formatBRL(input.valorVendaM2)}</td></tr>
+                                        <tr><td className="py-1.5 px-2 text-slate-700">Custo médio por lote</td><td className="py-1.5 px-2 text-right font-medium">{formatBRL(r.custoPorLote)}</td></tr>
+                                        <tr><td className="py-1.5 px-2 text-slate-700">Venda média por lote</td><td className="py-1.5 px-2 text-right font-medium">{formatBRL(r.valorVendaLote)}</td></tr>
+                                        <tr className="bg-red-50"><td className="py-2 px-2 font-bold text-slate-900">Custo Total da Obra</td><td className="py-2 px-2 text-right font-black text-red-700">{formatBRL(r.custoTotal)}</td></tr>
+                                        <tr className="bg-emerald-50"><td className="py-2 px-2 font-bold text-slate-900">VGV Total Estimado</td><td className="py-2 px-2 text-right font-black text-emerald-700">{formatBRL(r.vgvTotal)}</td></tr>
+                                        <tr><td className="py-1.5 px-2 font-bold text-slate-700">Margem Bruta (R$)</td><td className="py-1.5 px-2 text-right font-bold text-slate-800">{formatBRL(r.margemBruta)}</td></tr>
+                                        <tr><td className="py-1.5 px-2 font-bold text-slate-700">Margem sobre VGV (%)</td><td className="py-1.5 px-2 text-right font-bold text-slate-800">{r.margemPct.toFixed(2)}%</td></tr>
+                                        <tr className="bg-blue-50"><td className="py-2 px-2 font-bold text-blue-900">ROI Inicial Estimado</td><td className="py-2 px-2 text-right font-black text-blue-700">{r.roi.toFixed(2)}%</td></tr>
+                                        <tr><td className="py-1.5 px-2 text-slate-700">TIR Anual Aproximada</td><td className="py-1.5 px-2 text-right font-medium">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</td></tr>
+                                        <tr><td className="py-1.5 px-2 text-slate-700">VPL (TMA {input.taxaDescontoAA}% a.a.)</td><td className="py-1.5 px-2 text-right font-medium">{formatBRL(r.vpl)}</td></tr>
+                                        <tr><td className="py-1.5 px-2 text-slate-700">Prazos (Obra / Vendas)</td><td className="py-1.5 px-2 text-right font-medium">{input.prazoObraMeses} / {input.prazoVendasMeses} meses</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
+                        </div>
 
-                            {/* Gráficos para Impressão */}
-                            <div className="grid grid-cols-2 gap-8 break-inside-avoid">
-                                <div className="border border-slate-200 p-6 rounded-xl text-center flex flex-col items-center justify-center">
-                                    <h4 className="font-bold text-sm mb-6 uppercase tracking-wider text-slate-700">Composição de Áreas</h4>
-                                    <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
-                                    <div className="grid grid-cols-2 gap-2 mt-6 text-[10px] text-slate-600 text-left w-full max-w-[200px]">
-                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável ({r.pctVendavel.toFixed(1)}%)</span>
-                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário</span>
-                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Lazer/Verde</span>
-                                        <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Inst.</span>
-                                    </div>
-                                </div>
-                                <div className="border border-slate-200 p-6 rounded-xl flex flex-col items-center justify-center">
-                                    <h4 className="font-bold text-sm mb-6 uppercase tracking-wider text-slate-700">Custo x VGV x Margem</h4>
-                                    <div className="w-full max-w-[250px]">
-                                        <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
-                                    </div>
-                                </div>
-                            </div>
+                        {/* 6. NOTA TÉCNICA (EFICIÊNCIA DE GLEBA E URBANISMO) */}
+                        <div className="mb-12 break-inside-avoid">
+                            <h3 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-3 uppercase tracking-widest">Nota Técnica: Eficiência de Gleba e Tipologia</h3>
+                            <div className="space-y-3 text-xs leading-relaxed text-justify text-slate-700">
+                                <p><strong>Eficiência Média de Mercado:</strong> Em projetos de urbanismo no Brasil, a proporção média de área vendável em relação à área útil do terreno situa-se historicamente entre <strong>50% e 65%</strong>. A variação exata depende do relevo, formato do polígono e exigências legais do município.</p>
 
-                            {/* Nota Técnica e Assinatura */}
-                            <div className="break-inside-avoid pt-6 border-t-2 border-slate-900">
-                                <h3 className="text-base font-bold pb-2 mb-2 uppercase tracking-widest">Nota Técnica</h3>
-                                <div className="space-y-4 text-xs text-slate-700 text-justify mb-8">
-                                    {NOTA_TECNICA.map((n, i) => (
-                                        <p key={i}><strong>{n.titulo}:</strong> {n.paragrafos[0]}</p>
-                                    ))}
-                                    <p><strong>Parâmetro adotado neste estudo:</strong> {PRESETS_AREAS[input.tipo].label} ({PRESETS_AREAS[input.tipo].lei}), com custo de obra referencial médio adotado para a tipologia.</p>
-                                </div>
+                                <p><strong>Loteamento Aberto (Lei 6.766/1979):</strong> Apresenta eficiência média de <strong>50% a 58%</strong>. Neste modelo, vias, praças e áreas institucionais são compulsoriamente doadas ao município. As exigências rígidas de caixa de rua e recuos tendem a consumir maior proporção da gleba com o sistema viário.</p>
 
-                                <h3 className="text-base font-bold pb-2 mb-2 uppercase tracking-widest">Conclusão</h3>
-                                <div className="space-y-2 text-xs text-slate-700 text-justify mb-16">
-                                    <p>Certos de estarmos oferecendo as melhores soluções para a execução dos serviços de engenharia e serviços especializados, com diferenciais de mercado tais como verificação documentada das etapas realizadas, relatórios e acompanhamento constante, despedimo-nos com votos de estima e consideração.</p>
-                                </div>
+                                <p><strong>Condomínio de Lotes / Fechado (Lei 13.465/2017):</strong> Permite eficiência superior, variando de <strong>58% a 68%</strong>. Como as vias internas e áreas de lazer consistem em áreas comuns privativas, o projeto urbano é otimizado através da adoção de vias dimensionadas ao tráfego local e *cul-de-sacs*, minimizando as perdas de terreno.</p>
 
-                                <div className="text-center pt-8 text-xs text-slate-800">
-                                    <div className="w-64 border-b border-slate-900 mx-auto mb-2"></div>
-                                    <p className="font-black text-sm">Rennan Seidl Spechotto</p>
-                                    <p className="font-medium text-slate-600">Gerente de Obras / Especialista em Empreendimentos Horizontais</p>
-                                    <p className="font-medium text-slate-600 mt-2">Spechotto Assessoria & Construção</p>
-                                    <p className="text-[10px] text-slate-500 mt-1">Cuiabá - MT • {new Date().getFullYear()}</p>
+                                <p><strong>Fatores Modificadores:</strong> A eficiência da gleba é diretamente afetada pelo tamanho dos lotes adotados. Lotes amplos (ex: sítios de recreio a partir de 1.000 m²) demandam menos área de circulação por hectare, podendo elevar a eficiência para além de 65%. Em contrapartida, APPs severas, declividades acima de 30% e polígonos irregulares reduzem significativamente o índice de aproveitamento.</p>
+
+                                <div className="p-3 bg-slate-100 border-l-4 border-blue-900 font-medium">
+                                    <strong>Parâmetro Adotado Neste Estudo:</strong> {PRESETS_AREAS[input.tipo].label} baseado na {PRESETS_AREAS[input.tipo].lei}, considerando área média de {formatDecimal(input.loteMedio)} m² por lote. Os custos de obra refletem referenciais médios consolidados para esta tipologia construtiva.
                                 </div>
                             </div>
                         </div>
-                        {/* --- FIM DO RELATÓRIO DE IMPRESSÃO --- */}
+
+                        {/* 7. ASSINATURA E RODAPÉ */}
+                        <div className="break-inside-avoid mt-16 pt-8 text-center text-xs text-slate-800">
+                            <div className="w-64 border-b-2 border-slate-900 mx-auto mb-3"></div>
+                            <p className="font-black text-sm uppercase tracking-wider">Rennan Seidl Spechotto</p>
+                            <p className="font-bold text-slate-600 mt-1">Engenheiro e Especialista em Gerenciamento de Obras</p>
+                            <p className="font-bold text-slate-600">Spechotto Assessoria & Construção</p>
+                            <p className="text-[10px] text-slate-500 mt-2 font-medium">Documento gerado pela plataforma meUrbanismo • {new Date().getFullYear()}</p>
+                        </div>
 
                     </div>
+                    {/* ============================================================================== */}
+                    {/* ======================= FIM DO RELATÓRIO DE IMPRESSÃO ======================== */}
+
                 </div>
             )}
         </div>
