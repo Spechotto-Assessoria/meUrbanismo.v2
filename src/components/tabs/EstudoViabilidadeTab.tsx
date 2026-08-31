@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, X } from 'lucide-react';
+
+// IMPORTAÇÃO CORINGA BLINDADA - Passa no build do Vite sem reclamar
 import * as SupabaseModule from '../../services/supabase';
 const supabase = (SupabaseModule as any).supabase || (SupabaseModule as any).default || SupabaseModule;
 
@@ -141,11 +143,16 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     }, [loteMedio, viewMode]);
 
     const buscarEstudos = async () => {
-        if (!supabase || typeof supabase.from !== 'function') return;
-        setCarregando(true);
-        const { data } = await supabase.from('viabilidade_inicial_estudos').select('*').order('updated_at', { ascending: false });
-        if (data) setEstudos(data as EstudoRow[]);
-        setCarregando(false);
+        try {
+            if (!supabase || typeof supabase.from !== 'function') return;
+            setCarregando(true);
+            const { data } = await supabase.from('viabilidade_inicial_estudos').select('*').order('updated_at', { ascending: false });
+            if (data) setEstudos(data as EstudoRow[]);
+        } catch (e) {
+            console.error("Erro ao buscar estudos:", e);
+        } finally {
+            setCarregando(false);
+        }
     };
 
     useEffect(() => { void buscarEstudos(); }, []);
@@ -165,11 +172,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
 
         if (!obraNome.trim()) {
             setMensagemErro("Atenção: O Nome do Empreendimento é obrigatório.");
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
-        if (!supabase || typeof supabase.from !== 'function') {
-            setMensagemErro("Erro crítico: Falha na conexão com o Supabase.");
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
@@ -200,6 +202,10 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 status,
             };
 
+            if (!supabase || typeof supabase.from !== 'function') {
+                throw new Error("Instância do Supabase não encontrada. Verifique a conexão com o banco.");
+            }
+
             let error = null;
             if (!comoNovo && estudoId) {
                 const res = await supabase.from('viabilidade_inicial_estudos').update(payload).eq('id', estudoId);
@@ -216,7 +222,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
             await buscarEstudos();
             setViewMode('pipeline');
         } catch (err: any) {
-            setMensagemErro(err.message || "Erro ao salvar no banco de dados. Verifique a tabela viabilidade_inicial_estudos.");
+            setMensagemErro(err.message || "Ocorreu um erro inesperado ao salvar no banco de dados.");
         } finally {
             setSalvando(false);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -270,7 +276,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
         setViewMode('form');
     };
 
-    // --- GERADOR DE PDF PROFISSIONAL ESTILO SPECHOTTO ---
     const handleGerarPdf = () => {
         setGerandoPdf(true);
         setTimeout(() => {
@@ -359,9 +364,9 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                         </Button>
                     </div>
 
-                    {/* ÁREA DE IMPRESSÃO / PDF PROFISSIONAL (Estilo Spechotto) */}
+                    {/* ÁREA DE IMPRESSÃO / PDF PROFISSIONAL */}
                     <div ref={reportRef} className="space-y-6 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm print:p-0 print:border-none print:shadow-none">
-                        {/* CABEÇALHO PADRÃO SPECHOTTO */}
+                        {/* CABEÇALHO */}
                         <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6">
                             <div>
                                 <h2 className="text-xl font-black text-slate-900 tracking-tight">SPECHOTTO</h2>
@@ -373,7 +378,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* CORPO DO TEXTO / ENDEREÇAMENTO */}
+                        {/* CORPO DO TEXTO */}
                         <div className="space-y-3 text-xs text-slate-700 leading-relaxed pt-2">
                             <p className="font-bold text-slate-900">Aos cuidados de: <span className="font-normal">{destinatario || 'Cliente / Investidor'}</span></p>
                             <p className="font-bold text-slate-900">Assunto: <span className="font-normal">Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'}</span></p>
@@ -385,13 +390,6 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             <p>
                                 Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.
                             </p>
-
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 mt-4">
-                                <h4 className="font-bold text-slate-900">Considerações iniciais</h4>
-                                <p className="text-[11px] text-slate-600 leading-relaxed">
-                                    O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações fornecidas. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de APP na área. Recomenda-se que eventuais áreas de doação obrigatória sejam adquiridas externamente, de modo a preservar a área vendável.
-                                </p>
-                            </div>
                         </div>
 
                         {/* FORMULÁRIO (Exibido apenas em modo tela, oculto no PDF impresso) */}
@@ -589,13 +587,38 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             </div>
                         </div>
 
-                        {/* RELATÓRIO EXCLUSIVO PARA IMPRESSÃO / PDF */}
+                        {/* RELATÓRIO EXCLUSIVO PARA IMPRESSÃO / PDF COM GRÁFICOS */}
                         <div className="hidden print:block space-y-6 pt-4">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">VGV Estimado</p><p className="text-sm font-black text-slate-900 mt-1">{formatBRL(r.vgvTotal)}</p></div>
                                 <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">Custo Total</p><p className="text-sm font-black text-red-600 mt-1">{formatBRL(r.custoTotal)}</p></div>
                                 <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">Margem Bruta</p><p className="text-sm font-black text-emerald-600 mt-1">{formatBRL(r.margemBruta)}</p></div>
                                 <div className="border border-slate-300 p-3 rounded-lg text-center"><p className="text-[9px] font-bold text-slate-500 uppercase">ROI Inicial</p><p className="text-sm font-black text-blue-600 mt-1">{r.roi.toFixed(2)}%</p></div>
+                            </div>
+
+                            {/* GRÁFICOS INJETADOS NO PDF */}
+                            <div className="grid grid-cols-2 gap-4 mt-6">
+                                <div className="border border-slate-300 rounded-lg p-4 flex flex-col items-center">
+                                    <h3 className="font-bold text-xs uppercase text-slate-800 mb-4">Composição de Áreas</h3>
+                                    <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                    <div className="flex flex-wrap justify-center gap-2 mt-4 text-[9px] text-slate-600 font-medium">
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-blue-900 mr-1" /> Vendável</span>
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-blue-500 mr-1" /> Viário</span>
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-emerald-500 mr-1" /> Verde/Lazer</span>
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-slate-400 mr-1" /> Instit.</span>
+                                    </div>
+                                </div>
+                                <div className="border border-slate-300 rounded-lg p-4 flex flex-col items-center">
+                                    <h3 className="font-bold text-xs uppercase text-slate-800 mb-4">Custo × VGV × Margem</h3>
+                                    <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                                </div>
+                            </div>
+                            <div className="border border-slate-300 rounded-lg p-4 mt-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-xs uppercase text-slate-800">Curva S — Fluxo de caixa</h3>
+                                    <span className="text-[10px] font-bold text-purple-700">TIR: {r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</span>
+                                </div>
+                                <SCurveSVG data={r.graficoFluxo} />
                             </div>
 
                             <div className="border border-slate-300 rounded-lg p-4 space-y-3">
@@ -624,7 +647,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                 ))}
                             </div>
 
-                            <div className="pt-8 border-t border-slate-300 flex justify-between items-end text-xs text-slate-700">
+                            <div className="pt-8 border-t border-slate-300 flex justify-between items-end text-xs text-slate-700 mt-8">
                                 <div>
                                     <p className="font-bold text-slate-900">Rennan Seidl Spechotto</p>
                                     <p className="text-[10px] text-slate-500">Gerente de Obras / Especialista em Empreendimentos Horizontais</p>
