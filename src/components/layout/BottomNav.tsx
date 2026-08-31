@@ -1,14 +1,16 @@
 import React, { useRef } from 'react';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  CalendarDays, 
-  Camera, 
-  FolderGit2, 
-  PieChart, 
-  Map, 
-  ShoppingBag, 
-  FileText, 
+import {
+  LayoutDashboard,
+  TrendingUp,
+  DollarSign,
+  CalendarDays,
+  Camera,
+  FolderGit2,
+  PieChart,
+  Map,
+  ShoppingBag,
+  FileText,
+  Building2,
   Settings
 } from 'lucide-react';
 import { TabId } from '../../types';
@@ -24,16 +26,18 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
   const navContainerRef = useRef<HTMLDivElement>(null);
 
   const allTabs: { id: TabId; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { id: 'andamento', label: 'Andamento', icon: <TrendingUp className="w-6 h-6" /> },
-    { id: 'orcamento', label: 'Orçamento', icon: <DollarSign className="w-6 h-6" /> },
-    { id: 'cronograma', label: 'Cronograma', icon: <CalendarDays className="w-6 h-6" /> },
-    { id: 'acompanhamento', label: 'Acompanhamento', icon: <Camera className="w-6 h-6" /> },
-    { id: 'documentos', label: 'Documentos', icon: <FolderGit2 className="w-6 h-6" /> },
-    { id: 'viabilidade', label: 'Viabilidade', icon: <PieChart className="w-6 h-6" /> },
-    { id: 'mapa', label: 'Mapa Lotes', icon: <Map className="w-6 h-6" />, badge: 'Em Breve' },
-    { id: 'vendas', label: 'Vendas', icon: <ShoppingBag className="w-6 h-6" />, badge: 'Simulador' },
-    { id: 'relatorios', label: 'Relatórios', icon: <FileText className="w-6 h-6" /> },
-    ...(isAdmin ? [{ id: 'admin' as TabId, label: 'Administração', icon: <Settings className="w-6 h-6" />, badge: 'VIP' }] : [])
+    { id: 'resumo', label: 'Resumo', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { id: 'orcamento', label: 'Orçamento', icon: <DollarSign className="w-5 h-5" /> },
+    { id: 'cronograma', label: 'Cronograma', icon: <CalendarDays className="w-5 h-5" /> },
+    { id: 'andamento', label: 'Andamento', icon: <TrendingUp className="w-5 h-5" /> },
+    { id: 'viabilidade', label: 'Viabilidade', icon: <PieChart className="w-5 h-5" /> },
+    { id: 'acompanhamento', label: 'Acompanhamento', icon: <Camera className="w-5 h-5" /> },
+    { id: 'documentos', label: 'Documentos', icon: <FolderGit2 className="w-5 h-5" /> },
+    { id: 'mapa', label: 'Mapa Lotes', icon: <Map className="w-5 h-5" /> },
+    { id: 'vendas', label: 'Vendas', icon: <ShoppingBag className="w-5 h-5" />, badge: '120x' },
+    { id: 'relatorios', label: 'Relatórios', icon: <FileText className="w-5 h-5" /> },
+    { id: 'portfolio', label: 'Portfólio', icon: <Building2 className="w-5 h-5" /> },
+    ...(isAdmin ? [{ id: 'admin' as TabId, label: 'Admin', icon: <Settings className="w-5 h-5" />, badge: 'VIP' }] : [])
   ];
 
   // Filtra abas conforme permissão do RBAC
@@ -42,7 +46,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
   const handleSelectTab = (tabId: TabId) => {
     onTabChange(tabId);
 
-    // Navegação Inteligente: Rola suavemente até o container do conteúdo sem salto brusco
     requestAnimationFrame(() => {
       const container = document.getElementById('tab-content-container');
       if (container) {
@@ -53,9 +56,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-      <div 
+      <div
         ref={navContainerRef}
-        className="max-w-7xl mx-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-0.5 px-1"
+        className="max-w-7xl mx-auto flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-0.5 px-1"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {visibleTabs.map((tab) => {
@@ -64,9 +67,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
             <button
               key={tab.id}
               onClick={() => handleSelectTab(tab.id)}
-              className={`flex-shrink-0 snap-center min-w-[84px] sm:min-w-[96px] py-1.5 px-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 relative group ${
-                isActive 
-                  ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200/80 shadow-xs scale-[1.02]' 
+              className={`flex-shrink-0 snap-center min-w-[76px] sm:min-w-[88px] py-1.5 px-1.5 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 relative group cursor-pointer ${
+                isActive
+                  ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200 shadow-xs scale-[1.02]'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
               }`}
             >
@@ -77,24 +80,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
 
               {/* Badge Opcional */}
               {tab.badge && (
-                <span className={`absolute -top-1.5 right-1 text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-tighter border shadow-xs ${
-                  tab.badge === 'VIP' 
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-                    : tab.badge === 'Simulador' 
-                    ? 'bg-blue-50 text-blue-800 border-blue-200' 
-                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                <span className={`absolute -top-1.5 right-1 text-[8px] font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-tighter border shadow-xs ${
+                  tab.badge === 'VIP'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-blue-50 text-blue-800 border-blue-200'
                 }`}>
                   {tab.badge}
                 </span>
               )}
 
-              {/* Ícone de 24px */}
+              {/* Ícone */}
               <div className={`transition-transform duration-200 ${isActive ? 'scale-110 text-blue-900' : 'group-hover:scale-105 text-slate-500 group-hover:text-slate-800'}`}>
                 {tab.icon}
               </div>
 
-              {/* Nome completo da aba sem cortes */}
-              <span className={`text-[11px] font-semibold tracking-tight whitespace-nowrap leading-tight text-center ${
+              {/* Nome da aba */}
+              <span className={`text-[10px] sm:text-[11px] font-semibold tracking-tight whitespace-nowrap leading-tight text-center ${
                 isActive ? 'text-blue-950 font-bold' : 'text-slate-500'
               }`}>
                 {tab.label}

@@ -45,7 +45,7 @@ const DonutSVG = ({ values, colors }: { values: number[], colors: string[] }) =>
     const total = values.reduce((a, b) => a + b, 0) || 1;
     let offset = 0;
     return (
-        <svg viewBox="0 0 32 32" className="w-28 h-28 transform -rotate-90 mx-auto">
+        <svg viewBox="0 0 32 32" style={{ width: '120px', height: '120px', transform: 'rotate(-90deg)', margin: '0 auto', display: 'block' }}>
             {values.map((v, i) => {
                 const dash = (v / total) * 100;
                 const out = <circle key={i} r="15.915494309" cx="16" cy="16" fill="transparent" stroke={colors[i]} strokeWidth="5" strokeDasharray={`${dash} 100`} strokeDashoffset={-offset} />;
@@ -59,21 +59,21 @@ const DonutSVG = ({ values, colors }: { values: number[], colors: string[] }) =>
 const BarSVG = ({ c, v, m }: { c: number, v: number, m: number }) => {
     const max = Math.max(c, v, m, 1);
     return (
-        <div className="flex items-end justify-center gap-6 h-36 w-full pt-2 border-b-2 border-slate-300">
-            <div className="flex flex-col items-center w-20 justify-end">
-                <span className="text-[9px] font-bold text-slate-800 mb-1">{formatBRL(c).replace(/,00$/, '')}</span>
-                <div style={{ height: `${Math.max(15, (c / max) * 100)}%` }} className="w-full bg-blue-900 rounded-t-sm" />
-                <span className="text-[10px] mt-1 text-slate-900 font-black uppercase">Custo</span>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '24px', height: '150px', width: '100%', paddingTop: '8px', borderBottom: '2px solid #cbd5e1' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80px', height: '100%', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}>{formatBRL(c).replace(/,00$/, '')}</span>
+                <div style={{ height: `${Math.max(15, (c / max) * 100)}%`, width: '100%', backgroundColor: '#1e3a8a', borderTopLeftRadius: '2px', borderTopRightRadius: '2px' }} />
+                <span style={{ fontSize: '11px', marginTop: '4px', color: '#0f172a', fontWeight: 900, textTransform: 'uppercase' }}>Custo</span>
             </div>
-            <div className="flex flex-col items-center w-20 justify-end">
-                <span className="text-[9px] font-bold text-slate-800 mb-1">{formatBRL(v).replace(/,00$/, '')}</span>
-                <div style={{ height: `${Math.max(15, (v / max) * 100)}%` }} className="w-full bg-blue-500 rounded-t-sm" />
-                <span className="text-[10px] mt-1 text-slate-900 font-black uppercase">VGV</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80px', height: '100%', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}>{formatBRL(v).replace(/,00$/, '')}</span>
+                <div style={{ height: `${Math.max(15, (v / max) * 100)}%`, width: '100%', backgroundColor: '#3b82f6', borderTopLeftRadius: '2px', borderTopRightRadius: '2px' }} />
+                <span style={{ fontSize: '11px', marginTop: '4px', color: '#0f172a', fontWeight: 900, textTransform: 'uppercase' }}>VGV</span>
             </div>
-            <div className="flex flex-col items-center w-20 justify-end">
-                <span className="text-[9px] font-bold text-slate-800 mb-1">{formatBRL(m).replace(/,00$/, '')}</span>
-                <div style={{ height: `${Math.max(15, (m / max) * 100)}%` }} className="w-full bg-emerald-500 rounded-t-sm" />
-                <span className="text-[10px] mt-1 text-slate-900 font-black uppercase">Margem</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80px', height: '100%', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#1e293b', marginBottom: '4px' }}>{formatBRL(m).replace(/,00$/, '')}</span>
+                <div style={{ height: `${Math.max(15, (m / max) * 100)}%`, width: '100%', backgroundColor: '#10b981', borderTopLeftRadius: '2px', borderTopRightRadius: '2px' }} />
+                <span style={{ fontSize: '11px', marginTop: '4px', color: '#0f172a', fontWeight: 900, textTransform: 'uppercase' }}>Margem</span>
             </div>
         </div>
     );
@@ -88,13 +88,13 @@ const SCurveSVG = ({ data }: { data: { mes: number, acumulado: number }[] }) => 
     const zeroY = 100 - ((0 - min) / range) * 100;
 
     return (
-        <div className="relative w-full h-36 my-2 border-l border-b border-slate-400">
-            <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+        <div style={{ position: 'relative', width: '100%', height: '150px', margin: '8px 0', borderLeft: '1px solid #94a3b8', borderBottom: '1px solid #94a3b8' }}>
+            <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', overflow: 'visible' }} preserveAspectRatio="none">
                 <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="#94a3b8" strokeDasharray="2" strokeWidth="0.5" />
                 <polyline points={pts} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <div className="absolute top-0 -left-16 text-[9px] text-slate-600 font-bold">{formatBRL(max).split(',')[0]}</div>
-            <div className="absolute bottom-0 -left-16 text-[9px] text-slate-600 font-bold">{formatBRL(min).split(',')[0]}</div>
+            <div style={{ position: 'absolute', top: 0, left: '-60px', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>{formatBRL(max).split(',')[0]}</div>
+            <div style={{ position: 'absolute', bottom: 0, left: '-60px', fontSize: '10px', color: '#475569', fontWeight: 'bold' }}>{formatBRL(min).split(',')[0]}</div>
         </div>
     );
 };
@@ -673,9 +673,9 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                             <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse', border: '1px solid #cbd5e1' }}>
                                                 <thead>
                                                     <tr style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}>
-                                                        <th style={{ padding: '3px 5px', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>Destinação</th>
-                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>Área (m²)</th>
-                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>%</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '50%' }}>Destinação</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1', width: '30%' }}>Área (m²)</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1', width: '20%' }}>%</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -696,8 +696,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                             <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse', border: '1px solid #cbd5e1' }}>
                                                 <thead>
                                                     <tr style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
-                                                        <th style={{ padding: '3px 5px', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>Métrica</th>
-                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1' }}>Valor Estimado</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'left', borderBottom: '1px solid #cbd5e1', width: '60%' }}>Métrica</th>
+                                                        <th style={{ padding: '3px 5px', textAlign: 'right', borderBottom: '1px solid #cbd5e1', width: '40%' }}>Valor Estimado</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -763,10 +763,10 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                     </span>
                                 </div>
                                 <SCurveSVG data={r.graficoFluxo} />
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '3px' }}>
-                                    <span>Início da Obra</span>
-                                    {r.mesBreakEven !== null && <span style={{ color: '#059669' }}>Break-even (Mês {r.mesBreakEven})</span>}
-                                    <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '6px' }}>
+                                    <span style={{ width: '33%', textAlign: 'left' }}>Início da Obra</span>
+                                    {r.mesBreakEven !== null ? <span style={{ width: '34%', textAlign: 'center', color: '#059669' }}>Break-even (Mês {r.mesBreakEven})</span> : <span style={{ width: '34%' }}></span>}
+                                    <span style={{ width: '33%', textAlign: 'right' }}>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
                                 </div>
                             </div>
                         </div>

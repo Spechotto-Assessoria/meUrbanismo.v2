@@ -4,15 +4,17 @@
 
 export type TabId =
   | 'dashboard'
-  | 'andamento'
+  | 'resumo'
   | 'orcamento'
   | 'cronograma'
+  | 'andamento'
+  | 'viabilidade'
   | 'acompanhamento'
   | 'documentos'
-  | 'viabilidade'
   | 'mapa'
   | 'vendas'
   | 'relatorios'
+  | 'portfolio'
   | 'admin'
   | 'nova-empresa'
   | 'nova-obra';

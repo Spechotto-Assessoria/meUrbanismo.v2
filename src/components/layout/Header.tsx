@@ -10,7 +10,10 @@ import {
   User as UserIcon,
   Sparkles,
   Save,
-  RotateCcw
+  RotateCcw,
+  LogIn,
+  LogOut,
+  Lock
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -23,10 +26,13 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
   const {
     user,
     role,
-    obras,
     activeObra,
     setActiveObra,
-    switchRole
+    switchRole,
+    getUserObras,
+    isMasterAdmin,
+    setShowLoginModal,
+    logout
   } = useAuth();
 
   const [showObraMenu, setShowObraMenu] = useState(false);
@@ -39,16 +45,24 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
   const [telefone, setTelefone] = useState('(17) 99999-8888');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  const userObras = getUserObras();
+
   const getRoleBadge = (r: UserRole) => {
+    if (isMasterAdmin) {
+      return { label: 'MASTER ADMIN', color: 'bg-emerald-50 text-emerald-800 border-emerald-300' };
+    }
     switch (r) {
       case 'ADMINISTRADOR':
         return { label: 'ADMIN', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
       case 'PROPRIETARIO_INVESTIDOR':
+      case 'INVESTIDOR':
         return { label: 'INVESTIDOR', color: 'bg-blue-50 text-blue-800 border-blue-200' };
       case 'CORRETOR':
         return { label: 'CORRETOR', color: 'bg-amber-50 text-amber-800 border-amber-200' };
       case 'CLIENTE_COMPRADOR':
         return { label: 'CLIENTE', color: 'bg-purple-50 text-purple-800 border-purple-200' };
+      default:
+        return { label: 'CONVIDADO', color: 'bg-slate-50 text-slate-700 border-slate-200' };
     }
   };
 
@@ -84,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
         <div
           onClick={handleLogoPress}
           className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer select-none"
-          title="Voltar ao Dashboard Inicial"
+          title="Voltar ao Painel Geral"
         >
           <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0">
             <img
@@ -103,8 +117,8 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
           </div>
         </div>
 
-        {/* SELETOR DE OBRA (PROTEÇÃO CONTRA NULL) */}
-        <div className="relative flex-1 min-w-0 max-w-[140px] sm:max-w-[220px] mx-1">
+        {/* SELETOR DE OBRA (COM ISOLAMENTO DE ACESSO POR CONVITE) */}
+        <div className="relative flex-1 min-w-0 max-w-[140px] sm:max-w-[240px] mx-1">
           <button
             type="button"
             onClick={() => {
@@ -112,10 +126,10 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
               setShowNotifications(false);
               setShowProfileDropdown(false);
             }}
-            className="w-full flex items-center justify-between gap-1 px-2 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs overflow-hidden cursor-pointer"
+            className="w-full flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs overflow-hidden cursor-pointer"
           >
             <Building2 className="w-3.5 h-3.5 text-blue-900 shrink-0" />
-            <span className="truncate text-left font-medium text-slate-700 text-[11px] sm:text-xs">
+            <span className="truncate text-left font-bold text-slate-800 text-[11px] sm:text-xs">
               {activeObra && activeObra.nome ? activeObra.nome : 'Selecionar Obra'}
             </span>
             <ChevronDown className={`w-3 h-3 text-slate-500 shrink-0 transition-transform ${showObraMenu ? 'rotate-180' : ''}`} />
@@ -123,32 +137,42 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
 
           {showObraMenu && (
             <div className="absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-xl p-2 z-50 animate-fadeIn">
-              <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                Selecione o Empreendimento
+              <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                <span>Obras Vinculadas</span>
+                <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
+                  {userObras.length} liberadas
+                </span>
               </div>
               <div className="space-y-1 mt-1 max-h-60 overflow-y-auto">
-                {obras && obras.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveObra(o as any);
-                      setShowObraMenu(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${activeObra?.id === o.id
-                        ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
-                        : 'text-slate-700 hover:bg-slate-50'
+                {userObras.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    Nenhum empreendimento vinculado ao seu convite.
+                  </div>
+                ) : (
+                  userObras.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveObra(o as any);
+                        setShowObraMenu(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${
+                        activeObra?.id === o.id
+                          ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
+                          : 'text-slate-700 hover:bg-slate-50'
                       }`}
-                  >
-                    <div>
-                      <div className="font-semibold text-slate-900">{o.nome}</div>
-                      <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-blue-700" /> {o.cidade} - {o.uf} • {o.tipo}
+                    >
+                      <div>
+                        <div className="font-semibold text-slate-900">{o.nome}</div>
+                        <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-blue-700" /> {o.cidade} - {o.uf} • {o.tipo}
+                        </div>
                       </div>
-                    </div>
-                    {activeObra?.id === o.id && <Check className="w-4 h-4 text-blue-900 shrink-0" />}
-                  </button>
-                ))}
+                      {activeObra?.id === o.id && <Check className="w-4 h-4 text-blue-900 shrink-0" />}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -179,8 +203,12 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                 </div>
                 <div className="space-y-2 mt-2">
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="font-semibold text-slate-900">Nova Medição Aprovada</div>
-                    <div className="text-[11px] text-slate-600 mt-0.5">Medição nº 6 da Pavimentação homologada.</div>
+                    <div className="font-semibold text-slate-900">Medição Homologada</div>
+                    <div className="text-[11px] text-slate-600 mt-0.5">Medição nº 6 da Pavimentação aprovada pela Spechotto.</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <div className="font-semibold text-slate-900">Novo Documento Disponível</div>
+                    <div className="text-[11px] text-slate-600 mt-0.5">Projeto de Drenagem Pluvial (R02) anexado à pasta.</div>
                   </div>
                 </div>
               </div>
@@ -217,22 +245,24 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                   <div className="font-extrabold text-slate-900 text-sm sm:text-base">
                     {user?.nome || 'Usuário'}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{email}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">{user?.email}</div>
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleInfo.color}`}>
                         {roleInfo.label}
                       </span>
-                      <span className="text-[10px] text-blue-800 font-medium flex items-center gap-0.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-700" /> Nível Estrito RBAC
-                      </span>
+                      {isMasterAdmin && (
+                        <span className="text-[10px] text-emerald-800 font-bold flex items-center gap-0.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Acesso Total Master
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsEditing(!isEditing)}
                       className="text-[10px] font-bold text-blue-600 hover:text-blue-800 underline cursor-pointer"
                     >
-                      {isEditing ? 'Cancelar' : 'Editar Dados'}
+                      {isEditing ? 'Cancelar' : 'Editar'}
                     </button>
                   </div>
                 </div>
@@ -240,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                 {isEditing && (
                   <form onSubmit={handleSaveProfile} className="mt-3 space-y-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                     <div className="font-bold text-slate-700 text-[11px] flex items-center gap-1">
-                      <UserIcon className="w-3.5 h-3.5 text-blue-600" /> Alterar Dados Cadastrais
+                      <UserIcon className="w-3.5 h-3.5 text-blue-600" /> Alterar Dados
                     </div>
                     <div>
                       <label className="block text-[10px] font-medium text-slate-600">Nome</label>
@@ -272,83 +302,101 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                   </form>
                 )}
 
-                {role !== 'ADMINISTRADOR' && (
-                  <div className="mt-3 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-                    <span className="text-[11px] text-emerald-900 font-semibold">Modo Simulador Ativo</span>
-                    <button
-                      type="button"
-                      onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-3 h-3" /> Voltar p/ Admin
-                    </button>
-                  </div>
-                )}
+                {/* BOTÕES DE LOGIN / AUTH / LOGOUT */}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      setShowLoginModal(true);
+                    }}
+                    className="flex-1 py-2 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" /> Autenticar Conta
+                  </button>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      logout();
+                    }}
+                    className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-600 font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    title="Sair da Sessão"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Sair
+                  </button>
+                </div>
+
+                {/* ALTERNAR PERFIL DE TESTE */}
                 <div className="mt-3.5 pt-3 border-t border-slate-100">
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> ALTERNAR PERFIL DE TESTE:
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" /> ALTERNAR PERFIL DE DEMONSTRAÇÃO:
                   </div>
 
                   <div className="space-y-1">
                     <button
                       type="button"
                       onClick={() => { switchRole('admin'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'ADMINISTRADOR'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                        isMasterAdmin
                           ? 'bg-emerald-50 text-emerald-950 font-bold border border-emerald-200'
                           : 'text-slate-700 hover:bg-slate-50'
-                        }`}
+                      }`}
                     >
                       <div>
-                        <div className="font-bold">1. ADMINISTRADOR</div>
-                        <div className="text-[10px] text-slate-500">Acesso irrestrito total, convites e gestão</div>
+                        <div className="font-bold">1. ADMINISTRADOR MASTER</div>
+                        <div className="text-[10px] text-slate-500">rennan.spechotto@gmail.com (Acesso Total)</div>
                       </div>
-                      {role === 'ADMINISTRADOR' && <Check className="w-4 h-4 text-emerald-700 shrink-0" />}
+                      {isMasterAdmin && <Check className="w-4 h-4 text-emerald-700 shrink-0" />}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => { switchRole('investidor'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'PROPRIETARIO_INVESTIDOR'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                        role === 'PROPRIETARIO_INVESTIDOR' && !isMasterAdmin
                           ? 'bg-blue-50 text-blue-950 font-bold border border-blue-200'
                           : 'text-slate-700 hover:bg-slate-50'
-                        }`}
+                      }`}
                     >
                       <div>
                         <div className="font-bold">2. PROPRIETÁRIO / INVESTIDOR</div>
                         <div className="text-[10px] text-slate-500">Orçamento, Cronograma e Viabilidade</div>
                       </div>
-                      {role === 'PROPRIETARIO_INVESTIDOR' && <Check className="w-4 h-4 text-blue-800 shrink-0" />}
+                      {role === 'PROPRIETARIO_INVESTIDOR' && !isMasterAdmin && <Check className="w-4 h-4 text-blue-800 shrink-0" />}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => { switchRole('corretor'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CORRETOR'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                        role === 'CORRETOR' && !isMasterAdmin
                           ? 'bg-amber-50 text-amber-950 font-bold border border-amber-200'
                           : 'text-slate-700 hover:bg-slate-50'
-                        }`}
+                      }`}
                     >
                       <div>
                         <div className="font-bold">3. CORRETOR DE IMÓVEIS</div>
-                        <div className="text-[10px] text-slate-500">Vendas, Mapa e Andamento (Sem sigilosos)</div>
+                        <div className="text-[10px] text-slate-500">Vendas, Mapa e Propostas</div>
                       </div>
-                      {role === 'CORRETOR' && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
+                      {role === 'CORRETOR' && !isMasterAdmin && <Check className="w-4 h-4 text-amber-700 shrink-0" />}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => { switchRole('cliente'); setShowProfileDropdown(false); }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${role === 'CLIENTE_COMPRADOR'
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                        role === 'CLIENTE_COMPRADOR' && !isMasterAdmin
                           ? 'bg-purple-50 text-purple-950 font-bold border border-purple-200'
                           : 'text-slate-700 hover:bg-slate-50'
-                        }`}
+                      }`}
                     >
                       <div>
                         <div className="font-bold">4. CLIENTE / COMPRADOR</div>
-                        <div className="text-[10px] text-slate-500">Andamento e fotos públicas apenas</div>
+                        <div className="text-[10px] text-slate-500">Andamento, Fotos e Mapa</div>
                       </div>
-                      {role === 'CLIENTE_COMPRADOR' && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
+                      {role === 'CLIENTE_COMPRADOR' && !isMasterAdmin && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
                     </button>
                   </div>
                 </div>
