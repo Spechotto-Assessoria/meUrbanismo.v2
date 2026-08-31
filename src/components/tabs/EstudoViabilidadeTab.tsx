@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, X } from 'lucide-react';
 
-// IMPORTAÇÃO CORINGA BLINDADA - Passa no build do Vite sem reclamar
-import * as SupabaseModule from '../../services/supabase';
-const supabase = (SupabaseModule as any).supabase || (SupabaseModule as any).default || SupabaseModule;
+// CORREÇÃO: Apontando para o arquivo correto de serviço (supabase.ts que gerencia o LocalStorage)
+import { apiService } from '../../services/supabase';
 
 import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from './ui-components';
 import { CidadeAutocomplete } from '../viabilidade/CidadeAutocomplete';
@@ -144,10 +143,14 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
 
     const buscarEstudos = async () => {
         try {
-            if (!supabase || typeof supabase.from !== 'function') return;
             setCarregando(true);
-            const { data } = await supabase.from('viabilidade_inicial_estudos').select('*').order('updated_at', { ascending: false });
-            if (data) setEstudos(data as EstudoRow[]);
+            await apiService.getViabilidade('');
+            const savedList = localStorage.getItem('meurbanismo_viabilidade_estudos_list');
+            if (savedList) {
+                setEstudos(JSON.parse(savedList));
+            } else {
+                setEstudos([]);
+            }
         } catch (e) {
             console.error("Erro ao buscar estudos:", e);
         } finally {
@@ -178,7 +181,8 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
 
         setSalvando(true);
         try {
-            const payload = {
+            const novoEstudo: EstudoRow = {
+                id: (!comoNovo && estudoId) ? estudoId : `viab-${Date.now()}`,
                 titulo: obraNome.trim(),
                 empresa_nome: empresaNome || null,
                 destinatario: destinatario || null,
@@ -200,29 +204,24 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 prazo_vendas_meses: input.prazoVendasMeses,
                 taxa_desconto_aa: input.taxaDescontoAA,
                 status,
+                updated_at: new Date().toISOString()
             };
 
-            if (!supabase || typeof supabase.from !== 'function') {
-                throw new Error("Instância do Supabase não encontrada. Verifique a conexão com o banco.");
-            }
-
-            let error = null;
+            let novaLista = [...estudos];
             if (!comoNovo && estudoId) {
-                const res = await supabase.from('viabilidade_inicial_estudos').update(payload).eq('id', estudoId);
-                error = res.error;
+                novaLista = novaLista.map(item => item.id === estudoId ? novoEstudo : item);
             } else {
-                const res = await supabase.from('viabilidade_inicial_estudos').insert(payload).select('id').single();
-                error = res.error;
-                if (res.data) setEstudoId(res.data.id);
+                novaLista = [novoEstudo, ...novaLista];
+                setEstudoId(novoEstudo.id);
             }
 
-            if (error) throw error;
+            localStorage.setItem('meurbanismo_viabilidade_estudos_list', JSON.stringify(novaLista));
+            setEstudos(novaLista);
 
             setMensagemSucesso("Estudo salvo com sucesso!");
-            await buscarEstudos();
             setViewMode('pipeline');
         } catch (err: any) {
-            setMensagemErro(err.message || "Ocorreu um erro inesperado ao salvar no banco de dados.");
+            setMensagemErro(err.message || "Ocorreu um erro ao salvar o estudo.");
         } finally {
             setSalvando(false);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -230,14 +229,10 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
     };
 
     const handleExcluir = async (id: string) => {
-        if (!supabase || typeof supabase.from !== 'function') return;
-        const { error } = await supabase.from('viabilidade_inicial_estudos').delete().eq('id', id);
-        if (!error) {
-            setMensagemSucesso("Estudo excluído.");
-            void buscarEstudos();
-        } else {
-            setMensagemErro("Erro ao excluir estudo.");
-        }
+        const novaLista = estudos.filter(e => e.id !== id);
+        setEstudos(novaLista);
+        localStorage.setItem('meurbanismo_viabilidade_estudos_list', JSON.stringify(novaLista));
+        setMensagemSucesso("Estudo excluído.");
     };
 
     const carregarEstudoNoForm = (e: EstudoRow) => {
