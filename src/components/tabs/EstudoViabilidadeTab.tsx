@@ -400,6 +400,7 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                 )
             ) : (
                 <div className="space-y-6">
+                    {/* BARRA DE AÇÕES PERFEITAMENTE ALINHADA */}
                     <div className="flex flex-wrap items-center justify-end gap-2 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:hidden">
                         <Button onClick={() => handleSalvar(false)} disabled={salvando} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold h-9 px-4">
                             <Save className="w-4 h-4 mr-1.5" /> {estudoId ? "Salvar Estudo Selecionado" : "Salvar Estudo"}
@@ -435,6 +436,9 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                             <p>
                                 Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.
                             </p>
+                            <p>
+                                Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção.
+                            </p>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:hidden">
@@ -444,14 +448,14 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                     <CardContent className="space-y-4">
                                         <div className="space-y-1">
                                             <Label className="text-xs font-medium text-slate-500">Nome do Empreendimento *</Label>
-                                            <Input type="text" value={obraNome} onChange={(e) => setObraNome(e.target.value)} placeholder="Obrigatório" className="rounded-xl bg-slate-50 border-slate-200 text-sm" />
+                                            <Input type="text" value={obraNome} onChange={(e) => setObraNome(e.target.value)} placeholder="Obrigatório — vira o título do estudo" className="rounded-xl bg-slate-50 border-slate-200 text-sm" />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Empresa</Label><Input type="text" value={empresaNome} onChange={(e) => setEmpresaNome(e.target.value)} className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
-                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Destinatário</Label><Input type="text" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Destinatário</Label><Input type="text" value={destinatario} onChange={(e) => setDestinatario(e.target.value)} placeholder="Ex.: Pablo / Thiago" className="rounded-xl bg-slate-50 border-slate-200 text-sm" /></div>
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="text-xs font-medium text-slate-500">Localização / Cidade</Label>
+                                            <Label className="text-xs font-medium text-slate-500">Localização / Cidade do Brasil</Label>
                                             <CidadeAutocomplete value={localizacao} onChange={setLocalizacao} />
                                         </div>
                                     </CardContent>
@@ -468,35 +472,166 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                                         ))}
                                     </CardContent>
                                 </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Quadro de áreas</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área do Terreno (m²)</Label><Input value={areaTerreno} onChange={(e) => setAreaTerreno(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
+                                            <div className="space-y-1"><Label className="text-xs font-medium text-slate-500">Área de APP (m²)</Label><Input value={areaApp} onChange={(e) => setAreaApp(maskDecimal(e.target.value))} className="text-right bg-slate-50" /></div>
+                                        </div>
+
+                                        <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs flex justify-between font-bold text-slate-700">
+                                            <span>Área útil após APP:</span><span>{formatDecimal(r.areaBase)} m²</span>
+                                        </div>
+
+                                        <div className="space-y-3 pt-2">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-600">Sistema Viário <br /><span className="text-[10px] text-slate-400">Auto-ajusta pelo lote médio</span></span>
+                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.viario} onChange={(e) => setPercentuais(p => ({ ...p, viario: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-600">Áreas Verdes e Lazer</span>
+                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.verde} onChange={(e) => setPercentuais(p => ({ ...p, verde: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-600">Áreas Institucionais</span>
+                                                <div className="flex items-center gap-2"><span className="text-slate-500">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)} m²</span><Input type="number" value={percentuais.institucional} onChange={(e) => setPercentuais(p => ({ ...p, institucional: Number(e.target.value) || 0 }))} className="w-16 text-right font-medium" />%</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 bg-slate-100 rounded-xl border border-slate-200 text-xs text-center">
+                                            <div className="font-bold text-slate-800">Área privativa / vendável: {formatDecimal(r.areaVendavel)} m²</div>
+                                            <div className="text-[10px] text-slate-500 mt-0.5">{r.pctVendavel.toFixed(2)}% da área útil • {r.aproveitamentoPct.toFixed(2)}% do terreno</div>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-bold text-slate-500">Metragem média dos lotes (m²)</Label>
+                                            <Input value={loteMedio} onChange={(e) => setLoteMedio(maskDecimal(e.target.value))} className="text-right font-bold text-blue-600 bg-blue-50 border-blue-200" />
+                                        </div>
+                                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs font-black text-center text-purple-900">
+                                            Quantidade estimada de lotes: {r.qtdLotes} lotes
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Financeiro (custo vs venda)</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4 text-xs">
+                                        <div className="space-y-1">
+                                            <Label className="text-xs font-medium text-slate-500">Custo por m² de área privativa</Label>
+                                            <Input value={custoM2} onChange={(e) => setCustoM2(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
+                                        </div>
+                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo total estimado da obra</span><span className="font-bold text-slate-800">{formatBRL(r.custoTotal)}</span></div>
+                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Custo por lote</span><span className="font-bold text-slate-800">{formatBRL(r.custoPorLote)}</span></div>
+                                        <div className="flex justify-between py-2 border-b border-slate-100"><span className="text-slate-600">Valor de venda por lote (média)</span><span className="font-bold text-emerald-600">{formatBRL(r.valorVendaLote)}</span></div>
+
+                                        <div className="space-y-1 pt-2">
+                                            <Label className="text-xs font-bold text-emerald-700">Valor de venda por m² privativo</Label>
+                                            <Input value={valorVendaM2} onChange={(e) => setValorVendaM2(maskDecimal(e.target.value))} className="text-right font-bold text-emerald-700 bg-emerald-50 border-emerald-200" />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm">
+                                    <CardHeader><CardTitle className="text-sm font-bold">Projeção temporal</CardTitle></CardHeader>
+                                    <CardContent className="space-y-4 text-xs">
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label className="text-slate-500 font-medium">Prazo da obra (meses)</Label>
+                                                <Input value={prazoObra} onChange={(e) => setPrazoObra(e.target.value)} className="text-right bg-slate-50" type="number" />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-slate-500 font-medium">Prazo de vendas (meses)</Label>
+                                                <Input value={prazoVendas} onChange={(e) => setPrazoVendas(e.target.value)} className="text-right bg-slate-50" type="number" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-slate-500 font-medium">Taxa de desconto / TMA (% a.a.)</Label>
+                                            <Input value={tma} onChange={(e) => setTma(maskDecimal(e.target.value))} className="text-right bg-slate-50" />
+                                        </div>
+                                        <div className="flex justify-between items-center py-2 bg-slate-100 rounded-xl px-3 font-bold border border-slate-200">
+                                            <span className="text-slate-600">VPL (pela TMA)</span><span className="text-slate-800 text-sm">{formatBRL(r.vpl)}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
 
                             <div className="lg:col-span-7 space-y-6">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                     <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
                                         <CardContent className="p-4">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">VGV</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">VGV Estimado</p>
                                             <p className="text-base font-black text-slate-900 mt-1">{formatBRL(r.vgvTotal)}</p>
                                         </CardContent>
                                     </Card>
                                     <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
                                         <CardContent className="p-4">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">Custo</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custo Total</p>
                                             <p className="text-base font-black text-red-500 mt-1">{formatBRL(r.custoTotal)}</p>
                                         </CardContent>
                                     </Card>
                                     <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
                                         <CardContent className="p-4">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">Margem</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Margem Bruta</p>
                                             <p className="text-base font-black text-emerald-500 mt-1">{formatBRL(r.margemBruta)}</p>
                                         </CardContent>
                                     </Card>
                                     <Card className="rounded-2xl border-slate-200 shadow-sm text-center">
                                         <CardContent className="p-4">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">ROI</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ROI Inicial</p>
                                             <p className="text-base font-black text-blue-600 mt-1">{r.roi.toFixed(2)}%</p>
                                         </CardContent>
                                     </Card>
                                 </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
+                                        <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Composição de áreas</div>
+                                        <div className="p-6 flex flex-col items-center">
+                                            <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                            <div className="flex flex-wrap justify-center gap-3 mt-6 text-[10px] text-slate-600 font-medium">
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável</span>
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário</span>
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Verde/Lazer</span>
+                                                <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Institucional</span>
+                                            </div>
+                                        </div>
+                                    </Card>
+
+                                    <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
+                                        <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold text-slate-800">Custo × VGV × Margem</div>
+                                        <div className="p-6">
+                                            <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                                        </div>
+                                    </Card>
+                                </div>
+
+                                <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
+                                    <div className="bg-slate-50 p-4 border-b border-slate-100 text-sm font-bold flex justify-between items-center text-slate-800">
+                                        Curva S — Fluxo de caixa
+                                        <span className="text-[10px] font-normal text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200">TIR Anual: <strong className="text-purple-600">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</strong></span>
+                                    </div>
+                                    <div className="p-6 pt-8">
+                                        <SCurveSVG data={r.graficoFluxo} />
+                                        <div className="flex justify-between mt-3 text-[9px] text-slate-400 font-bold uppercase">
+                                            <span>Início da Obra</span>
+                                            {r.mesBreakEven !== null && <span className="text-emerald-500">Break-even (Mês {r.mesBreakEven})</span>}
+                                            <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-200 shadow-sm bg-slate-50">
+                                    <div className="p-5 space-y-4">
+                                        {NOTA_TECNICA.map((n, i) => (
+                                            <div key={i} className="text-xs">
+                                                <h4 className="font-bold text-slate-800 mb-1">{n.titulo}</h4>
+                                                <p className="text-slate-600 leading-relaxed">{n.paragrafos[0]}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
                             </div>
                         </div>
                     </div>
