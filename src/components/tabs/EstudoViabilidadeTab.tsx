@@ -88,7 +88,7 @@ const SCurveSVG = ({ data }: { data: { mes: number, acumulado: number }[] }) => 
     const zeroY = 100 - ((0 - min) / range) * 100;
 
     return (
-        <div className="relative w-full h-52 mt-6 mb-2 border-l border-b border-slate-300">
+        <div className="relative w-full h-48 mt-4 mb-2 border-l border-b border-slate-300">
             <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" preserveAspectRatio="none">
                 <line x1="0" y1={zeroY} x2="100" y2={zeroY} stroke="#94a3b8" strokeDasharray="2" strokeWidth="0.5" />
                 <polyline points={pts} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -622,177 +622,186 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
                     {/* ============================================================================== */}
                     {/* === INÍCIO DO RELATÓRIO DE IMPRESSÃO PROFISSIONAL (SOMENTE PDF/IMPRESSÃO) === */}
                     {/* ============================================================================== */}
-                    <div className="hidden print:block bg-white text-slate-900 w-full p-4">
+                    <div className="hidden print:block bg-white text-slate-900 w-full p-2">
 
-                        {/* 1. CABEÇALHO CORPORATIVO COM LOGOS GRANDES E TÍTULO CENTRALIZADO */}
-                        <div className="grid grid-cols-3 items-center border-b-4 border-blue-900 pb-6 mb-8 w-full">
-                            {/* Logo Esquerda (Spechotto - Maior) */}
-                            <div className="flex justify-start items-center">
-                                <img src="/logo-spechotto.png" alt="Spechotto Assessoria & Construção" className="h-24 max-h-24 w-auto object-contain" />
-                            </div>
-
-                            {/* Título Centralizado */}
-                            <div className="text-center">
-                                <h1 className="text-lg font-black text-blue-950 uppercase tracking-wider m-0 p-0 leading-tight">ESTUDO DE VIABILIDADE INICIAL</h1>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Análise Econômica e Urbanística</p>
-                            </div>
-
-                            {/* Logo Direta (meUrbanismo - Maior) */}
-                            <div className="flex justify-end items-center">
-                                <img src="/logo-meurbanismo.jpg" alt="meUrbanismo" className="h-20 max-h-20 w-auto object-contain" />
-                            </div>
-                        </div>
-
-                        {/* 2. DADOS DE IDENTIFICAÇÃO E INTRODUÇÃO */}
-                        <div className="mb-8 space-y-4 text-sm leading-relaxed text-justify break-inside-avoid">
-                            <div className="text-right text-xs text-slate-600 space-y-0.5 mb-4">
-                                <p className="font-bold">Cuiabá, {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.</p>
-                            </div>
-                            <p><strong>Aos cuidados de:</strong> {destinatario || 'Cliente / Investidor'}</p>
-                            <p><strong>Assunto:</strong> Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'} ({localizacao || 'Cuiabá - MT'})</p>
-                            <p className="pt-2">Prezado(a),</p>
-                            <p>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento denominado <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
-                            <p>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção. Agradecemos desde já a confiança depositada e nos colocamos à vossa inteira disposição para os esclarecimentos que se fizerem necessários.</p>
-                        </div>
-
-                        {/* 3. CONSIDERAÇÕES INICIAIS */}
-                        <div className="mb-8 text-sm leading-relaxed text-justify break-inside-avoid">
-                            <h3 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-3 uppercase tracking-widest">Considerações Iniciais</h3>
-                            <p className="mb-2">O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações base de metragem. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de Área de Preservação Permanente (APP).</p>
-                            <p>Quando houver APP, recomenda-se que a área de doação obrigatória seja adquirida externamente ao empreendimento, de modo a não reduzir a área vendável. Como infraestrutura básica, o empreendimento deverá contemplar: rede de drenagem, dreno de bordo nas ruas, rede de abastecimento de água, tratamento de esgoto, pavimentação asfáltica, rede de energia e iluminação, garantindo qualidade superior ao produto final.</p>
-                        </div>
-
-                        {/* === QUEBRA DE PÁGINA ANTES DAS TABELAS === */}
-                        <div className="print:break-before-page pt-4"></div>
-
-                        {/* 4. TABELAS (QUADRO DE ÁREAS E INDICADORES) */}
-                        <div className="grid grid-cols-2 gap-6 mb-8 mt-4 break-inside-avoid">
-                            {/* Quadro de Áreas */}
-                            <div>
-                                <h3 className="text-xs font-bold text-blue-900 border-b border-blue-900 pb-1 mb-2 uppercase tracking-widest">Quadro de Áreas</h3>
-                                <table className="w-full text-[11px] text-left border-collapse border border-slate-300">
-                                    <thead>
-                                        <tr className="bg-blue-900 text-white">
-                                            <th className="py-1.5 px-2 border-b border-slate-300">Destinação</th>
-                                            <th className="py-1.5 px-2 text-right border-b border-slate-300">Área (m²)</th>
-                                            <th className="py-1.5 px-2 text-right border-b border-slate-300">%</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        <tr className="bg-slate-50"><td className="py-1 px-2 font-bold">Área total da gleba</td><td className="py-1 px-2 text-right font-medium">{formatDecimal(input.areaTerreno)}</td><td className="py-1 px-2 text-right">100%</td></tr>
-                                        <tr><td className="py-1 px-2">Área de APP (deduzida)</td><td className="py-1 px-2 text-right text-red-600">{formatDecimal(input.areaApp)}</td><td className="py-1 px-2 text-right text-red-600">{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr className="bg-slate-100"><td className="py-1 px-2 font-bold text-slate-700">Área útil (após APP)</td><td className="py-1 px-2 text-right font-bold text-slate-700">{formatDecimal(r.areaBase)}</td><td className="py-1 px-2 text-right font-bold text-slate-700">{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr><td className="py-1 px-2">Sistema Viário</td><td className="py-1 px-2 text-right">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td className="py-1 px-2 text-right">{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr><td className="py-1 px-2">Áreas Verdes e Lazer</td><td className="py-1 px-2 text-right">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td className="py-1 px-2 text-right">{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr><td className="py-1 px-2">Áreas Institucionais</td><td className="py-1 px-2 text-right">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td className="py-1 px-2 text-right">{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
-                                        <tr className="bg-blue-50 border-t-2 border-blue-200"><td className="py-1 px-2 font-black text-blue-900">Área privativa (Vendável)</td><td className="py-1 px-2 text-right font-black text-blue-900">{formatDecimal(r.areaVendavel)}</td><td className="py-1 px-2 text-right font-black text-blue-900">{formatDecimal(r.aproveitamentoPct)}%</td></tr>
-                                        <tr className="bg-white"><td className="py-1 px-2 font-bold text-slate-600">Lotes estimados</td><td className="py-1 px-2 text-right font-bold text-slate-600">{r.qtdLotes} lotes</td><td className="py-1 px-2 text-right text-slate-600">{formatDecimal(input.loteMedio)} m²/lote</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Indicadores Financeiros */}
-                            <div>
-                                <h3 className="text-xs font-bold text-blue-900 border-b border-blue-900 pb-1 mb-2 uppercase tracking-widest">Indicadores Financeiros</h3>
-                                <table className="w-full text-[11px] text-left border-collapse border border-slate-300">
-                                    <thead>
-                                        <tr className="bg-slate-800 text-white">
-                                            <th className="py-1.5 px-2 border-b border-slate-300">Métrica</th>
-                                            <th className="py-1.5 px-2 text-right border-b border-slate-300">Valor Estimado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        <tr><td className="py-1 px-2 text-slate-700">Custo Ref. por m² privativo</td><td className="py-1 px-2 text-right font-medium">{formatBRL(input.custoM2Privativo)}</td></tr>
-                                        <tr><td className="py-1 px-2 text-slate-700">Venda Ref. por m² privativo</td><td className="py-1 px-2 text-right font-medium">{formatBRL(input.valorVendaM2)}</td></tr>
-                                        <tr><td className="py-1 px-2 text-slate-700">Custo médio por lote</td><td className="py-1 px-2 text-right font-medium">{formatBRL(r.custoPorLote)}</td></tr>
-                                        <tr><td className="py-1 px-2 text-slate-700">Venda média por lote</td><td className="py-1 px-2 text-right font-medium">{formatBRL(r.valorVendaLote)}</td></tr>
-                                        <tr className="bg-red-50"><td className="py-1 px-2 font-bold text-slate-900">Custo Total da Obra</td><td className="py-1 px-2 text-right font-black text-red-700">{formatBRL(r.custoTotal)}</td></tr>
-                                        <tr className="bg-emerald-50"><td className="py-1 px-2 font-bold text-slate-900">VGV Total Estimado</td><td className="py-1 px-2 text-right font-black text-emerald-700">{formatBRL(r.vgvTotal)}</td></tr>
-                                        <tr><td className="py-1 px-2 font-bold text-slate-700">Margem Bruta (R$)</td><td className="py-1 px-2 text-right font-bold text-slate-800">{formatBRL(r.margemBruta)}</td></tr>
-                                        <tr><td className="py-1 px-2 font-bold text-slate-700">Margem sobre VGV (%)</td><td className="py-1 px-2 text-right font-bold text-slate-800">{r.margemPct.toFixed(2)}%</td></tr>
-                                        <tr className="bg-blue-50"><td className="py-1 px-2 font-bold text-blue-900">ROI Inicial Estimado</td><td className="py-1 px-2 text-right font-black text-blue-700">{r.roi.toFixed(2)}%</td></tr>
-                                        <tr><td className="py-1 px-2 text-slate-700">TIR Anual Aproximada</td><td className="py-1 px-2 text-right font-medium">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</td></tr>
-                                        <tr><td className="py-1 px-2 text-slate-700">VPL (TMA {input.taxaDescontoAA}% a.a.)</td><td className="py-1 px-2 text-right font-medium">{formatBRL(r.vpl)}</td></tr>
-                                        <tr><td className="py-1 px-2 text-slate-700">Prazos (Obra / Vendas)</td><td className="py-1 px-2 text-right font-medium">{input.prazoObraMeses} / {input.prazoVendasMeses} meses</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* === QUEBRA DE PÁGINA ANTES DOS GRÁFICOS === */}
-                        <div className="print:break-before-page pt-4"></div>
-
-                        {/* 5. GRÁFICOS (ÁREAS E CUSTO x VGV) */}
-                        <div className="grid grid-cols-2 gap-6 mb-8 mt-4 break-inside-avoid">
-                            {/* Gráfico 1: Áreas */}
-                            <div className="flex flex-col items-center justify-center p-4 border border-slate-300 rounded-xl bg-slate-50">
-                                <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-4">Uso do Solo (Áreas)</h4>
-                                <div className="w-32 h-32">
-                                    <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                        {/* PÁGINA 1: CABEÇALHO, APRESENTAÇÃO E CONSIDERAÇÕES */}
+                        <div>
+                            {/* 1. CABEÇALHO CORPORATIVO COM LOGOS GRANDES E TÍTULO CENTRALIZADO */}
+                            <div className="grid grid-cols-3 items-center border-b-4 border-blue-900 pb-4 mb-6 w-full">
+                                <div className="flex justify-start items-center">
+                                    <img src="/logo-spechotto.png" alt="Spechotto Assessoria & Construção" className="h-20 max-h-20 w-auto object-contain" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 mt-4 text-[9px] text-slate-700 w-full max-w-[220px]">
-                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-900 mr-1.5" /> Vendável: {r.pctVendavel.toFixed(1)}%</span>
-                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5" /> Viário: {input.percentuais.viario.toFixed(1)}%</span>
-                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5" /> Verdes: {input.percentuais.verde.toFixed(1)}%</span>
-                                    <span className="flex items-center"><div className="w-2.5 h-2.5 rounded-full bg-slate-400 mr-1.5" /> Inst.: {input.percentuais.institucional.toFixed(1)}%</span>
+                                <div className="text-center">
+                                    <h1 className="text-base font-black text-blue-950 uppercase tracking-wider m-0 p-0 leading-tight">ESTUDO DE VIABILIDADE INICIAL</h1>
+                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Análise Econômica e Urbanística</p>
+                                </div>
+                                <div className="flex justify-end items-center">
+                                    <img src="/logo-meurbanismo.jpg" alt="meUrbanismo" className="h-16 max-h-16 w-auto object-contain" />
                                 </div>
                             </div>
 
-                            {/* Gráfico 2: Financeiro */}
-                            <div className="flex flex-col items-center justify-center p-4 border border-slate-300 rounded-xl bg-slate-50">
-                                <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-2">Custo × VGV × Margem</h4>
-                                <div className="w-full max-w-[260px]">
-                                    <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                            {/* 2. DADOS DE IDENTIFICAÇÃO E INTRODUÇÃO */}
+                            <div className="mb-6 space-y-3 text-xs leading-relaxed text-justify">
+                                <div className="text-right text-[11px] text-slate-600 space-y-0.5 mb-2">
+                                    <p className="font-bold">Cuiabá, {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}.</p>
+                                </div>
+                                <p><strong>Aos cuidados de:</strong> {destinatario || 'Cliente / Investidor'}</p>
+                                <p><strong>Assunto:</strong> Estudo de Viabilidade Inicial — {obraNome || 'Novo Empreendimento'} ({localizacao || 'Cuiabá - MT'})</p>
+                                <p className="pt-1">Prezado(a),</p>
+                                <p>Em atendimento a vossa solicitação, apresentamos a seguir o <strong>Estudo de Viabilidade Inicial</strong> para o empreendimento denominado <strong>{obraNome || 'Não definido'}</strong>, localizado na cidade de <strong>{localizacao || 'Cuiabá - MT'}</strong>.</p>
+                                <p>Aproveitamos a oportunidade para reafirmar nosso compromisso em atendê-los com os mais elevados níveis de qualidade, buscando oferecer as melhores soluções tecnológicas associadas às boas práticas da engenharia e da construção. Agradecemos desde já a confiança depositada e nos colocamos à vossa inteira disposição para os esclarecimentos que se fizerem necessários.</p>
+                            </div>
+
+                            {/* 3. CONSIDERAÇÕES INICIAIS */}
+                            <div className="mb-4 text-xs leading-relaxed text-justify">
+                                <h3 className="text-xs font-bold text-blue-900 border-b border-blue-900 pb-1 mb-2 uppercase tracking-widest">Considerações Iniciais</h3>
+                                <p className="mb-1.5">O estudo de viabilidade a seguir foi elaborado de forma estimada e prévia, utilizando como base os parâmetros mínimos de projeto e as informações base de metragem. Para um estudo mais detalhado será necessário projeto preliminar e definições legais de município e estado, principalmente relacionadas a questões ambientais e à eventual existência de Área de Preservação Permanente (APP).</p>
+                                <p>Quando houver APP, recomenda-se que a área de doação obrigatória seja adquirida externamente ao empreendimento, de modo a não reduzir a área vendável. Como infraestrutura básica, o empreendimento deverá contemplar: rede de drenagem, dreno de bordo nas ruas, rede de abastecimento de água, tratamento de esgoto, pavimentação asfáltica, rede de energia e iluminação, garantindo qualidade superior ao produto final.</p>
+                            </div>
+                        </div>
+
+                        {/* === QUEBRA DE PÁGINA OBRIGATÓRIA PARA A PÁGINA 2 (TABELAS) === */}
+                        <div className="print:break-before-page pt-2"></div>
+
+                        {/* PÁGINA 2: TABELAS (QUADRO DE ÁREAS E INDICADORES) */}
+                        <div className="w-full">
+                            <h3 className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-4 pb-1 border-b border-slate-300">Sumário Executivo e Métricas Numéricas</h3>
+                            <div className="grid grid-cols-2 gap-6">
+                                {/* Quadro de Áreas */}
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-blue-900 border-b border-blue-900 pb-1 mb-2 uppercase tracking-widest">Quadro de Áreas</h4>
+                                    <table className="w-full text-[11px] text-left border-collapse border border-slate-300">
+                                        <thead>
+                                            <tr className="bg-blue-900 text-white">
+                                                <th className="py-1 px-2 border-b border-slate-300">Destinação</th>
+                                                <th className="py-1 px-2 text-right border-b border-slate-300">Área (m²)</th>
+                                                <th className="py-1 px-2 text-right border-b border-slate-300">%</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200">
+                                            <tr className="bg-slate-50"><td className="py-1 px-2 font-bold">Área total da gleba</td><td className="py-1 px-2 text-right font-medium">{formatDecimal(input.areaTerreno)}</td><td className="py-1 px-2 text-right">100%</td></tr>
+                                            <tr><td className="py-1 px-2">Área de APP (deduzida)</td><td className="py-1 px-2 text-right text-red-600">{formatDecimal(input.areaApp)}</td><td className="py-1 px-2 text-right text-red-600">{formatDecimal((input.areaApp / input.areaTerreno) * 100)}%</td></tr>
+                                            <tr className="bg-slate-100"><td className="py-1 px-2 font-bold text-slate-700">Área útil (após APP)</td><td className="py-1 px-2 text-right font-bold text-slate-700">{formatDecimal(r.areaBase)}</td><td className="py-1 px-2 text-right font-bold text-slate-700">{formatDecimal((r.areaBase / input.areaTerreno) * 100)}%</td></tr>
+                                            <tr><td className="py-1 px-2">Sistema Viário</td><td className="py-1 px-2 text-right">{formatDecimal((input.percentuais.viario / 100) * r.areaBase)}</td><td className="py-1 px-2 text-right">{formatDecimal((((input.percentuais.viario / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                            <tr><td className="py-1 px-2">Áreas Verdes e Lazer</td><td className="py-1 px-2 text-right">{formatDecimal((input.percentuais.verde / 100) * r.areaBase)}</td><td className="py-1 px-2 text-right">{formatDecimal((((input.percentuais.verde / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                            <tr><td className="py-1 px-2">Áreas Institucionais</td><td className="py-1 px-2 text-right">{formatDecimal((input.percentuais.institucional / 100) * r.areaBase)}</td><td className="py-1 px-2 text-right">{formatDecimal((((input.percentuais.institucional / 100) * r.areaBase) / input.areaTerreno) * 100)}%</td></tr>
+                                            <tr className="bg-blue-50 border-t-2 border-blue-200"><td className="py-1 px-2 font-black text-blue-900">Área privativa (Vendável)</td><td className="py-1 px-2 text-right font-black text-blue-900">{formatDecimal(r.areaVendavel)}</td><td className="py-1 px-2 text-right font-black text-blue-900">{formatDecimal(r.aproveitamentoPct)}%</td></tr>
+                                            <tr className="bg-white"><td className="py-1 px-2 font-bold text-slate-600">Lotes estimados</td><td className="py-1 px-2 text-right font-bold text-slate-600">{r.qtdLotes} lotes</td><td className="py-1 px-2 text-right text-slate-600">{formatDecimal(input.loteMedio)} m²/lote</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Indicadores Financeiros */}
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-blue-900 border-b border-blue-900 pb-1 mb-2 uppercase tracking-widest">Indicadores Financeiros</h4>
+                                    <table className="w-full text-[11px] text-left border-collapse border border-slate-300">
+                                        <thead>
+                                            <tr className="bg-slate-800 text-white">
+                                                <th className="py-1 px-2 border-b border-slate-300">Métrica</th>
+                                                <th className="py-1 px-2 text-right border-b border-slate-300">Valor Estimado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200">
+                                            <tr><td className="py-1 px-2 text-slate-700">Custo Ref. por m² privativo</td><td className="py-1 px-2 text-right font-medium">{formatBRL(input.custoM2Privativo)}</td></tr>
+                                            <tr><td className="py-1 px-2 text-slate-700">Venda Ref. por m² privativo</td><td className="py-1 px-2 text-right font-medium">{formatBRL(input.valorVendaM2)}</td></tr>
+                                            <tr><td className="py-1 px-2 text-slate-700">Custo médio por lote</td><td className="py-1 px-2 text-right font-medium">{formatBRL(r.custoPorLote)}</td></tr>
+                                            <tr><td className="py-1 px-2 text-slate-700">Venda média por lote</td><td className="py-1 px-2 text-right font-medium">{formatBRL(r.valorVendaLote)}</td></tr>
+                                            <tr className="bg-red-50"><td className="py-1 px-2 font-bold text-slate-900">Custo Total da Obra</td><td className="py-1 px-2 text-right font-black text-red-700">{formatBRL(r.custoTotal)}</td></tr>
+                                            <tr className="bg-emerald-50"><td className="py-1 px-2 font-bold text-slate-900">VGV Total Estimado</td><td className="py-1 px-2 text-right font-black text-emerald-700">{formatBRL(r.vgvTotal)}</td></tr>
+                                            <tr><td className="py-1 px-2 font-bold text-slate-700">Margem Bruta (R$)</td><td className="py-1 px-2 text-right font-bold text-slate-800">{formatBRL(r.margemBruta)}</td></tr>
+                                            <tr><td className="py-1 px-2 font-bold text-slate-700">Margem sobre VGV (%)</td><td className="py-1 px-2 text-right font-bold text-slate-800">{r.margemPct.toFixed(2)}%</td></tr>
+                                            <tr className="bg-blue-50"><td className="py-1 px-2 font-bold text-blue-900">ROI Inicial Estimado</td><td className="py-1 px-2 text-right font-black text-blue-700">{r.roi.toFixed(2)}%</td></tr>
+                                            <tr><td className="py-1 px-2 text-slate-700">TIR Anual Aproximada</td><td className="py-1 px-2 text-right font-medium">{r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}</td></tr>
+                                            <tr><td className="py-1 px-2 text-slate-700">VPL (TMA {input.taxaDescontoAA}% a.a.)</td><td className="py-1 px-2 text-right font-medium">{formatBRL(r.vpl)}</td></tr>
+                                            <tr><td className="py-1 px-2 text-slate-700">Prazos (Obra / Vendas)</td><td className="py-1 px-2 text-right font-medium">{input.prazoObraMeses} / {input.prazoVendasMeses} meses</td></tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Gráfico 3: Curva S (Isolado e com quebra protegida para nunca cortar) */}
-                        <div className="mb-8 p-6 border border-slate-300 rounded-xl bg-slate-50 break-inside-avoid">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Curva S — Fluxo de Caixa Acumulado</h4>
-                                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded border border-purple-200">
-                                    TIR Anual: {r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}
-                                </span>
+                        {/* === QUEBRA DE PÁGINA OBRIGATÓRIA PARA A PÁGINA 3 (GRÁFICOS) === */}
+                        <div className="print:break-before-page pt-2"></div>
+
+                        {/* PÁGINA 3: GRÁFICOS (USO DO SOLO, CUSTO x VGV E CURVA S) */}
+                        <div className="w-full">
+                            <h3 className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-4 pb-1 border-b border-slate-300">Análise Gráfica e Fluxo de Caixa</h3>
+
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                                {/* Gráfico 1: Áreas */}
+                                <div className="flex flex-col items-center justify-center p-3 border border-slate-300 rounded-xl bg-slate-50">
+                                    <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-3">Uso do Solo (Áreas)</h4>
+                                    <div className="w-28 h-28">
+                                        <DonutSVG values={[r.pctVendavel, input.percentuais.viario, input.percentuais.verde, input.percentuais.institucional, 0]} colors={['#1e3a8a', '#3b82f6', '#10b981', '#94a3b8', '#f59e0b']} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mt-3 text-[9px] text-slate-700 w-full max-w-[200px]">
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-blue-900 mr-1.5" /> Vendável: {r.pctVendavel.toFixed(1)}%</span>
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-blue-500 mr-1.5" /> Viário: {input.percentuais.viario.toFixed(1)}%</span>
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" /> Verdes: {input.percentuais.verde.toFixed(1)}%</span>
+                                        <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-slate-400 mr-1.5" /> Inst.: {input.percentuais.institucional.toFixed(1)}%</span>
+                                    </div>
+                                </div>
+
+                                {/* Gráfico 2: Financeiro */}
+                                <div className="flex flex-col items-center justify-center p-3 border border-slate-300 rounded-xl bg-slate-50">
+                                    <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-2">Custo × VGV × Margem</h4>
+                                    <div className="w-full max-w-[240px]">
+                                        <BarSVG c={r.custoTotal} v={r.vgvTotal} m={r.margemBruta} />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="pt-2">
-                                <SCurveSVG data={r.graficoFluxo} />
-                                <div className="flex justify-between mt-3 text-[10px] text-slate-500 font-bold uppercase">
-                                    <span>Início da Obra</span>
-                                    {r.mesBreakEven !== null && <span className="text-emerald-600 font-black">Break-even (Mês {r.mesBreakEven})</span>}
-                                    <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
+
+                            {/* Gráfico 3: Curva S */}
+                            <div className="p-4 border border-slate-300 rounded-xl bg-slate-50">
+                                <div className="flex justify-between items-center mb-2">
+                                    <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">Curva S — Fluxo de Caixa Acumulado</h4>
+                                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                                        TIR Anual: {r.tirAnual !== null ? `${r.tirAnual.toFixed(2)}%` : 'n/a'}
+                                    </span>
+                                </div>
+                                <div className="pt-1">
+                                    <SCurveSVG data={r.graficoFluxo} />
+                                    <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-bold uppercase">
+                                        <span>Início da Obra</span>
+                                        {r.mesBreakEven !== null && <span className="text-emerald-600 font-black">Break-even (Mês {r.mesBreakEven})</span>}
+                                        <span>Fim dos Recebimentos (Mês {r.graficoFluxo.length - 1})</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* === QUEBRA DE PÁGINA OBRIGATÓRIA ANTES DAS NOTAS TÉCNICAS (ELIMINA O CORTE) === */}
-                        <div className="print:break-before-page pt-4"></div>
+                        {/* === QUEBRA DE PÁGINA OBRIGATÓRIA PARA A PÁGINA 4 (NOTA TÉCNICA E ASSINATURA) === */}
+                        <div className="print:break-before-page pt-2"></div>
 
-                        {/* 6. NOTA TÉCNICA (EFICIÊNCIA DE GLEBA E URBANISMO) */}
-                        <div className="mb-8 break-inside-avoid">
-                            <h3 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-4 uppercase tracking-widest">Nota Técnica: Eficiência de Gleba e Tipologia</h3>
-                            <div className="text-xs leading-relaxed text-justify text-slate-700 space-y-3">
-                                <p><strong>Eficiência Média de Mercado:</strong> Em projetos de urbanismo no Brasil, a proporção média de área vendável em relação à área útil do terreno situa-se historicamente entre <strong>50% e 65%</strong>. A variação exata depende do relevo, formato do polígono e exigências legais do município.</p>
+                        {/* PÁGINA 4: NOTA TÉCNICA E ASSINATURA */}
+                        <div className="w-full">
+                            <h3 className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-4 pb-1 border-b border-slate-300">Fundamentação Técnica</h3>
 
-                                <p><strong>Loteamento Aberto (Lei 6.766/1979):</strong> Apresenta eficiência média de <strong>50% a 58%</strong>. Neste modelo, vias, praças e áreas institucionais são compulsoriamente doadas ao município. As exigências rígidas de caixa de rua e recuos tendem a consumir maior proporção da gleba com o sistema viário.</p>
+                            <div className="mb-8">
+                                <h4 className="text-sm font-bold text-blue-900 border-b border-blue-900 pb-1 mb-3 uppercase tracking-widest">Nota Técnica: Eficiência de Gleba e Tipologia</h4>
+                                <div className="text-xs leading-relaxed text-justify text-slate-700 space-y-3">
+                                    <p><strong>Eficiência Média de Mercado:</strong> Em projetos de urbanismo no Brasil, a proporção média de área vendável em relação à área útil do terreno situa-se historicamente entre <strong>50% e 65%</strong>. A variação exata depende do relevo, formato do polígono e exigências legais do município.</p>
 
-                                <p><strong>Condomínio de Lotes / Fechado (Lei 13.465/2017):</strong> Permite eficiência superior, variando de <strong>58% a 68%</strong>. Como as vias internas e áreas de lazer consistem em áreas comuns privativas, o projeto urbano é otimizado através da adoção de vias dimensionadas ao tráfego local e *cul-de-sacs*, minimizando as perdas de terreno.</p>
+                                    <p><strong>Loteamento Aberto (Lei 6.766/1979):</strong> Apresenta eficiência média de <strong>50% a 58%</strong>. Neste modelo, vias, praças e áreas institucionais são compulsoriamente doadas ao município. As exigências rígidas de caixa de rua e recuos tendem a consumir maior proporção da gleba com o sistema viário.</p>
 
-                                <p><strong>Fatores Modificadores:</strong> A eficiência da gleba é diretamente afetada pelo tamanho dos lotes adotados. Lotes amplos (ex: sítios de recreio a partir de 1.000 m²) demandam menos área de circulação por hectare, podendo elevar a eficiência para além de 65%. Em contrapartida, APPs severas, declividades acima de 30% e polígonos irregulares reduzem significativamente o índice de aproveitamento.</p>
+                                    <p><strong>Condomínio de Lotes / Fechado (Lei 13.465/2017):</strong> Permite eficiência superior, variando de <strong>58% a 68%</strong>. Como as vias internas e áreas de lazer consistem em áreas comuns privativas, o projeto urbano é otimizado através da adoção de vias dimensionadas ao tráfego local e *cul-de-sacs*, minimizando as perdas de terreno.</p>
 
-                                <div className="p-4 bg-slate-100 border-l-4 border-blue-900 font-medium my-4">
-                                    <strong>Parâmetro Adotado Neste Estudo:</strong> {PRESETS_AREAS[input.tipo].label} baseado na {PRESETS_AREAS[input.tipo].lei}, considerando área média de {formatDecimal(input.loteMedio)} m² por lote. Os custos de obra refletem referenciais médios consolidados para esta tipologia construtiva.
+                                    <p><strong>Fatores Modificadores:</strong> A eficiência da gleba é diretamente afetada pelo tamanho dos lotes adotados. Lotes amplos (ex: sítios de recreio a partir de 1.000 m²) demandam menos área de circulação por hectare, podendo elevar a eficiência para além de 65%. Em contrapartida, APPs severas, declividades acima de 30% e polígonos irregulares reduzem significativamente o índice de aproveitamento.</p>
+
+                                    <div className="p-3 bg-slate-100 border-l-4 border-blue-900 font-medium my-3">
+                                        <strong>Parâmetro Adotado Neste Estudo:</strong> {PRESETS_AREAS[input.tipo].label} baseado na {PRESETS_AREAS[input.tipo].lei}, considerando área média de {formatDecimal(input.loteMedio)} m² por lote. Os custos de obra refletem referenciais médios consolidados para esta tipologia construtiva.
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 7. ASSINATURA E RODAPÉ */}
-                        <div className="mt-16 pt-8 text-center text-xs text-slate-800 break-inside-avoid">
-                            <div className="w-64 border-b-2 border-slate-900 mx-auto mb-3"></div>
-                            <p className="font-black text-sm uppercase tracking-wider">Rennan Seidl Spechotto</p>
-                            <p className="font-bold text-slate-600 mt-1">Engenheiro e Especialista em Gerenciamento de Obras</p>
-                            <p className="font-bold text-slate-600">Spechotto Assessoria & Construção</p>
-                            <p className="text-[10px] text-slate-400 mt-4 font-medium">Documento gerado pela plataforma meUrbanismo • {new Date().getFullYear()}</p>
+                            {/* Assinatura */}
+                            <div className="mt-12 pt-6 text-center text-xs text-slate-800">
+                                <div className="w-64 border-b-2 border-slate-900 mx-auto mb-3"></div>
+                                <p className="font-black text-sm uppercase tracking-wider">Rennan Seidl Spechotto</p>
+                                <p className="font-bold text-slate-600 mt-0.5">Engenheiro e Especialista em Gerenciamento de Obras</p>
+                                <p className="font-bold text-slate-600">Spechotto Assessoria & Construção</p>
+                                <p className="text-[10px] text-slate-400 mt-3 font-medium">Documento gerado pela plataforma meUrbanismo • {new Date().getFullYear()}</p>
+                            </div>
                         </div>
 
                     </div>
