@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { AuthAlert } from './AuthAlert';
 import {
   Lock,
   Mail,
   KeyRound,
   ShieldCheck,
-  X,
-  CheckCircle2,
-  AlertCircle
+  X
 } from 'lucide-react';
 
 interface LoginModalProps {
@@ -30,20 +29,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
       const res = await loginWithEmail(email, password);
       if (res.success) {
-        setSuccess('Autenticado com sucesso!');
+        setSuccess('Autenticado com sucesso! Redirecionando...');
+        setEmail('');
+        setPassword('');
+        setLoading(false);
         setTimeout(() => {
           setSuccess(null);
           if (onClose) onClose();
         }, 800);
       } else {
         setError(res.error || 'Credenciais inválidas.');
+        setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao conectar ao servidor de autenticação.');
-    } finally {
+      setError(err?.message || 'Erro ao conectar ao servidor de autenticação.');
       setLoading(false);
     }
   };
@@ -51,16 +54,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
       const res = await loginWithGoogle();
       if (!res.success) {
         setError(res.error || 'Login com Google temporariamente indisponível no servidor.');
+        setLoading(false);
       } else {
-        setSuccess('Autenticado via Google OAuth!');
+        setSuccess('Autenticado via Google OAuth! Redirecionando...');
+        // O navegador é redirecionado para o provedor OAuth; o carregamento
+        // permanece ativo até a troca de página, evitando reabrir o formulário.
       }
     } catch (err: any) {
       setError('Login com Google indisponível no momento. Utilize e-mail e senha.');
-    } finally {
       setLoading(false);
     }
   };
@@ -75,14 +81,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              disabled={loading}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="w-4 h-4" />
             </button>
           )}
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-white/10 backdrop-blur-md p-2 flex items-center justify-center border border-white/20 mb-3 shadow-inner">
-            <img src="/logo-meurbanismo.png" alt="meUrbanismo" className="w-full h-full object-contain" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
+            <img
+              src="/logo-meurbanismo.png"
+              alt="meUrbanismo"
+              className="w-full h-full object-contain mix-blend-multiply"
+            />
           </div>
 
           <h2 className="text-xl font-black tracking-tight">meUrbanismo</h2>
@@ -90,19 +101,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-4">
-          {error && (
-            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-start gap-2 animate-fadeIn">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>{success}</span>
-            </div>
-          )}
+          {error && <AuthAlert type="error" message={error} />}
+          {success && <AuthAlert type="success" message={success} />}
 
           {/* FORMULÁRIO DE LOGIN */}
           <form onSubmit={handleEmailLogin} className="space-y-3.5">
@@ -115,10 +115,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 <input
                   type="email"
                   required
+                  disabled={loading}
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ex: seu.email@exemplo.com"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -132,10 +134,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 <input
                   type="password"
                   required
+                  disabled={loading}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                 />
               </div>
             </div>

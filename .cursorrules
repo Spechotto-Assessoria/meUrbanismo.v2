@@ -1,10 +1,11 @@
-# Regras de Desenvolvimento - meUrbanismo (Superpowers)
+# Diretrizes Gerais
+- **Idioma:** Sempre responda e comente os códigos em Português do Brasil (pt-BR).
 
-Você é um desenvolvedor especialista em React, TypeScript, Tailwind CSS e Supabase.
-Antes de executar qualquer alteração complexa no código, consulte as metodologias disponíveis na pasta `/skills`.
+# Diretrizes de Design Visual
+- **Estética Profissional:** Evite visuais com "cara de IA" (cores neon exageradas, gradientes chamativos e botões excessivamente arredondados). Utilize uma paleta sóbria e corporativa (tons de Navy, Slate, cinzas neutros e acentos corporativos limpos).
+- **Componentes:** Utilize padrões inspirados no shadcn/ui: bordas sutis (`border-border/70`), sombras elegantes e discretas (`shadow-sm` ou `shadow-elegant`), fontes limpas e espaçamentos consistentes.
+- **Responsividade:** Garanta que todas as tabelas e painéis se adaptem perfeitamente a dispositivos móveis e desktops.
 
-Siga estritamente estas diretrizes:
-1. **Brainstorming & Planejamento:** Antes de criar novas telas (como o Dashboard ou Estudo de Viabilidade), planeje os componentes e as permissões de usuário (admin vs cliente).
-2. **Preservação de Código:** Não apague componentes existentes sem confirmação explícita.
-3. **Validação do Banco:** Sempre valide os schemas e consultas ao Supabase antes de implementar alterações na interface.
-4. **Qualidade:** Siga princípios de TDD (desenvolvimento orientado a testes) e componentes reutilizáveis.
+# Diretrizes de Segurança e RBAC
+- **Controle de Acesso por Papel (RBAC):** Os perfis de `Cliente / Comprador` e `Corretor de Imóveis` possuem restrição absoluta a dados financeiros. Nenhuma informação de custo, orçamento detalhado em dinheiro, margem de lucro, VGV global ou TIR/VPL pode ser exibida para esses papéis.
+- **Mascaramento Obrigatório:** Se um componente financeiro for renderizado para um usuário sem permissão, exiba valores mascarados (`—`) ou oculte completamente o elemento.

@@ -338,40 +338,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Usamos skipBrowserRedirect: true para impedir que o navegador seja redirecionado
+      // automaticamente para a página de erro 400 JSON do Supabase se o provedor estiver desabilitado.
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: window.location.origin,
+          skipBrowserRedirect: true
         }
       });
+
       if (error) {
         const msg = error.message || '';
-        if (
-          msg.toLowerCase().includes('provider is not enabled') ||
-          msg.toLowerCase().includes('unsupported provider') ||
-          msg.toLowerCase().includes('not enabled')
-        ) {
-          return {
-            success: false,
-            error: 'O login com Google não está habilitado no servidor Supabase. Por favor, utilize seu e-mail e senha cadastrados.'
-          };
-        }
-        return { success: false, error: msg };
-      }
-      return { success: true };
-    } catch (err: any) {
-      const msg = err?.message || String(err);
-      if (
-        msg.toLowerCase().includes('provider is not enabled') ||
-        msg.toLowerCase().includes('unsupported provider') ||
-        msg.toLowerCase().includes('not enabled')
-      ) {
         return {
           success: false,
-          error: 'O login com Google não está habilitado no servidor Supabase. Por favor, utilize seu e-mail e senha cadastrados.'
+          error: 'O login com Google está desativado ou não configurado neste projeto. Por favor, utilize seu e-mail e senha cadastrados.'
         };
       }
-      return { success: false, error: 'Falha temporária ao conectar com o Google OAuth. Utilize e-mail e senha.' };
+
+      // Se retornou a URL de autorização, verificamos se o provedor do projeto está ativo
+      if (data?.url) {
+        try {
+          // Faz uma checagem preliminar para saber se o endpoint não responde com 400/erro de provedor
+          const res = await fetch(data.url, { method: 'GET', headers: { Accept: 'text/html,application/xhtml+xml' } });
+          if (!res.ok) {
+            return {
+              success: false,
+              error: 'O login com Google está desativado ou não configurado neste projeto do Supabase. Utilize e-mail e senha.'
+            };
+          }
+          // Se a resposta for OK (redirecionamento do Google), podemos navegar com segurança
+          window.location.href = data.url;
+          return { success: true };
+        } catch (fetchErr) {
+          // Em caso de CORS no fetch preliminar ou erro de rede, se o Google não estiver configurado
+          return {
+            success: false,
+            error: 'O login com Google está desativado ou não configurado neste projeto. Por favor, utilize seu e-mail e senha.'
+          };
+        }
+      }
+
+      return {
+        success: false,
+        error: 'O login com Google está desativado ou não configurado neste projeto. Utilize seu e-mail e senha.'
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: 'O login com Google está desativado ou não configurado neste projeto. Utilize e-mail e senha.'
+      };
     }
   };
 

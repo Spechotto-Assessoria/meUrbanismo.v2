@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { AuthAlert } from './AuthAlert';
 import {
   Lock,
   Mail,
   KeyRound,
   ShieldCheck,
-  Building2,
-  Sparkles,
-  ArrowRight,
-  CheckCircle2,
-  X,
-  User as UserIcon,
-  HelpCircle
+  User as UserIcon
 } from 'lucide-react';
 
 export const LoginScreen: React.FC = () => {
@@ -36,19 +31,21 @@ export const LoginScreen: React.FC = () => {
         const res = await signUpWithEmail(email, password, nome);
         if (res.success) {
           setSuccess('Conta criada com sucesso! Verificando sessão...');
+          setPassword('');
         } else {
           setError(res.error || 'Erro ao realizar cadastro.');
         }
       } else {
         const res = await loginWithEmail(email, password);
         if (res.success) {
-          setSuccess('Autenticado com sucesso!');
+          setSuccess('Autenticado com sucesso! Redirecionando...');
+          setPassword('');
         } else {
           setError(res.error || 'Credenciais inválidas. Verifique seu e-mail e senha.');
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Falha na conexão com o servidor de autenticação.');
+      setError(err?.message || 'Falha na conexão com o servidor de autenticação.');
     } finally {
       setLoading(false);
     }
@@ -56,15 +53,18 @@ export const LoginScreen: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     setError(null);
+    setSuccess(null);
     setLoading(true);
     try {
       const res = await loginWithGoogle();
       if (!res.success) {
         setError(res.error || 'Falha ao iniciar autenticação Google.');
+        setLoading(false);
       }
+      // Em caso de sucesso, o navegador é redirecionado para o provedor OAuth,
+      // então o estado de carregamento é mantido até a troca de página.
     } catch (err: any) {
       setError('Erro no login social Google.');
-    } finally {
       setLoading(false);
     }
   };
@@ -80,8 +80,12 @@ export const LoginScreen: React.FC = () => {
         
         {/* CABEÇALHO CORPORATIVO */}
         <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 p-8 text-white text-center relative">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-white/10 backdrop-blur-md p-2.5 flex items-center justify-center border border-white/20 mb-3 shadow-inner">
-            <img src="/logo-meurbanismo.png" alt="meUrbanismo" className="w-full h-full object-contain" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
+            <img
+              src="/logo-meurbanismo.png"
+              alt="meUrbanismo"
+              className="w-full h-full object-contain mix-blend-multiply"
+            />
           </div>
 
           <h1 className="text-2xl font-black tracking-tight">meUrbanismo</h1>
@@ -94,19 +98,8 @@ export const LoginScreen: React.FC = () => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-5">
-          {error && (
-            <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center gap-2 animate-shake">
-              <X className="w-4 h-4 text-red-500 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>{success}</span>
-            </div>
-          )}
+          {error && <AuthAlert type="error" message={error} />}
+          {success && <AuthAlert type="success" message={success} />}
 
           {/* FORMULÁRIO */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -120,10 +113,12 @@ export const LoginScreen: React.FC = () => {
                   <input
                     type="text"
                     required
+                    disabled={loading}
+                    autoComplete="name"
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
                     placeholder="Seu nome completo"
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                   />
                 </div>
               </div>
@@ -138,10 +133,12 @@ export const LoginScreen: React.FC = () => {
                 <input
                   type="email"
                   required
+                  disabled={loading}
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ex: seu.email@exemplo.com"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -155,10 +152,12 @@ export const LoginScreen: React.FC = () => {
                 <input
                   type="password"
                   required
+                  disabled={loading}
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -204,11 +203,13 @@ export const LoginScreen: React.FC = () => {
           <div className="text-center pt-2">
             <button
               type="button"
+              disabled={loading}
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setError(null);
+                setSuccess(null);
               }}
-              className="text-xs text-blue-600 hover:text-blue-800 font-bold transition-colors cursor-pointer"
+              className="text-xs text-blue-600 hover:text-blue-800 font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSignUp
                 ? 'Já possui uma conta? Fazer Login'

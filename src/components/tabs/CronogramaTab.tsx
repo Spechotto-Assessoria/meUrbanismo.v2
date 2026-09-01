@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { CronogramaItem, OrcamentoItem } from '../../types';
+import { useObraAccess } from '../../hooks/useObraAccess';
+import { CronogramaItem } from '../../types';
 import { apiService } from '../../services/supabase';
 import {
   ResponsiveContainer,
@@ -11,7 +12,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend
+  LineChart
 } from 'recharts';
 import {
   Calendar,
@@ -21,13 +22,15 @@ import {
   Layers,
   UploadCloud,
   Sparkles,
-  Calculator,
   RefreshCw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ShieldCheck
 } from 'lucide-react';
 
 export const CronogramaTab: React.FC = () => {
-  const { activeObra, isMasterAdmin } = useAuth();
+  const { activeObra } = useAuth();
+  const { isMasterAdmin, canViewFinancials, isCliente, isCorretor } = useObraAccess();
+
   const [cronograma, setCronograma] = useState<CronogramaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grafico' | 'matriz'>('grafico');
@@ -58,7 +61,6 @@ export const CronogramaTab: React.FC = () => {
     let acumuladoValor = 0;
 
     for (let m = 1; m <= meses; m++) {
-      // Função senoidal da Curva S padrão para distribuição de obras de infraestrutura
       const t = m / meses;
       const pesoMensal = Math.sin(t * Math.PI) * (1.5 / meses);
       const percMes = Math.min(100 - acumuladoPerc, m === meses ? 100 - acumuladoPerc : parseFloat((pesoMensal * 100).toFixed(2)));
@@ -89,14 +91,19 @@ export const CronogramaTab: React.FC = () => {
 
   const dadosAtuais = modoDistribuicao === 'auto' ? autoCronograma : cronograma;
 
-  const chartData = dadosAtuais.map((item: any) => ({
-    name: item.mes_label || item.mes,
-    'Previsto Acumulado (%)': item.percentual_previsto_acumulado,
-    'Realizado Acumulado (%)': item.percentual_realizado_acumulado,
-    'Previsto Mensal (R$ mil)': Math.round((item.valor_previsto_mes || 0) / 1000),
-    'Realizado Mensal (R$ mil)': item.valor_realizado_mes ? Math.round(item.valor_realizado_mes / 1000) : null,
-    status: item.status
-  }));
+  const chartData = dadosAtuais.map((item: any) => {
+    const base: any = {
+      name: item.mes_label || item.mes,
+      'Previsto Acumulado (%)': item.percentual_previsto_acumulado,
+      'Realizado Acumulado (%)': item.percentual_realizado_acumulado,
+      status: item.status
+    };
+    if (canViewFinancials) {
+      base['Previsto Mensal (R$ mil)'] = Math.round((item.valor_previsto_mes || 0) / 1000);
+      base['Realizado Mensal (R$ mil)'] = item.valor_realizado_mes ? Math.round(item.valor_realizado_mes / 1000) : null;
+    }
+    return base;
+  });
 
   const handleSimularImportacao = () => {
     setImportStatus('Lendo colunas de meses e etapas da planilha...');
@@ -124,52 +131,59 @@ export const CronogramaTab: React.FC = () => {
               Planejamento Temporal
             </span>
             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-900 border border-purple-200 uppercase tracking-wider">
-              Curva S
+              {canViewFinancials ? 'Curva S Físico-Financeira' : 'Curva S Físico'}
             </span>
           </div>
           <h1 className="text-xl font-black text-slate-900 mt-1 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" /> Cronograma Físico-Financeiro
+            <Calendar className="w-5 h-5 text-blue-600" />
+            {canViewFinancials ? 'Cronograma Físico-Financeiro' : 'Cronograma Físico de Obras'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Distribuição orçamentária ao longo de <strong>{prazoMeses} meses</strong> ({formatBRL(custoTotalObra)})
+            {canViewFinancials
+              ? `Distribuição orçamentária ao longo de ${prazoMeses} meses (${formatBRL(custoTotalObra)})`
+              : `Avanço físico previsto e executado ao longo de ${prazoMeses} meses`}
           </p>
         </div>
 
-        {/* MODO DE DISTRIBUIÇÃO */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setModoDistribuicao('auto')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                modoDistribuicao === 'auto'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 inline mr-1 text-purple-600" /> Auto Curva S
-            </button>
-            <button
-              type="button"
-              onClick={() => setModoDistribuicao('custom')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                modoDistribuicao === 'custom'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Personalizado
-            </button>
-          </div>
+        {/* MODO DE DISTRIBUIÇÃO E IMPORTAÇÃO (APENAS INVESTIDOR / ADMIN) */}
+        {canViewFinancials && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setModoDistribuicao('auto')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  modoDistribuicao === 'auto'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 inline mr-1 text-purple-600" /> Auto Curva S
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoDistribuicao('custom')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  modoDistribuicao === 'custom'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Personalizado
+              </button>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setShowImportModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-blue-600" /> Importar Planilha
-          </button>
-        </div>
+            {isMasterAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-blue-600" /> Importar Planilha
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* SELETOR DE VISUALIZAÇÃO */}
@@ -204,31 +218,46 @@ export const CronogramaTab: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-600" /> Curva S de Desembolso Físico-Financeiro
+                <TrendingUp className="w-4 h-4 text-blue-600" /> Curva S de Evolução
               </h3>
               <p className="text-xs text-slate-500">
-                Acompanhamento das linhas acumuladas de avanço e barras de desembolso mensal
+                {canViewFinancials
+                  ? 'Acompanhamento das linhas acumuladas de avanço e barras de desembolso mensal'
+                  : 'Acompanhamento do percentual de avanço físico planejado vs realizado'}
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs font-bold">
-              <span className="flex items-center gap-1 text-blue-600">● Previsto Acumulado</span>
-              <span className="flex items-center gap-1 text-emerald-600">● Realizado Acumulado</span>
-              <span className="flex items-center gap-1 text-slate-400">■ Desembolso Mês</span>
+              <span className="flex items-center gap-1 text-blue-600">● Previsto Acumulado (%)</span>
+              <span className="flex items-center gap-1 text-emerald-600">● Realizado Acumulado (%)</span>
+              {canViewFinancials && (
+                <span className="flex items-center gap-1 text-slate-400">■ Desembolso (R$ mil)</span>
+              )}
             </div>
           </div>
 
           <div className="w-full h-80 pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 10 }} unit="%" domain={[0, 100]} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 10 }} unit="k" />
-                <Tooltip formatter={(val: any) => [val, '']} />
-                <Bar yAxisId="right" dataKey="Previsto Mensal (R$ mil)" fill="#cbd5e1" radius={[4, 4, 0, 0]} name="Desembolso Mensal (R$ mil)" />
-                <Line yAxisId="left" type="monotone" dataKey="Previsto Acumulado (%)" stroke="#2563eb" strokeWidth={3} dot={{ r: 2 }} name="Previsto Acumulado (%)" />
-                <Line yAxisId="left" type="monotone" dataKey="Realizado Acumulado (%)" stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} name="Realizado Acumulado (%)" />
-              </ComposedChart>
+              {canViewFinancials ? (
+                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} />
+                  <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 10 }} unit="%" domain={[0, 100]} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 10 }} unit="k" />
+                  <Tooltip formatter={(val: any) => [val, '']} />
+                  <Bar yAxisId="right" dataKey="Previsto Mensal (R$ mil)" fill="#cbd5e1" radius={[4, 4, 0, 0]} name="Desembolso Mensal (R$ mil)" />
+                  <Line yAxisId="left" type="monotone" dataKey="Previsto Acumulado (%)" stroke="#2563eb" strokeWidth={3} dot={{ r: 2 }} name="Previsto Acumulado (%)" />
+                  <Line yAxisId="left" type="monotone" dataKey="Realizado Acumulado (%)" stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} name="Realizado Acumulado (%)" />
+                </ComposedChart>
+              ) : (
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 10 }} unit="%" domain={[0, 100]} />
+                  <Tooltip formatter={(val: any) => [`${val}%`, '']} />
+                  <Line type="monotone" dataKey="Previsto Acumulado (%)" stroke="#2563eb" strokeWidth={3} dot={{ r: 2 }} name="Previsto Acumulado (%)" />
+                  <Line type="monotone" dataKey="Realizado Acumulado (%)" stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} name="Realizado Acumulado (%)" />
+                </LineChart>
+              )}
             </ResponsiveContainer>
           </div>
         </div>
@@ -242,8 +271,12 @@ export const CronogramaTab: React.FC = () => {
                   <th className="p-3.5">Mês Referência</th>
                   <th className="p-3.5 text-right">% Previsto Mês</th>
                   <th className="p-3.5 text-right">% Acumulado</th>
-                  <th className="p-3.5 text-right">Desembolso Previsto</th>
-                  <th className="p-3.5 text-right">Desembolso Acumulado</th>
+                  {canViewFinancials && (
+                    <>
+                      <th className="p-3.5 text-right">Desembolso Previsto</th>
+                      <th className="p-3.5 text-right">Desembolso Acumulado</th>
+                    </>
+                  )}
                   <th className="p-3.5 text-center">Status</th>
                 </tr>
               </thead>
@@ -253,8 +286,12 @@ export const CronogramaTab: React.FC = () => {
                     <td className="p-3.5 font-bold text-slate-800">{item.mes_label || item.mes}</td>
                     <td className="p-3.5 text-right font-medium text-slate-600">{item.percentual_previsto_mes}%</td>
                     <td className="p-3.5 text-right font-black text-blue-600">{item.percentual_previsto_acumulado}%</td>
-                    <td className="p-3.5 text-right font-semibold text-slate-800">{formatBRL(item.valor_previsto_mes || 0)}</td>
-                    <td className="p-3.5 text-right font-bold text-slate-900">{formatBRL(item.valor_previsto_acumulado || 0)}</td>
+                    {canViewFinancials && (
+                      <>
+                        <td className="p-3.5 text-right font-semibold text-slate-800">{formatBRL(item.valor_previsto_mes || 0)}</td>
+                        <td className="p-3.5 text-right font-bold text-slate-900">{formatBRL(item.valor_previsto_acumulado || 0)}</td>
+                      </>
+                    )}
                     <td className="p-3.5 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                         item.status === 'Executado'
@@ -273,7 +310,7 @@ export const CronogramaTab: React.FC = () => {
       )}
 
       {/* MODAL DE IMPORTAÇÃO DE CRONOGRAMA */}
-      {showImportModal && (
+      {showImportModal && isMasterAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
