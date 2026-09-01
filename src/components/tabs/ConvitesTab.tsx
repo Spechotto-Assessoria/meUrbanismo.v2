@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { dataService } from '../../services/supabase';
 import {
     Send,
     Mail,
@@ -17,26 +18,10 @@ import {
     Edit3,
     X,
     Save,
-    MapPin
+    MapPin,
+    Loader2
 } from 'lucide-react';
-import { UserRole } from '../../types';
-
-export interface Convite {
-    id: string;
-    email: string;
-    nome?: string;
-    telefone?: string;
-    obraId: string;
-    obraNome: string;
-    role: UserRole;
-    ativo: boolean;
-    dataCriacao: string;
-    linkAcceso: string;
-    quadraLote?: string;
-    statusCadastro?: 'PENDENTE' | 'COMPLETO';
-}
-
-const STORAGE_KEY = 'meurbanismo_convites_v1';
+import { UserRole, Convite } from '../../types';
 
 export const ConvitesTab: React.FC = () => {
     const { obras } = useAuth();
@@ -45,8 +30,8 @@ export const ConvitesTab: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
-    const defaultObraId = obras && obras.length > 0 ? obras[0].id : '1';
-    const defaultObraNome = obras && obras.length > 0 ? obras[0].nome : 'Residencial Reserva dos Ipês';
+    const defaultObraId = obras && obras.length > 0 ? obras[0].id : '';
+    const defaultObraNome = obras && obras.length > 0 ? obras[0].nome : '';
 
     // Estados do Formulário
     const [email, setEmail] = useState('');
@@ -55,42 +40,32 @@ export const ConvitesTab: React.FC = () => {
     const [quadraLote, setQuadraLote] = useState('');
     const [obraId, setObraId] = useState(defaultObraId);
     const [role, setRole] = useState<UserRole>('CLIENTE_COMPRADOR');
+    const [enviando, setEnviando] = useState(false);
+    const [erro, setErro] = useState<string | null>(null);
 
     // Estado de Edição
     const [editingConvite, setEditingConvite] = useState<Convite | null>(null);
+    const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
-    // Carrega do localStorage ou inicializa
-    const [convites, setConvites] = useState<Convite[]>(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch (e) {
-                console.error('Erro ao ler convites salvos:', e);
-            }
-        }
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        return [
-            {
-                id: '1',
-                email: 'rennan_seidl@hotmail.com',
-                nome: 'Rennan Spechotto',
-                telefone: '(17) 99999-8888',
-                obraId: defaultObraId,
-                obraNome: defaultObraNome,
-                role: 'PROPRIETARIO_INVESTIDOR',
-                ativo: true,
-                dataCriacao: '01/08/2026',
-                linkAcceso: `${baseUrl}/?email=rennan_seidl%40hotmail.com&obra=1#/convite`,
-                statusCadastro: 'COMPLETO',
-                quadraLote: ''
-            }
-        ];
-    });
+    const [convites, setConvites] = useState<Convite[]>([]);
+    const [carregando, setCarregando] = useState(true);
+
+    const carregarConvites = async () => {
+        setCarregando(true);
+        const data = await dataService.getConvites();
+        setConvites(data);
+        setCarregando(false);
+    };
 
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(convites));
-    }, [convites]);
+        void carregarConvites();
+    }, []);
+
+    useEffect(() => {
+        if (!obraId && defaultObraId) {
+            setObraId(defaultObraId);
+        }
+    }, [defaultObraId, obraId]);
 
     const [filtroRole, setFiltroRole] = useState<string>('TODOS');
     const [filtroObra, setFiltroObra] = useState<string>('TODAS');
@@ -106,11 +81,14 @@ export const ConvitesTab: React.FC = () => {
                 return ['Orçamento', 'Cronograma', 'Andamento da Obra', 'Viabilidade', 'Acompanhamento', 'Projetos e Documentos', 'Relatórios', 'Mapa de Disponibilidade', 'Vendas'];
             case 'ADMINISTRADOR':
                 return ['Acesso Total Irrestrito + Módulo de Convites & Gestão'];
+            default:
+                return [];
         }
     };
 
-    const handleCreateConvite = (e: React.FormEvent) => {
+    const handleCreateConvite = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErro(null);
         const cleanEmail = email.trim().toLowerCase();
 
         if (!cleanEmail) {
@@ -118,96 +96,113 @@ export const ConvitesTab: React.FC = () => {
             return;
         }
 
-        const jaExiste = convites.some(c => c.email.toLowerCase() === cleanEmail);
+        if (!obraId) {
+            alert('Selecione um empreendimento / obra antes de continuar.');
+            return;
+        }
+
+        const jaExiste = convites.some(c => (c.email || '').toLowerCase() === cleanEmail && c.obra_id === obraId);
         if (jaExiste) {
-            alert(`O e-mail "${cleanEmail}" já possui um convite gerado! Você pode editá-lo ou reenviá-lo na lista abaixo.`);
+            alert(`O e-mail "${cleanEmail}" já possui um convite gerado para esta obra! Você pode editá-lo ou reenviá-lo na lista abaixo.`);
             return;
         }
 
         const baseUrl = window.location.origin;
-        const obraSelecionada = (obras || []).find(o => o.id === obraId) || obras?.[0];
-        const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraSelecionada?.id || '1'}#/convite`;
+        const obraSelecionada = (obras || []).find(o => o.id === obraId);
+        const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraId}#/convite`;
 
-        const newConvite: Convite = {
-            id: Date.now().toString(),
-            email: cleanEmail,
-            nome: nome.trim(),
-            telefone: telefone.trim(),
-            quadraLote: role === 'CLIENTE_COMPRADOR' ? quadraLote.trim() : '',
-            obraId: obraSelecionada?.id || '1',
-            obraNome: obraSelecionada?.nome || 'Empreendimento',
-            role,
-            ativo: true,
-            dataCriacao: new Date().toLocaleDateString('pt-BR'),
-            linkAcceso: linkSeguro,
-            statusCadastro: 'PENDENTE'
-        };
+        setEnviando(true);
+        try {
+            const novoConvite = await dataService.saveConvite({
+                obra_id: obraId,
+                email: cleanEmail,
+                nome: nome.trim(),
+                telefone: telefone.trim(),
+                role,
+                quadraLote: role === 'CLIENTE_COMPRADOR' ? quadraLote.trim() : '',
+                ativo: true,
+                link_acesso: linkSeguro,
+                statusCadastro: 'PENDENTE'
+            } as any);
 
-        setConvites([newConvite, ...convites]);
-        setEmail('');
-        setNome('');
-        setTelefone('');
-        setQuadraLote('');
-        alert('Convite gerado e salvo com sucesso!');
-    };
-
-    const handleToggleAtivo = (id: string) => {
-        setConvites(convites.map(c => c.id === id ? { ...c, ativo: !c.ativo } : c));
-    };
-
-    const handleChangeRole = (id: string, newRole: UserRole) => {
-        setConvites(convites.map(c => {
-            if (c.id === id) {
-                return {
-                    ...c,
-                    role: newRole,
-                    quadraLote: newRole === 'CLIENTE_COMPRADOR' ? c.quadraLote : ''
-                };
-            }
-            return c;
-        }));
-    };
-
-    const handleDelete = (id: string) => {
-        if (confirm('Deseja realmente excluir este convite/acesso?')) {
-            setConvites(convites.filter(c => c.id !== id));
+            setConvites(prev => [{ ...novoConvite, obraNome: obraSelecionada?.nome }, ...prev]);
+            setEmail('');
+            setNome('');
+            setTelefone('');
+            setQuadraLote('');
+        } catch (err: any) {
+            setErro(err?.message || 'Não foi possível gerar o convite. Verifique suas permissões.');
+        } finally {
+            setEnviando(false);
         }
     };
 
-    const handleSaveEdit = (e: React.FormEvent) => {
+    const handleToggleAtivo = async (c: Convite) => {
+        const atualizado = await dataService.saveConvite({ ...(c as any), ativo: !c.ativo });
+        setConvites(prev => prev.map(item => item.id === c.id ? { ...item, ...atualizado } : item));
+    };
+
+    const handleChangeRole = async (c: Convite, newRole: UserRole) => {
+        const atualizado = await dataService.saveConvite({
+            ...(c as any),
+            role: newRole,
+            quadraLote: newRole === 'CLIENTE_COMPRADOR' ? (c as any).quadraLote : ''
+        });
+        setConvites(prev => prev.map(item => item.id === c.id ? { ...item, ...atualizado } : item));
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Deseja realmente excluir este convite/acesso?')) return;
+        try {
+            await dataService.deleteConvite(id);
+            setConvites(prev => prev.filter(c => c.id !== id));
+        } catch (err: any) {
+            alert(err?.message || 'Não foi possível excluir o convite.');
+        }
+    };
+
+    const handleSaveEdit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingConvite) return;
-
-        setConvites(convites.map(c => c.id === editingConvite.id ? editingConvite : c));
-        setEditingConvite(null);
-        alert('Convite atualizado com sucesso!');
+        setSalvandoEdicao(true);
+        try {
+            const atualizado = await dataService.saveConvite(editingConvite as any);
+            setConvites(prev => prev.map(c => c.id === editingConvite.id ? { ...c, ...atualizado } : c));
+            setEditingConvite(null);
+        } catch (err: any) {
+            alert(err?.message || 'Não foi possível salvar as alterações do convite.');
+        } finally {
+            setSalvandoEdicao(false);
+        }
     };
 
     const handleCopyLink = (c: Convite) => {
-        navigator.clipboard.writeText(c.linkAcceso);
+        navigator.clipboard.writeText(c.link_acesso || '');
         setCopiedId(c.id);
         setTimeout(() => setCopiedId(null), 2000);
     };
 
+    const nomeObraDoConvite = (c: Convite) => obras?.find(o => o.id === c.obra_id)?.nome || (c as any).obraNome || 'Empreendimento';
+
     const handleSendWhatsApp = (c: Convite) => {
         const mensagem = encodeURIComponent(
-            `Olá ${c.nome || ''}!\n\nVocê está recebendo o acesso à plataforma *meUrbanismo* para acompanhar o empreendimento *${c.obraNome}*.\n\nAcesse o link abaixo, crie seu acesso com este e-mail (${c.email}) e cadastre sua nova senha:\n${c.linkAcceso}`
+            `Olá ${c.nome || ''}!\n\nVocê está recebendo o acesso à plataforma *meUrbanismo* para acompanhar o empreendimento *${nomeObraDoConvite(c)}*.\n\nAcesse o link abaixo, crie seu acesso com este e-mail (${c.email}) e cadastre sua nova senha:\n${c.link_acesso}`
         );
         const num = c.telefone ? c.telefone.replace(/\D/g, '') : '';
         window.open(`https://wa.me/${num}?text=${mensagem}`, '_blank');
     };
 
     const handleSendEmail = (c: Convite) => {
-        const assunto = encodeURIComponent(`Acesso à plataforma meUrbanismo - ${c.obraNome}`);
+        const assunto = encodeURIComponent(`Acesso à plataforma meUrbanismo - ${nomeObraDoConvite(c)}`);
         const corpo = encodeURIComponent(
-            `Olá ${c.nome || ''}!\n\nVocê foi convidado para acessar a plataforma meUrbanismo no empreendimento ${c.obraNome}.\n\nClique no link para criar sua senha com o e-mail (${c.email}):\n${c.linkAcceso}`
+            `Olá ${c.nome || ''}!\n\nVocê foi convidado para acessar a plataforma meUrbanismo no empreendimento ${nomeObraDoConvite(c)}.\n\nClique no link para criar sua senha com o e-mail (${c.email}):\n${c.link_acesso}`
         );
         window.open(`mailto:${c.email}?subject=${assunto}&body=${corpo}`, '_blank');
     };
 
     const convitesFiltrados = convites.filter(c => {
         const matchRole = filtroRole === 'TODOS' || c.role === filtroRole;
-        const matchObra = filtroObra === 'TODAS' || c.obraId === filtroObra;
+        const matchObra = filtroObra === 'TODAS' || c.obra_id === filtroObra;
         return matchRole && matchObra;
     });
 
@@ -222,6 +217,7 @@ export const ConvitesTab: React.FC = () => {
                 </div>
                 <p className="text-xs text-slate-500">
                     Crie links de acesso personalizados, vincule a uma obra e controle as permissões exatas de cada perfil convidado.
+                    Estes convites são a fonte real de permissão no banco de dados (RLS) — sem um convite ativo, o usuário não recebe nenhum dado da obra.
                 </p>
             </div>
 
@@ -230,6 +226,12 @@ export const ConvitesTab: React.FC = () => {
                 <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                     <Share2 className="w-4 h-4 text-blue-600" /> Gerar Novo Convite
                 </h2>
+
+                {erro && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                        {erro}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -284,6 +286,7 @@ export const ConvitesTab: React.FC = () => {
                                 onChange={e => setObraId(e.target.value)}
                                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white"
                             >
+                                {(!obras || obras.length === 0) && <option value="">Nenhuma obra cadastrada</option>}
                                 {obras && obras.map(o => (
                                     <option key={o.id} value={o.id}>{o.nome} ({o.cidade})</option>
                                 ))}
@@ -307,7 +310,7 @@ export const ConvitesTab: React.FC = () => {
 
                 {role === 'CLIENTE_COMPRADOR' && (
                     <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200 animate-fadeIn">
-                        <label className="block text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+                        <label className="text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
                             <MapPin className="w-3.5 h-3.5 text-blue-600" /> Quadra e Lote Adquirido (Opcional)
                         </label>
                         <input
@@ -333,9 +336,11 @@ export const ConvitesTab: React.FC = () => {
 
                 <button
                     type="submit"
-                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                    disabled={enviando}
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-60"
                 >
-                    <Send className="w-4 h-4" /> Criar e Gerar Link de Convite
+                    {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {enviando ? 'Gerando...' : 'Criar e Gerar Link de Convite'}
                 </button>
             </form>
 
@@ -373,7 +378,11 @@ export const ConvitesTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
-                    {convitesFiltrados.length === 0 ? (
+                    {carregando ? (
+                        <div className="flex items-center justify-center py-10 text-slate-400 gap-2 text-xs font-semibold">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Carregando convites...
+                        </div>
+                    ) : convitesFiltrados.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-6">Nenhum convite encontrado com os filtros selecionados.</p>
                     ) : (
                         convitesFiltrados.map(c => (
@@ -393,10 +402,10 @@ export const ConvitesTab: React.FC = () => {
                                             )}
                                         </div>
                                         <div className="text-xs text-slate-500 mt-0.5">
-                                            {c.nome ? `${c.nome} • ` : ''} Empreendimento: <strong className="text-slate-700">{c.obraNome}</strong>
-                                            {c.role === 'CLIENTE_COMPRADOR' && c.quadraLote && (
+                                            {c.nome ? `${c.nome} • ` : ''} Empreendimento: <strong className="text-slate-700">{nomeObraDoConvite(c)}</strong>
+                                            {c.role === 'CLIENTE_COMPRADOR' && (c as any).quadraLote && (
                                                 <span className="ml-2 font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                                                    {c.quadraLote}
+                                                    {(c as any).quadraLote}
                                                 </span>
                                             )}
                                         </div>
@@ -408,7 +417,7 @@ export const ConvitesTab: React.FC = () => {
                                         </span>
                                         <button
                                             type="button"
-                                            onClick={() => handleToggleAtivo(c.id)}
+                                            onClick={() => handleToggleAtivo(c)}
                                             className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${c.ativo ? 'bg-emerald-500 justify-end' : 'bg-slate-300 justify-start'}`}
                                         >
                                             <div className="w-4 h-4 rounded-full bg-white shadow-md"></div>
@@ -422,7 +431,7 @@ export const ConvitesTab: React.FC = () => {
                                             <span className="text-xs font-semibold text-slate-500">Perfil:</span>
                                             <select
                                                 value={c.role}
-                                                onChange={e => handleChangeRole(c.id, e.target.value as UserRole)}
+                                                onChange={e => handleChangeRole(c, e.target.value as UserRole)}
                                                 className="px-2 py-1 text-xs rounded-lg border border-slate-200 font-bold bg-slate-50 text-slate-800"
                                             >
                                                 <option value="CLIENTE_COMPRADOR">Comprador / Adquirente</option>
@@ -431,11 +440,13 @@ export const ConvitesTab: React.FC = () => {
                                             </select>
                                         </div>
 
-                                        <span className="text-[10px] text-slate-400">Criado em: {c.dataCriacao}</span>
+                                        <span className="text-[10px] text-slate-400">
+                                            Criado em: {c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '—'}
+                                        </span>
                                     </div>
 
                                     <div className="flex flex-wrap gap-1">
-                                        {getAbasPreview(c.role).map((aba, i) => (
+                                        {getAbasPreview(c.role as UserRole).map((aba, i) => (
                                             <span key={i} className="text-[9px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
                                                 {aba}
                                             </span>
@@ -547,8 +558,8 @@ export const ConvitesTab: React.FC = () => {
                                     <label className="block text-xs font-semibold text-slate-600 mb-1">Quadra / Lote (Ex: Quadra C - Lote 05)</label>
                                     <input
                                         type="text"
-                                        value={editingConvite.quadraLote || ''}
-                                        onChange={e => setEditingConvite({ ...editingConvite, quadraLote: e.target.value })}
+                                        value={(editingConvite as any).quadra_lote || ''}
+                                        onChange={e => setEditingConvite({ ...editingConvite, quadra_lote: e.target.value } as any)}
                                         placeholder="Quadra e Lote do cliente"
                                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
                                     />
@@ -558,8 +569,8 @@ export const ConvitesTab: React.FC = () => {
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Status do Cadastro</label>
                                 <select
-                                    value={editingConvite.statusCadastro || 'PENDENTE'}
-                                    onChange={e => setEditingConvite({ ...editingConvite, statusCadastro: e.target.value as any })}
+                                    value={(editingConvite as any).statusCadastro || 'PENDENTE'}
+                                    onChange={e => setEditingConvite({ ...editingConvite, statusCadastro: e.target.value as any } as any)}
                                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white"
                                 >
                                     <option value="PENDENTE">Pendente (Aguardando conclusão do cliente)</option>
@@ -571,15 +582,18 @@ export const ConvitesTab: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={() => setEditingConvite(null)}
-                                    className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
+                                    disabled={salvandoEdicao}
+                                    className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer disabled:opacity-50"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
+                                    disabled={salvandoEdicao}
+                                    className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-1 cursor-pointer disabled:opacity-60"
                                 >
-                                    <Save className="w-4 h-4" /> Salvar
+                                    {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Salvar
                                 </button>
                             </div>
                         </form>

@@ -1,12 +1,23 @@
 -- ==============================================================================
--- SCHEMA SUPABASE: meUrbanismo v2
+-- SCHEMA SUPABASE: meUrbanismo v3 (RLS real + mascaramento financeiro por papel)
 -- Spechotto Assessoria & Construção
+--
+-- COMO APLICAR:
+--   1. Abra o painel do seu projeto em https://supabase.com/dashboard
+--   2. Vá em "SQL Editor" → "New query"
+--   3. Cole TODO o conteúdo deste arquivo e clique em "Run"
+--   4. Este script é IDEMPOTENTE: pode ser executado novamente com segurança
+--      a qualquer momento (ex.: após atualizações), sem duplicar dados.
+--
+-- IMPORTANTE: este script precisa ser rodado com a "service_role" do painel
+-- SQL Editor (é o padrão quando você usa o SQL Editor do próprio Supabase).
+-- A chave "anon/publishable" usada pelo app NUNCA tem permissão para alterar
+-- schema — por isso esta migração deve ser aplicada manualmente uma vez.
 -- ==============================================================================
 
--- 1. CRIAÇÃO DOS BUCKETS DE STORAGE
--- Buckets: obra_arquivos, fotos_obra, medicoes, orcamentos, cronograma
+-- 1. BUCKETS DE STORAGE
 insert into storage.buckets (id, name, public)
-values 
+values
   ('obra_arquivos', 'obra_arquivos', true),
   ('fotos_obra', 'fotos_obra', true),
   ('medicoes', 'medicoes', false),
@@ -14,11 +25,14 @@ values
   ('cronograma', 'cronograma', false)
 on conflict (id) do nothing;
 
--- 2. TABELA DE EMPRESAS
+-- ==============================================================================
+-- 2. TABELAS
+-- ==============================================================================
+
 create table if not exists public.empresas (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
-  cnpj text not null unique,
+  cnpj text unique,
   logo_url text,
   responsavel_tecnico text,
   crea_cau text,
@@ -28,19 +42,17 @@ create table if not exists public.empresas (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 3. TABELA DE PERFIS DE USUÁRIOS (RBAC)
 create table if not exists public.perfis (
   id uuid primary key references auth.users on delete cascade,
   email text not null unique,
   nome text not null,
-  role text not null check (role in ('ADMINISTRADOR', 'PROPRIETARIO_INVESTIDOR', 'CORRETOR', 'CLIENTE_COMPRADOR')),
+  role text not null default 'CLIENTE_COMPRADOR',
   avatar_url text,
   telefone text,
   empresa_id uuid references public.empresas(id),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 4. TABELA DE OBRAS / LOTEAMENTOS
 create table if not exists public.obras (
   id uuid primary key default gen_random_uuid(),
   empresa_id uuid references public.empresas(id) on delete cascade,
@@ -49,39 +61,41 @@ create table if not exists public.obras (
   cidade text not null,
   uf text not null default 'SP',
   status text not null default 'Em Andamento',
-  data_inicio date not null,
-  data_previsao date not null,
+  descricao text,
+  endereco text,
+  data_inicio date,
+  data_previsao date,
   percentual_concluido numeric(5,2) default 0,
   area_total_m2 numeric(12,2) default 0,
+  metragem_padrao_lote numeric(8,2) default 0,
   total_lotes integer default 0,
   lotes_disponiveis integer default 0,
   lotes_reservados integer default 0,
   lotes_vendidos integer default 0,
-  vgv_total numeric(15,2) default 0,
+  valor_vgv numeric(15,2) default 0,
   custo_orcado numeric(15,2) default 0,
   custo_realizado numeric(15,2) default 0,
-  imagem_capa text,
-  endereco_completo text,
+  foto_capa text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. TABELA DE ORÇAMENTOS
 create table if not exists public.orcamentos (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
+  macro_etapa_id text,
+  macro_etapa_nome text,
   codigo_sinapi text,
-  categoria text not null,
+  categoria text,
   descricao text not null,
   unidade text not null,
-  quantidade numeric(12,2) not null,
-  valor_unitario numeric(12,2) not null,
-  valor_total numeric(15,2) not null,
+  quantidade numeric(12,2) not null default 0,
+  valor_unitario numeric(12,2) not null default 0,
+  valor_total numeric(15,2) not null default 0,
   percentual_executado numeric(5,2) default 0,
   valor_executado numeric(15,2) default 0,
   data_atualizacao timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 6. TABELA DE CRONOGRAMA FÍSICO-FINANCEIRO
 create table if not exists public.cronograma (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
@@ -95,93 +109,93 @@ create table if not exists public.cronograma (
   valor_realizado_mes numeric(15,2) default 0,
   valor_previsto_acumulado numeric(15,2) default 0,
   valor_realizado_acumulado numeric(15,2) default 0,
-  status text not null default 'Futuro',
+  status text not null default 'planejado',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 7. TABELA DE DIÁRIO DE OBRA
 create table if not exists public.diario_obra (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
   data date not null default current_date,
-  clima_manha text not null default 'Ensolarado',
-  clima_tarde text not null default 'Ensolarado',
-  condicao_solo text not null default 'Praticável',
+  clima_manha text default 'Ensolarado',
+  clima_tarde text default 'Ensolarado',
+  condicao_solo text default 'Praticável',
   efetivo_proprio integer default 0,
   efetivo_terceirizado integer default 0,
   equipamentos_ativos text[],
+  equipes_presentes text[],
   atividades_realizadas text not null,
   ocorrencias text,
   responsavel_nome text not null,
   fotos_urls text[],
+  visivel_convidados boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 8. TABELA DE MEDIÇÕES
 create table if not exists public.medicoes (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
   numero_medicao integer not null,
-  periodo_inicio date not null,
-  periodo_fim date not null,
-  fornecedor_empreiteiro text not null,
-  servico_executado text not null,
-  valor_medicao numeric(15,2) not null,
-  valor_acumulado numeric(15,2) not null,
+  periodo_inicio date,
+  periodo_fim date,
+  fornecedor_empreiteiro text,
+  servico_executado text,
+  resumo_atividades text,
+  valor_medicao numeric(15,2) not null default 0,
+  valor_acumulado numeric(15,2) not null default 0,
   percentual_medido_periodo numeric(5,2) default 0,
   percentual_medido_acumulado numeric(5,2) default 0,
-  status text not null default 'Em Análise',
-  aprovado_por text,
-  data_aprovacao timestamp with time zone,
-  observacoes text,
+  status text not null default 'rascunho',
+  link_relatorio_pdf text,
+  visivel_convidados boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 9. TABELA DE FOTOS DA OBRA
 create table if not exists public.fotos_obra (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
   url text not null,
   titulo text not null,
   descricao text,
-  categoria text not null default 'Evolução Geral',
+  categoria text default 'Evolução Geral',
+  etapa_relacionada text,
   data_registro date not null default current_date,
-  visivel_convidados boolean default false, -- Flag essencial
+  visivel_convidados boolean default false,
   autor_nome text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 10. TABELA DE DOCUMENTOS E PROJETOS
 create table if not exists public.obra_arquivos (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
   titulo text not null,
-  categoria text not null default 'Urbanístico',
+  categoria text default 'Urbanístico',
   codigo_revisao text default 'R00',
   data_emissao date default current_date,
   tamanho_bytes bigint default 0,
-  tipo_extensao text not null default 'PDF',
+  tipo_extensao text not null default 'pdf',
   arquivo_url text not null,
-  visivel_convidados boolean default false, -- Flag toggle 🌐 vs 🔒
-  responsavel_tecnico text not null,
+  visivel_convidados boolean default false,
+  responsavel_tecnico text,
   descricao text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 11. TABELA DE VIABILIDADE FINANCEIRA
 create table if not exists public.viabilidade (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade unique,
-  vgv_bruto numeric(15,2) not null,
+  area_total numeric(12,2),
+  quantidade_lotes integer,
+  vgv_bruto numeric(15,2) not null default 0,
   comissoes_vendas numeric(15,2) default 0,
   impostos_receita numeric(15,2) default 0,
-  vgv_liquido numeric(15,2) not null,
+  vgv_liquido numeric(15,2) not null default 0,
   custo_terreno numeric(15,2) default 0,
   custo_obras_infra numeric(15,2) default 0,
   custo_projetos_licencas numeric(15,2) default 0,
   custo_marketing_admin numeric(15,2) default 0,
-  custo_total numeric(15,2) not null,
-  lucro_liquido_projetado numeric(15,2) not null,
+  custo_total numeric(15,2) not null default 0,
+  lucro_liquido_projetado numeric(15,2) not null default 0,
   margem_liquida_percentual numeric(5,2) default 0,
   roi_percentual numeric(5,2) default 0,
   tir_anual_percentual numeric(5,2) default 0,
@@ -191,41 +205,191 @@ create table if not exists public.viabilidade (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 12. TABELA DE LOTES (MAPA DE DISPONIBILIDADE)
 create table if not exists public.lotes (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
   quadra text not null,
   numero text not null,
-  area_m2 numeric(8,2) not null,
+  area_m2 numeric(8,2) not null default 0,
   frente_m numeric(6,2),
   fundo_m numeric(6,2),
-  valor_m2 numeric(10,2) not null,
-  valor_total numeric(12,2) not null,
-  status text not null default 'Disponível' check (status in ('Disponível', 'Reservado', 'Vendido', 'Bloqueado')),
+  valor_m2 numeric(10,2) default 0,
+  valor_total numeric(12,2) default 0,
+  status text not null default 'disponivel',
   topografia text default 'Plano',
   cliente_nome text,
   corretor_nome text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 13. TABELA DE CONVITES
 create table if not exists public.convites (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
-  nome text not null,
+  nome text,
   email text not null,
   telefone text,
-  role text not null check (role in ('ADMINISTRADOR', 'PROPRIETARIO_INVESTIDOR', 'CORRETOR', 'CLIENTE_COMPRADOR')),
-  token text not null unique,
-  status text not null default 'Pendente',
-  link_acesso text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  expira_em timestamp with time zone not null
+  role text not null default 'CLIENTE_COMPRADOR',
+  quadra_lote text,
+  ativo boolean default true,
+  status_cadastro text not null default 'PENDENTE',
+  link_acesso text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Garante que os valores de "role" aceitos incluam todos os papéis usados no app.
+do $$
+begin
+  alter table public.perfis drop constraint if exists perfis_role_check;
+  alter table public.perfis add constraint perfis_role_check
+    check (role in ('ADMINISTRADOR','PROPRIETARIO_INVESTIDOR','CORRETOR','CLIENTE_COMPRADOR','GESTOR','ENGENHEIRO','CONSULTOR','INVESTIDOR'));
+
+  alter table public.convites drop constraint if exists convites_role_check;
+  alter table public.convites add constraint convites_role_check
+    check (role in ('ADMINISTRADOR','PROPRIETARIO_INVESTIDOR','CORRETOR','CLIENTE_COMPRADOR','GESTOR','ENGENHEIRO','CONSULTOR','INVESTIDOR'));
+
+  alter table public.lotes drop constraint if exists lotes_status_check;
+  alter table public.lotes add constraint lotes_status_check
+    check (status in ('disponivel','reservado','vendido','bloqueado'));
+end $$;
+
 -- ==============================================================================
--- POLÍTICAS DE ROW LEVEL SECURITY (RLS)
+-- 3. FUNÇÕES DE SEGURANÇA (SECURITY DEFINER)
+--
+-- IMPORTANTE: usamos funções SECURITY DEFINER em vez de subqueries diretas na
+-- própria tabela "perfis" dentro das políticas de RLS de "perfis" para evitar
+-- o erro clássico do Postgres "infinite recursion detected in policy for
+-- relation perfis" (uma policy de SELECT/ALL em "perfis" que consulta a
+-- própria "perfis" recursivamente). As funções abaixo rodam com privilégio
+-- elevado (bypassando RLS internamente) apenas para essa checagem pontual,
+-- e devolvem um resultado simples (boolean/texto) para as políticas usarem.
+-- ==============================================================================
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    coalesce(auth.jwt() ->> 'email', '') ilike 'rennan.spechotto@gmail.com'
+    or coalesce(auth.jwt() ->> 'email', '') ilike 'rennan_seidl@hotmail.com'
+    or exists (
+      select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
+    );
+$$;
+
+create or replace function public.current_role_name()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role from public.perfis where id = auth.uid();
+$$;
+
+-- Papéis que têm permissão de ver valores monetários (orçamento, custos, VGV, TIR/VPL).
+create or replace function public.can_view_financials()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or public.current_role_name() in ('PROPRIETARIO_INVESTIDOR', 'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'INVESTIDOR');
+$$;
+
+-- Verifica se o usuário autenticado tem convite ativo vinculado à obra informada.
+create or replace function public.has_obra_access(target_obra_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or exists (
+      select 1 from public.convites c
+      where c.obra_id = target_obra_id
+        and lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+        and coalesce(c.ativo, true) = true
+    );
+$$;
+
+-- ==============================================================================
+-- 4. AUTO-PROVISIONAMENTO DE PERFIL NO CADASTRO (auth.users → public.perfis)
+-- ==============================================================================
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.perfis (id, email, nome, role)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data ->> 'nome', new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
+    case
+      when lower(new.email) in ('rennan.spechotto@gmail.com', 'rennan_seidl@hotmail.com') then 'ADMINISTRADOR'
+      else 'CLIENTE_COMPRADOR'
+    end
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Backfill: garante que usuários já existentes em auth.users tenham uma linha em perfis.
+insert into public.perfis (id, email, nome, role)
+select
+  u.id,
+  u.email,
+  coalesce(u.raw_user_meta_data ->> 'nome', u.raw_user_meta_data ->> 'full_name', split_part(u.email, '@', 1)),
+  case
+    when lower(u.email) in ('rennan.spechotto@gmail.com', 'rennan_seidl@hotmail.com') then 'ADMINISTRADOR'
+    else 'CLIENTE_COMPRADOR'
+  end
+from auth.users u
+on conflict (id) do nothing;
+
+-- ==============================================================================
+-- 5. PRIVILÉGIOS DE TABELA (necessários para que o RLS abaixo passe a valer)
+--
+-- GRANT apenas concede a possibilidade de acesso; quem realmente decide o que
+-- cada usuário pode ler/gravar são as POLICIES de RLS da seção seguinte.
+-- ==============================================================================
+
+grant usage on schema public to authenticated, anon;
+
+grant select, insert, update, delete on
+  public.empresas,
+  public.perfis,
+  public.obras,
+  public.orcamentos,
+  public.cronograma,
+  public.diario_obra,
+  public.medicoes,
+  public.fotos_obra,
+  public.obra_arquivos,
+  public.viabilidade,
+  public.lotes,
+  public.convites
+to authenticated;
+
+-- ==============================================================================
+-- 6. ROW LEVEL SECURITY
 -- ==============================================================================
 
 alter table public.empresas enable row level security;
@@ -241,61 +405,221 @@ alter table public.viabilidade enable row level security;
 alter table public.lotes enable row level security;
 alter table public.convites enable row level security;
 
--- POLÍTICAS PARA ADMIN (Acesso total)
-create policy "Admin total perfis" on public.perfis for all using (
-  auth.jwt() ->> 'email' = 'rennan.spechotto@gmail.com' or exists (
-    select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
-  )
-);
+-- PERFIS: admin vê/edita tudo; usuário comum só enxerga o próprio perfil (não pode alterar seu papel).
+drop policy if exists "perfis_admin_all" on public.perfis;
+create policy "perfis_admin_all" on public.perfis for all
+  using (public.is_admin()) with check (public.is_admin());
 
-create policy "Admin total empresas" on public.empresas for all using (
-  auth.jwt() ->> 'email' = 'rennan.spechotto@gmail.com' or exists (
-    select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
-  )
-);
+drop policy if exists "perfis_self_select" on public.perfis;
+create policy "perfis_self_select" on public.perfis for select
+  using (id = auth.uid());
 
-create policy "Admin total obras" on public.obras for all using (
-  auth.jwt() ->> 'email' = 'rennan.spechotto@gmail.com' or exists (
-    select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
-  )
-);
+-- EMPRESAS: gestão exclusiva do admin master. Consultas indiretas (nome da empresa
+-- dentro de obras_publicas) funcionam via view, que roda com privilégio de dono
+-- e não depende de RLS de empresas.
+drop policy if exists "empresas_admin_all" on public.empresas;
+create policy "empresas_admin_all" on public.empresas for all
+  using (public.is_admin()) with check (public.is_admin());
 
-create policy "Admin total orcamentos" on public.orcamentos for all using (
-  auth.jwt() ->> 'email' = 'rennan.spechotto@gmail.com' or exists (
-    select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
-  )
-);
+-- OBRAS (tabela base): SOMENTE administradores consultam/alteram diretamente.
+-- Todo mundo mais deve ler através da view "obras_publicas" (mascara campos
+-- financeiros conforme o papel do usuário).
+drop policy if exists "obras_admin_all" on public.obras;
+create policy "obras_admin_all" on public.obras for all
+  using (public.is_admin()) with check (public.is_admin());
 
-create policy "Admin total cronograma" on public.cronograma for all using (
-  auth.jwt() ->> 'email' = 'rennan.spechotto@gmail.com' or exists (
-    select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
-  )
-);
+-- CONVITES: admin gerencia tudo; o convidado pode ver o próprio convite (para
+-- exibir status/obra na tela dele, se necessário).
+drop policy if exists "convites_admin_all" on public.convites;
+create policy "convites_admin_all" on public.convites for all
+  using (public.is_admin()) with check (public.is_admin());
 
-create policy "Admin total viabilidade" on public.viabilidade for all using (
-  auth.jwt() ->> 'email' = 'rennan.spechotto@gmail.com' or exists (
-    select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
-  )
-);
+drop policy if exists "convites_self_select" on public.convites;
+create policy "convites_self_select" on public.convites for select
+  using (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
 
--- POLÍTICAS PARA PROPRIETÁRIO / INVESTIDOR (Leitura de orçamento, cronograma, viabilidade, fotos, docs)
-create policy "Proprietario leitura orcamentos" on public.orcamentos for select using (
-  exists (select 1 from public.perfis where id = auth.uid() and role = 'PROPRIETARIO_INVESTIDOR')
-);
+-- ORÇAMENTOS: 100% financeiro. Só admin e papéis com canViewFinancials, e só
+-- para obras às quais o usuário tem acesso.
+drop policy if exists "orcamentos_admin_all" on public.orcamentos;
+create policy "orcamentos_admin_all" on public.orcamentos for all
+  using (public.is_admin()) with check (public.is_admin());
 
-create policy "Proprietario leitura viabilidade" on public.viabilidade for select using (
-  exists (select 1 from public.perfis where id = auth.uid() and role = 'PROPRIETARIO_INVESTIDOR')
-);
+drop policy if exists "orcamentos_financeiro_select" on public.orcamentos;
+create policy "orcamentos_financeiro_select" on public.orcamentos for select
+  using (public.can_view_financials() and public.has_obra_access(obra_id));
 
--- POLÍTICAS DE FOTOS E DOCUMENTOS PÚBLICOS / CONVIDADOS
-create policy "Fotos visiveis a convidados" on public.fotos_obra for select using (
-  visivel_convidados = true or exists (
-    select 1 from public.perfis where id = auth.uid() and role in ('ADMINISTRADOR', 'PROPRIETARIO_INVESTIDOR')
-  )
-);
+-- CRONOGRAMA (tabela base): leitura completa (com valores em R$) restrita a
+-- quem pode ver financeiro. Corretor/Cliente devem usar a view "cronograma_publico".
+drop policy if exists "cronograma_admin_all" on public.cronograma;
+create policy "cronograma_admin_all" on public.cronograma for all
+  using (public.is_admin()) with check (public.is_admin());
 
-create policy "Documentos visiveis a convidados" on public.obra_arquivos for select using (
-  visivel_convidados = true or exists (
-    select 1 from public.perfis where id = auth.uid() and role in ('ADMINISTRADOR', 'PROPRIETARIO_INVESTIDOR')
-  )
-);
+drop policy if exists "cronograma_financeiro_select" on public.cronograma;
+create policy "cronograma_financeiro_select" on public.cronograma for select
+  using (public.can_view_financials() and public.has_obra_access(obra_id));
+
+-- DIÁRIO DE OBRA: staff interno (financeiro) vê tudo; convidados só o que
+-- estiver marcado como público.
+drop policy if exists "diario_admin_all" on public.diario_obra;
+create policy "diario_admin_all" on public.diario_obra for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "diario_select" on public.diario_obra;
+create policy "diario_select" on public.diario_obra for select
+  using (
+    public.has_obra_access(obra_id)
+    and (visivel_convidados = true or public.can_view_financials())
+  );
+
+-- MEDIÇÕES (tabela base, com valores em R$): staff financeiro vê tudo.
+-- Corretor/Cliente devem usar a view "medicoes_publicas".
+drop policy if exists "medicoes_admin_all" on public.medicoes;
+create policy "medicoes_admin_all" on public.medicoes for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "medicoes_financeiro_select" on public.medicoes;
+create policy "medicoes_financeiro_select" on public.medicoes for select
+  using (public.can_view_financials() and public.has_obra_access(obra_id));
+
+-- FOTOS DA OBRA
+drop policy if exists "fotos_admin_all" on public.fotos_obra;
+create policy "fotos_admin_all" on public.fotos_obra for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "fotos_select" on public.fotos_obra;
+create policy "fotos_select" on public.fotos_obra for select
+  using (
+    public.has_obra_access(obra_id)
+    and (visivel_convidados = true or public.can_view_financials())
+  );
+
+-- DOCUMENTOS / ARQUIVOS DA OBRA
+drop policy if exists "arquivos_admin_all" on public.obra_arquivos;
+create policy "arquivos_admin_all" on public.obra_arquivos for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "arquivos_select" on public.obra_arquivos;
+create policy "arquivos_select" on public.obra_arquivos for select
+  using (
+    public.has_obra_access(obra_id)
+    and (visivel_convidados = true or public.can_view_financials())
+  );
+
+-- VIABILIDADE: 100% financeiro/estratégico. Apenas admin e financeiro.
+drop policy if exists "viabilidade_admin_all" on public.viabilidade;
+create policy "viabilidade_admin_all" on public.viabilidade for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "viabilidade_financeiro_select" on public.viabilidade;
+create policy "viabilidade_financeiro_select" on public.viabilidade for select
+  using (public.can_view_financials() and public.has_obra_access(obra_id));
+
+-- LOTES: preço de venda do lote é informação comercial (não "financeiro interno"),
+-- visível a todos com acesso à obra — corretores e clientes precisam ver preços
+-- para vender/acompanhar a compra. Apenas admin e corretor podem alterar status.
+drop policy if exists "lotes_admin_all" on public.lotes;
+create policy "lotes_admin_all" on public.lotes for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "lotes_select" on public.lotes;
+create policy "lotes_select" on public.lotes for select
+  using (public.has_obra_access(obra_id));
+
+drop policy if exists "lotes_corretor_update" on public.lotes;
+create policy "lotes_corretor_update" on public.lotes for update
+  using (public.current_role_name() = 'CORRETOR' and public.has_obra_access(obra_id))
+  with check (public.current_role_name() = 'CORRETOR' and public.has_obra_access(obra_id));
+
+-- ==============================================================================
+-- 7. VIEWS DE MASCARAMENTO FINANCEIRO
+--
+-- Views clássicas do Postgres (sem "security_invoker") rodam com o privilégio
+-- do dono da view. No Supabase, isso significa que elas enxergam as tabelas
+-- base "por baixo" da RLS de "obras"/"cronograma"/"medicoes" (que hoje só
+-- libera acesso direto para administradores). A view então aplica sua PRÓPRIA
+-- regra de visibilidade (has_obra_access) e mascara colunas monetárias com
+-- CASE WHEN can_view_financials() — ou seja, mesmo que um usuário sem
+-- permissão tente consultar a view diretamente via API, as colunas de valor
+-- retornam NULL de verdade, aplicado no banco, não apenas escondido na tela.
+-- ==============================================================================
+
+create or replace view public.obras_publicas as
+select
+  o.id,
+  o.empresa_id,
+  e.nome as empresa_nome,
+  o.nome,
+  o.tipo,
+  o.cidade,
+  o.uf,
+  o.status,
+  o.descricao,
+  o.endereco,
+  o.data_inicio,
+  o.data_previsao,
+  o.percentual_concluido,
+  o.area_total_m2,
+  o.metragem_padrao_lote,
+  o.total_lotes,
+  o.lotes_disponiveis,
+  o.lotes_reservados,
+  o.lotes_vendidos,
+  o.foto_capa,
+  o.created_at,
+  case when public.can_view_financials() then o.valor_vgv end as valor_vgv,
+  case when public.can_view_financials() then o.custo_orcado end as custo_orcado,
+  case when public.can_view_financials() then o.custo_realizado end as custo_realizado
+from public.obras o
+left join public.empresas e on e.id = o.empresa_id
+where public.has_obra_access(o.id);
+
+grant select on public.obras_publicas to authenticated;
+
+create or replace view public.cronograma_publico as
+select
+  c.id,
+  c.obra_id,
+  c.mes_ano,
+  c.mes_label,
+  c.percentual_previsto_mes,
+  c.percentual_realizado_mes,
+  c.percentual_previsto_acumulado,
+  c.percentual_realizado_acumulado,
+  c.status,
+  c.created_at,
+  case when public.can_view_financials() then c.valor_previsto_mes end as valor_previsto_mes,
+  case when public.can_view_financials() then c.valor_realizado_mes end as valor_realizado_mes,
+  case when public.can_view_financials() then c.valor_previsto_acumulado end as valor_previsto_acumulado,
+  case when public.can_view_financials() then c.valor_realizado_acumulado end as valor_realizado_acumulado
+from public.cronograma c
+where public.has_obra_access(c.obra_id);
+
+grant select on public.cronograma_publico to authenticated;
+
+create or replace view public.medicoes_publicas as
+select
+  m.id,
+  m.obra_id,
+  m.numero_medicao,
+  m.periodo_inicio,
+  m.periodo_fim,
+  m.fornecedor_empreiteiro,
+  m.servico_executado,
+  m.resumo_atividades,
+  m.percentual_medido_periodo,
+  m.percentual_medido_acumulado,
+  m.status,
+  m.link_relatorio_pdf,
+  m.visivel_convidados,
+  m.created_at,
+  case when public.can_view_financials() then m.valor_medicao end as valor_medicao,
+  case when public.can_view_financials() then m.valor_acumulado end as valor_acumulado
+from public.medicoes m
+where public.has_obra_access(m.obra_id)
+  and (m.visivel_convidados = true or public.can_view_financials());
+
+grant select on public.medicoes_publicas to authenticated;
+
+-- ==============================================================================
+-- FIM DA MIGRAÇÃO
+-- ==============================================================================

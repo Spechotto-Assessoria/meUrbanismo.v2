@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building, PlusCircle, Save, Upload, ArrowLeft } from 'lucide-react';
+import { Building, PlusCircle, Save, Upload, ArrowLeft, Loader2 } from 'lucide-react';
+import type { Obra } from '../../types';
 
 interface NovaObraTabProps {
     onBack?: () => void;
@@ -25,6 +26,8 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onBack, onGoToNovaEmpr
     const [metragemPadraoLote, setMetragemPadraoLote] = useState('');
     const [dataInicio, setDataInicio] = useState('');
     const [dataEntrega, setDataEntrega] = useState('');
+    const [salvando, setSalvando] = useState(false);
+    const [erro, setErro] = useState<string | null>(null);
 
     const handleEmpresaSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
@@ -37,8 +40,9 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onBack, onGoToNovaEmpr
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErro(null);
 
         if (!nome.trim()) {
             alert('Informe o Nome da Obra.');
@@ -52,30 +56,36 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onBack, onGoToNovaEmpr
 
         const emp = empresas.find(e => e.id === empresaId);
 
-        const nova = addObra({
-            nome: nome.trim(),
-            empresaId,
-            empresaNome: emp?.nome || 'Empresa',
-            cidade: cidade.trim() || 'Chapada dos Guimarães',
-            uf: uf.trim() || 'MT',
-            tipo,
-            status,
-            descricao,
-            endereco,
-            areaM2: parseFloat(areaM2) || 0,
-            valorGlobal: parseFloat(valorGlobal) || 0,
-            qtdLotes: parseInt(qtdLotes) || 0,
-            metragemPadraoLote: parseFloat(metragemPadraoLote) || 0,
-            dataInicio,
-            dataEntrega,
-            foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
-        });
+        setSalvando(true);
+        try {
+            const nova = await addObra({
+                nome: nome.trim(),
+                empresaId,
+                empresaNome: emp?.nome || 'Empresa',
+                cidade: cidade.trim() || 'Chapada dos Guimarães',
+                uf: uf.trim() || 'MT',
+                tipo,
+                status,
+                descricao,
+                endereco,
+                areaM2: parseFloat(areaM2) || 0,
+                valorGlobal: parseFloat(valorGlobal) || 0,
+                qtdLotes: parseInt(qtdLotes) || 0,
+                metragemPadraoLote: parseFloat(metragemPadraoLote) || 0,
+                dataInicio,
+                dataEntrega,
+                foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
+            } as Omit<Obra, 'id'>);
 
-        setActiveObra(nova);
-        alert('Nova Obra cadastrada com sucesso!');
+            setActiveObra(nova);
 
-        if (onBack) {
-            onBack();
+            if (onBack) {
+                onBack();
+            }
+        } catch (err: any) {
+            setErro(err?.message || 'Não foi possível salvar a obra. Tente novamente.');
+        } finally {
+            setSalvando(false);
         }
     };
 
@@ -102,6 +112,11 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onBack, onGoToNovaEmpr
             </div>
 
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                {erro && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                        {erro}
+                    </div>
+                )}
                 <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nome da Obra *</label>
                     <input
@@ -303,16 +318,19 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({ onBack, onGoToNovaEmpr
                         <button
                             type="button"
                             onClick={onBack}
-                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs cursor-pointer"
+                            disabled={salvando}
+                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs cursor-pointer disabled:opacity-50"
                         >
                             Cancelar
                         </button>
                     )}
                     <button
                         type="submit"
-                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                        disabled={salvando}
+                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
                     >
-                        <Save className="w-4 h-4" /> Cadastrar Obra
+                        {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {salvando ? 'Salvando...' : 'Cadastrar Obra'}
                     </button>
                 </div>
             </form>

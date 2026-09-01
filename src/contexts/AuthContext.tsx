@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole, SwitchRoleParam, Obra, Empresa, TabId, User } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { UserRole, Obra, Empresa, TabId, User } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { dataService } from '../services/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -11,8 +12,9 @@ interface AuthContextType {
   empresas: Empresa[];
   activeObra: Obra | null;
   setActiveObra: (obra: Obra | null) => void;
-  addEmpresa: (empresa: Omit<Empresa, 'id'>) => Empresa;
-  addObra: (obra: Omit<Obra, 'id'>) => Obra;
+  addEmpresa: (empresa: Omit<Empresa, 'id'>) => Promise<Empresa>;
+  addObra: (obra: Omit<Obra, 'id'>) => Promise<Obra>;
+  refreshObras: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (email: string, pass: string, nome?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
@@ -27,121 +29,67 @@ interface AuthContextType {
 }
 
 const MASTER_ADMIN_EMAIL = 'rennan.spechotto@gmail.com';
-
-const MOCK_EMPRESAS: Empresa[] = [
-  {
-    id: 'emp-001',
-    nome: 'Conecta Urbanismo',
-    cnpj: '12.345.678/0001-90',
-    email: 'contato@conectaurbanismo.com.br'
-  },
-  {
-    id: 'emp-002',
-    nome: 'Linkage Empreendimentos',
-    cnpj: '98.765.432/0001-10',
-    email: 'contato@linkage.com.br'
-  }
-];
-
-const MOCK_OBRAS: Obra[] = [
-  {
-    id: 'obra-001',
-    nome: 'Residencial Reserva dos Ipês',
-    empresa_id: 'emp-001',
-    empresaId: 'emp-001',
-    empresa_nome: 'Conecta Urbanismo',
-    empresaNome: 'Conecta Urbanismo',
-    cidade: 'Mirassol',
-    uf: 'SP',
-    tipo: 'Loteamento Fechado',
-    area_total_m2: 245000,
-    areaM2: 245000,
-    total_lotes: 312,
-    qtdLotes: 312,
-    lotes_vendidos: 198,
-    lotes_disponiveis: 114,
-    percentual_concluido: 68.5,
-    custo_orcado: 14850000,
-    custo_realizado: 9950000,
-    valor_vgv: 38500000,
-    foto_capa: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800'
-  },
-  {
-    id: 'obra-002',
-    nome: 'Villa Bella Urban Park',
-    empresa_id: 'emp-002',
-    empresaId: 'emp-002',
-    empresa_nome: 'Linkage Empreendimentos',
-    empresaNome: 'Linkage Empreendimentos',
-    cidade: 'São José do Rio Preto',
-    uf: 'SP',
-    tipo: 'Loteamento Aberto',
-    area_total_m2: 180000,
-    areaM2: 180000,
-    total_lotes: 240,
-    qtdLotes: 240,
-    lotes_vendidos: 84,
-    lotes_disponiveis: 156,
-    percentual_concluido: 32.0,
-    custo_orcado: 11200000,
-    custo_realizado: 3584000,
-    valor_vgv: 29800000,
-    foto_capa: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800'
-  }
-];
+const MASTER_ADMIN_EMAIL_ALT = 'rennan_seidl@hotmail.com';
 
 const AUTH_STORAGE_KEY = 'meurbanismo_auth_session_v2';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao ler sessão salva:', e);
-      }
-    }
-    return null;
-  });
+const VALID_ROLES: UserRole[] = [
+  'ADMINISTRADOR',
+  'PROPRIETARIO_INVESTIDOR',
+  'CORRETOR',
+  'CLIENTE_COMPRADOR',
+  'GESTOR',
+  'ENGENHEIRO',
+  'CONSULTOR',
+  'INVESTIDOR'
+];
 
+const isValidRole = (value: unknown): value is UserRole =>
+  typeof value === 'string' && VALID_ROLES.includes(value as UserRole);
+
+const isMasterEmail = (email?: string | null): boolean => {
+  const clean = (email || '').toLowerCase().trim();
+  return clean === MASTER_ADMIN_EMAIL || clean === MASTER_ADMIN_EMAIL_ALT;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // IMPORTANTE: o estado de usuário NUNCA deve ser inicializado a partir de dados
+  // brutos do localStorage. Esse blob não é assinado nem verificado pelo servidor,
+  // então um usuário poderia editá-lo via DevTools (ex.: setar role: 'ADMINISTRADOR')
+  // e escalar privilégios instantaneamente. O usuário só é considerado autenticado
+  // após a confirmação de uma sessão real junto ao Supabase (ver initAuth abaixo),
+  // e o PAPEL (role) é sempre lido da tabela "perfis" no banco — nunca de um valor
+  // que o próprio cliente possa forjar (como user_metadata, que é editável pelo
+  // usuário via supabase.auth.updateUser()).
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [role, setRole] = useState<UserRole>('CLIENTE_COMPRADOR');
-  const [empresas, setEmpresas] = useState<Empresa[]>(MOCK_EMPRESAS);
-  const [obras, setObras] = useState<Obra[]>(MOCK_OBRAS);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [obras, setObras] = useState<Obra[]>([]);
   const [activeObra, setActiveObraState] = useState<Obra | null>(null);
 
-  const determineUserRole = (email?: string, metaRole?: string): UserRole => {
-    if (!email) return 'CLIENTE_COMPRADOR';
-    const cleanEmail = email.toLowerCase().trim();
-    if (cleanEmail === MASTER_ADMIN_EMAIL.toLowerCase().trim() || cleanEmail === 'rennan_seidl@hotmail.com' || cleanEmail.includes('spechotto')) {
-      return 'ADMINISTRADOR';
-    }
-
-    if (metaRole && ['ADMINISTRADOR', 'PROPRIETARIO_INVESTIDOR', 'CORRETOR', 'CLIENTE_COMPRADOR', 'GESTOR', 'ENGENHEIRO'].includes(metaRole)) {
-      return metaRole as UserRole;
-    }
-
-    // Busca por convites ativos no sistema
-    const convitesRaw = localStorage.getItem('meurbanismo_convites_v1');
-    if (convitesRaw) {
-      try {
-        const convites = JSON.parse(convitesRaw);
-        const match = convites.find((c: any) => c.email?.toLowerCase().trim() === cleanEmail && c.ativo !== false);
-        if (match && match.role) {
-          return match.role;
-        }
-      } catch (e) {
-        console.error(e);
+  /**
+   * Busca o papel (role) real do usuário na tabela public.perfis — fonte da
+   * verdade protegida por RLS no banco. Nunca confia em user_metadata (que o
+   * próprio usuário pode alterar via API) para conceder privilégios.
+   */
+  const fetchRoleFromPerfis = async (userId: string, email: string): Promise<UserRole> => {
+    try {
+      const { data, error } = await supabase.from('perfis').select('role').eq('id', userId).maybeSingle();
+      if (!error && data && isValidRole(data.role)) {
+        return data.role;
       }
+    } catch (e) {
+      console.error('Erro ao buscar perfil do usuário:', e);
     }
-
-    return 'CLIENTE_COMPRADOR';
+    // Fallback apenas para o instante entre o cadastro e a execução do trigger
+    // de auto-provisionamento (public.handle_new_user) no banco.
+    return isMasterEmail(email) ? 'ADMINISTRADOR' : 'CLIENTE_COMPRADOR';
   };
 
-  const syncUserFromSupabase = (sbUser: any) => {
+  const syncUserFromSupabase = async (sbUser: any): Promise<void> => {
     if (!sbUser) {
       setUser(null);
       localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -149,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const email = sbUser.email || '';
-    const userRole = determineUserRole(email, sbUser.user_metadata?.role);
+    const userRole = await fetchRoleFromPerfis(sbUser.id, email);
     const nome = sbUser.user_metadata?.nome || sbUser.user_metadata?.full_name || email.split('@')[0];
 
     const appUser: User = {
@@ -162,6 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(appUser);
     setRole(userRole);
+    // Cache apenas para exibição otimista de UI (nome/avatar); nunca é usado
+    // para conceder acesso — veja o comentário no initAuth abaixo.
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(appUser));
   };
 
@@ -170,25 +120,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Erro ao verificar sessão Supabase:', error.message);
+        }
+
         if (session?.user) {
-          syncUserFromSupabase(session.user);
+          // Fonte da verdade: sessão real e válida confirmada pelo Supabase.
+          await syncUserFromSupabase(session.user);
         } else {
-          // Se não há sessão Supabase válida, valida se havia sessão local prévia
-          const saved = localStorage.getItem(AUTH_STORAGE_KEY);
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              setUser(parsed);
-              setRole(parsed.role || 'CLIENTE_COMPRADOR');
-            } catch {
-              setUser(null);
-            }
-          } else {
-            setUser(null);
-          }
+          // Sem sessão válida no servidor: nunca reidratar o usuário a partir de
+          // um blob de localStorage não verificado. Limpa qualquer resquício local
+          // e exige novo login, fechando o vetor de escalonamento de privilégios.
+          setUser(null);
+          setRole('CLIENTE_COMPRADOR');
+          localStorage.removeItem(AUTH_STORAGE_KEY);
         }
       } catch (e) {
         console.error('Erro ao verificar sessão Supabase:', e);
+        setUser(null);
+        localStorage.removeItem(AUTH_STORAGE_KEY);
       } finally {
         setLoading(false);
       }
@@ -198,10 +148,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        syncUserFromSupabase(session.user);
+        void syncUserFromSupabase(session.user);
       } else if (_event === 'SIGNED_OUT') {
         setUser(null);
         setActiveObraState(null);
+        setObras([]);
+        setEmpresas([]);
         localStorage.removeItem(AUTH_STORAGE_KEY);
       }
     });
@@ -211,52 +163,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Seleciona obra padrão ao logar se houver obras
-  useEffect(() => {
-    if (user && !activeObra && obras.length > 0) {
-      const userObras = getUserObras();
-      if (userObras.length > 0) {
-        setActiveObraState(userObras[0]);
-      }
-    }
-  }, [user, obras]);
-
-  // Master Admin: rennan.spechotto@gmail.com sempre tem acesso irrestrito total a tudo
-  const isMasterAdmin =
-    user?.email?.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() ||
-    user?.email?.toLowerCase().trim() === 'rennan_seidl@hotmail.com' ||
-    user?.role === 'ADMINISTRADOR';
+  // Master Admin: e-mails fixos sempre têm acesso irrestrito total a tudo
+  const isMasterAdmin = isMasterEmail(user?.email) || user?.role === 'ADMINISTRADOR';
 
   const isAuthenticated = Boolean(user);
   const isAdmin = isMasterAdmin;
-  const canViewFinancials = isMasterAdmin || role === 'PROPRIETARIO_INVESTIDOR' || role === 'GESTOR' || role === 'INVESTIDOR';
+  const canViewFinancials = isMasterAdmin || role === 'PROPRIETARIO_INVESTIDOR' || role === 'GESTOR' || role === 'ENGENHEIRO' || role === 'CONSULTOR' || role === 'INVESTIDOR';
   const isCorretor = isMasterAdmin || role === 'CORRETOR';
+
+  /**
+   * Busca as obras e empresas reais do Supabase.
+   *
+   * "obras" vem da view "obras_publicas": o próprio Postgres já filtra as
+   * linhas conforme os convites do usuário (RLS/has_obra_access) e mascara as
+   * colunas financeiras para quem não tem permissão — não é uma filtragem
+   * feita aqui no cliente, então não pode ser burlada via DevTools.
+   */
+  const refreshObras = useCallback(async (): Promise<void> => {
+    if (!user) {
+      setObras([]);
+      setEmpresas([]);
+      return;
+    }
+    try {
+      const [obrasData, empresasData] = await Promise.all([
+        dataService.getObras(),
+        dataService.getEmpresas()
+      ]);
+      setObras(obrasData);
+      setEmpresas(empresasData);
+    } catch (e) {
+      console.error('Erro ao carregar obras/empresas do Supabase:', e);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void refreshObras();
+  }, [refreshObras]);
+
+  // Seleciona obra padrão ao logar se houver obras
+  useEffect(() => {
+    if (user && !activeObra && obras.length > 0) {
+      setActiveObraState(obras[0]);
+    }
+  }, [user, obras, activeObra]);
 
   const setActiveObra = (obra: Obra | null) => {
     setActiveObraState(obra);
   };
 
-  const addEmpresa = (novaData: Omit<Empresa, 'id'>): Empresa => {
-    const novaEmpresa: Empresa = {
-      ...novaData,
-      id: `emp-${Date.now()}`
-    };
+  const addEmpresa = async (novaData: Omit<Empresa, 'id'>): Promise<Empresa> => {
+    const novaEmpresa = await dataService.saveEmpresa(novaData);
     setEmpresas(prev => [novaEmpresa, ...prev]);
     return novaEmpresa;
   };
 
-  const addObra = (novaData: Omit<Obra, 'id'>): Obra => {
-    const novaObra: Obra = {
-      ...novaData,
-      id: `obra-${Date.now()}`
-    };
-    setObras(prev => [novaObra, ...prev]);
+  const addObra = async (novaData: Omit<Obra, 'id'>): Promise<Obra> => {
+    const novaObra = await dataService.saveObra(novaData);
+    await refreshObras();
     return novaObra;
   };
 
   const loginWithEmail = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     if (!email || !pass) return { success: false, error: 'E-mail e senha são obrigatórios.' };
 
+    // SEGURANÇA: a autenticação é validada exclusivamente pelo Supabase Auth.
+    // Não existe (e não deve existir) nenhum atalho de senha para o admin master
+    // ou qualquer outro usuário — isso seria uma porta dos fundos exploravel por
+    // qualquer pessoa que soubesse o e-mail do administrador. O papel de
+    // ADMINISTRADOR é concedido automaticamente pela tabela "perfis" somente
+    // após uma autenticação real e bem-sucedida com a senha correta.
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -264,45 +240,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        // Fallback para credenciais do Administrador Master ou convites locais se Supabase auth retornar credencial inválida
-        if (email.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() && pass.length >= 4) {
-          const masterUser: User = {
-            id: 'usr_master_admin',
-            email: MASTER_ADMIN_EMAIL,
-            nome: 'Rennan Spechotto',
-            role: 'ADMINISTRADOR',
-            avatar_url: '/logo-meurbanismo.png'
-          };
-          setUser(masterUser);
-          setRole('ADMINISTRADOR');
-          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(masterUser));
-          return { success: true };
-        }
-        return { success: false, error: error.message || 'Credenciais inválidas.' };
+        return { success: false, error: 'Credenciais inválidas. Verifique seu e-mail e senha.' };
       }
 
       if (data.user) {
-        syncUserFromSupabase(data.user);
+        await syncUserFromSupabase(data.user);
         return { success: true };
       }
 
       return { success: false, error: 'Não foi possível obter dados do usuário.' };
-    } catch (err: any) {
-      // Fallback de segurança para o Administrador Master
-      if (email.toLowerCase().trim() === MASTER_ADMIN_EMAIL.toLowerCase().trim() && pass.length >= 4) {
-        const masterUser: User = {
-          id: 'usr_master_admin',
-          email: MASTER_ADMIN_EMAIL,
-          nome: 'Rennan Spechotto',
-          role: 'ADMINISTRADOR',
-          avatar_url: '/logo-meurbanismo.png'
-        };
-        setUser(masterUser);
-        setRole('ADMINISTRADOR');
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(masterUser));
-        return { success: true };
-      }
-      return { success: false, error: err.message || 'Erro ao conectar ao serviço de autenticação.' };
+    } catch {
+      return { success: false, error: 'Erro ao conectar ao serviço de autenticação. Tente novamente.' };
     }
   };
 
@@ -315,8 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: pass,
         options: {
           data: {
-            nome: nome || email.split('@')[0],
-            role: 'CLIENTE_COMPRADOR'
+            nome: nome || email.split('@')[0]
           }
         }
       });
@@ -326,7 +273,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        syncUserFromSupabase(data.user);
+        await syncUserFromSupabase(data.user);
         return { success: true };
       }
 
@@ -349,7 +296,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        const msg = error.message || '';
         return {
           success: false,
           error: 'O login com Google está desativado ou não configurado neste projeto. Por favor, utilize seu e-mail e senha cadastrados.'
@@ -370,7 +316,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Se a resposta for OK (redirecionamento do Google), podemos navegar com segurança
           window.location.href = data.url;
           return { success: true };
-        } catch (fetchErr) {
+        } catch {
           // Em caso de CORS no fetch preliminar ou erro de rede, se o Google não estiver configurado
           return {
             success: false,
@@ -383,7 +329,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         success: false,
         error: 'O login com Google está desativado ou não configurado neste projeto. Utilize seu e-mail e senha.'
       };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
         error: 'O login com Google está desativado ou não configurado neste projeto. Utilize e-mail e senha.'
@@ -400,6 +346,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Limpeza completa de tokens de sessão cliente
       setUser(null);
       setActiveObraState(null);
+      setObras([]);
+      setEmpresas([]);
       setRole('CLIENTE_COMPRADOR');
       localStorage.removeItem(AUTH_STORAGE_KEY);
       sessionStorage.clear();
@@ -412,38 +360,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Verifica se o usuário tem acesso à Obra específica
+  /**
+   * Verifica se o usuário tem acesso à obra informada.
+   *
+   * IMPORTANTE: isto NÃO é a barreira de segurança real — é apenas um atalho
+   * de conveniência para a UI. A lista "obras" já vem filtrada pelo Postgres
+   * (RLS + has_obra_access na view "obras_publicas"), então mesmo que este
+   * cálculo aqui fosse manipulado via DevTools, o servidor nunca devolveria
+   * dados de uma obra não autorizada.
+   */
   const canAccessObra = (obraId: string): boolean => {
     if (isMasterAdmin) return true;
-    if (!user) return false;
-
-    // Se houver convite ativo para o e-mail do usuário vinculado a esta obra
-    const convitesRaw = localStorage.getItem('meurbanismo_convites_v1');
-    if (!convitesRaw) {
-      return obraId === 'obra-001';
-    }
-
-    try {
-      const convites = JSON.parse(convitesRaw);
-      const temConvite = convites.some((c: any) =>
-        (c.obraId === obraId || c.obra_id === obraId) &&
-        (c.email?.toLowerCase().trim() === user.email?.toLowerCase().trim()) &&
-        (c.ativo !== false)
-      );
-      return temConvite || obraId === 'obra-001';
-    } catch {
-      return obraId === 'obra-001';
-    }
+    return obras.some(o => o.id === obraId);
   };
 
-  // Lista apenas as obras autorizadas para o usuário logado
-  const getUserObras = (): Obra[] => {
-    if (isMasterAdmin) return obras;
-    if (!user) return [];
-    return obras.filter(o => canAccessObra(o.id));
-  };
+  // A lista de obras já reflete exatamente o que o usuário tem permissão de
+  // ver (filtrado pelo próprio banco), então basta devolvê-la diretamente.
+  const getUserObras = (): Obra[] => obras;
 
-  // Validação de acesso a cada uma das 11 abas da obra e abas globais
+  // Validação de acesso a cada uma das abas da obra e abas globais
   const canAccessTab = (tabId: TabId): boolean => {
     if (!user) return false;
 
@@ -455,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Administrador tem acesso total irrestrito a todas as abas
     if (isMasterAdmin) return true;
 
-    // Menu dos 11 módulos da Obra
+    // Menu dos módulos da Obra
     switch (role) {
       case 'PROPRIETARIO_INVESTIDOR':
       case 'INVESTIDOR':
@@ -530,6 +465,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setActiveObra,
         addEmpresa,
         addObra,
+        refreshObras,
         loginWithEmail,
         signUpWithEmail,
         loginWithGoogle,

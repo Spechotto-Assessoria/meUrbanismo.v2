@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useObraAccess } from '../../hooks/useObraAccess';
 import { 
   FileText, 
   Printer, 
@@ -15,6 +16,7 @@ import { MOCK_MACRO_ETAPAS } from '../../services/mockData';
 
 export const RelatoriosTab: React.FC = () => {
   const { activeObra, user } = useAuth();
+  const { canViewFinancials } = useObraAccess();
 
   if (!activeObra) {
     return null;
@@ -105,14 +107,14 @@ export const RelatoriosTab: React.FC = () => {
             <div className="p-3 bg-navy-950 rounded-xl border border-slate-800">
               <span className="text-slate-400 block">Custo Total Realizado</span>
               <span className="text-lg font-black text-white mt-1 block">
-                R$ {(activeObra.custo_realizado / 1000000).toFixed(2)} M
+                {canViewFinancials ? `R$ ${(activeObra.custo_realizado / 1000000).toFixed(2)} M` : '🔒 Restrito'}
               </span>
             </div>
 
             <div className="p-3 bg-navy-950 rounded-xl border border-slate-800">
               <span className="text-slate-400 block">Orçamento Aprovado</span>
               <span className="text-lg font-black text-slate-300 mt-1 block">
-                R$ {(activeObra.custo_orcado / 1000000).toFixed(2)} M
+                {canViewFinancials ? `R$ ${(activeObra.custo_orcado / 1000000).toFixed(2)} M` : '🔒 Restrito'}
               </span>
             </div>
 

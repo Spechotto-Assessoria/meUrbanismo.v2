@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, Search } from 'lucide-react';
+import { Calculator, Layers, ArrowLeft, Save, FilePlus2, FileDown, Sheet, Loader2, Trash2, Pencil, Search, ShieldAlert } from 'lucide-react';
 import { apiService } from '../../services/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from './ui-components';
 import { CidadeAutocomplete } from '../viabilidade/CidadeAutocomplete';
@@ -102,6 +103,17 @@ const SCurveSVG = ({ data }: { data: { mes: number, acumulado: number }[] }) => 
 interface Props { onBack: () => void; }
 
 export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
+    // DEFESA EM PROFUNDIDADE: esta calculadora expõe VGV, custos, margens, TIR e VPL
+    // de todos os empreendimentos. A navegação até aqui já é restrita a botões
+    // visíveis somente ao Administrador Master, mas o roteador principal (App.tsx)
+    // não redireciona automaticamente esta aba por ser um formulário global — por
+    // isso a própria tela também nega a renderização do conteúdo sensível caso seja
+    // alcançada por qualquer outro meio (ex.: estado de navegação manipulado).
+    // Importante: o hook useAuth() e os demais hooks abaixo são sempre chamados,
+    // incondicionalmente, para respeitar as Regras de Hooks do React — a decisão
+    // de bloquear o acesso é aplicada apenas no retorno (JSX) final do componente.
+    const { isMasterAdmin } = useAuth();
+
     const [viewMode, setViewMode] = useState<'pipeline' | 'form'>('pipeline');
     const [estudoId, setEstudoId] = useState<string | null>(null);
     const [estudos, setEstudos] = useState<EstudoRow[]>([]);
@@ -297,6 +309,25 @@ export const EstudoViabilidadeTab: React.FC<Props> = ({ onBack }) => {
             setGerandoPdf(false);
         }, 500);
     };
+
+    if (!isMasterAdmin) {
+        return (
+            <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm space-y-3 max-w-md mx-auto mt-10">
+                <ShieldAlert className="w-10 h-10 text-rose-500 mx-auto" />
+                <h3 className="text-sm font-bold text-slate-800">Acesso Restrito</h3>
+                <p className="text-xs text-slate-500">
+                    Esta calculadora de viabilidade contém dados financeiros sigilosos e está disponível apenas para administradores.
+                </p>
+                <button
+                    type="button"
+                    onClick={onBack}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer"
+                >
+                    Voltar
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 pb-12 max-w-7xl mx-auto">

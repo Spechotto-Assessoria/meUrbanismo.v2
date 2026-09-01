@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building2, Save, Upload, ArrowLeft } from 'lucide-react';
+import { Building2, Save, Upload, ArrowLeft, Loader2 } from 'lucide-react';
 
 interface NovaEmpresaTabProps {
     onBack?: () => void;
@@ -15,29 +15,37 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
     const [contato, setContato] = useState('');
     const [email, setEmail] = useState('');
     const [telefone, setTelefone] = useState('');
+    const [salvando, setSalvando] = useState(false);
+    const [erro, setErro] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErro(null);
 
         if (!nome.trim()) {
             alert('Por favor, preencha o Nome / Razão Social da empresa.');
             return;
         }
 
-        const criada = addEmpresa({
-            nome: nome.trim(),
-            cnpj: cnpj.trim(),
-            contato: contato.trim(),
-            email: email.trim(),
-            telefone: telefone.trim()
-        });
+        setSalvando(true);
+        try {
+            const criada = await addEmpresa({
+                nome: nome.trim(),
+                cnpj: cnpj.trim(),
+                contato: contato.trim(),
+                email: email.trim(),
+                telefone: telefone.trim()
+            });
 
-        alert('Empresa cadastrada com sucesso!');
-
-        if (onSuccess) {
-            onSuccess(criada.id);
-        } else if (onBack) {
-            onBack();
+            if (onSuccess) {
+                onSuccess(criada.id);
+            } else if (onBack) {
+                onBack();
+            }
+        } catch (err: any) {
+            setErro(err?.message || 'Não foi possível salvar a empresa. Tente novamente.');
+        } finally {
+            setSalvando(false);
         }
     };
 
@@ -64,6 +72,11 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
             </div>
 
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                {erro && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                        {erro}
+                    </div>
+                )}
                 <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nome / Razão social *</label>
                     <input
@@ -141,16 +154,19 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
                         <button
                             type="button"
                             onClick={onBack}
-                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs cursor-pointer"
+                            disabled={salvando}
+                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs cursor-pointer disabled:opacity-50"
                         >
                             Cancelar
                         </button>
                     )}
                     <button
                         type="submit"
-                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                        disabled={salvando}
+                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
                     >
-                        <Save className="w-4 h-4" /> Cadastrar Empresa
+                        {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {salvando ? 'Salvando...' : 'Cadastrar Empresa'}
                     </button>
                 </div>
             </form>
