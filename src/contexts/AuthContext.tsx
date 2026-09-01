@@ -18,6 +18,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (email: string, pass: string, nome?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   canAccessTab: (tabId: TabId) => boolean;
   canAccessObra: (obraId: string) => boolean;
@@ -240,7 +241,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        return { success: false, error: 'Credenciais inválidas. Verifique seu e-mail e senha.' };
+        // Log detalhado apenas no console do navegador (não exposto na UI) para
+        // facilitar o diagnóstico — ex.: distinguir senha errada de e-mail não
+        // confirmado, sem ajudar um invasor a enumerar contas existentes.
+        console.error(`[auth] Falha no login para "${email}": ${error.status || ''} ${error.message}`);
+
+        if (/email not confirmed/i.test(error.message)) {
+          return {
+            success: false,
+            error: 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada (e spam) para o link de confirmação enviado pelo Supabase.'
+          };
+        }
+
+        return { success: false, error: 'Credenciais inválidas. Verifique seu e-mail e senha, ou use "Esqueci minha senha".' };
       }
 
       if (data.user) {
@@ -249,6 +262,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       return { success: false, error: 'Não foi possível obter dados do usuário.' };
+    } catch {
+      return { success: false, error: 'Erro ao conectar ao serviço de autenticação. Tente novamente.' };
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    if (!email) return { success: false, error: 'Informe o e-mail cadastrado.' };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin
+      });
+      if (error) {
+        console.error('[auth] Falha ao solicitar redefinição de senha:', error.message);
+        return { success: false, error: 'Não foi possível enviar o e-mail de redefinição. Tente novamente em instantes.' };
+      }
+      return { success: true };
     } catch {
       return { success: false, error: 'Erro ao conectar ao serviço de autenticação. Tente novamente.' };
     }
@@ -469,6 +498,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithEmail,
         signUpWithEmail,
         loginWithGoogle,
+        resetPassword,
         logout,
         canAccessTab,
         canAccessObra,

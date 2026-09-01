@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export const LoginScreen: React.FC = () => {
-  const { loginWithEmail, signUpWithEmail, loginWithGoogle } = useAuth();
+  const { loginWithEmail, signUpWithEmail, loginWithGoogle, resetPassword } = useAuth();
 
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -46,6 +46,27 @@ export const LoginScreen: React.FC = () => {
       }
     } catch (err: any) {
       setError(err?.message || 'Falha na conexão com o servidor de autenticação.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Informe seu e-mail no campo acima para receber o link de redefinição.');
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const res = await resetPassword(email);
+      if (res.success) {
+        setSuccess('Se este e-mail estiver cadastrado, você receberá um link para redefinir sua senha em instantes.');
+      } else {
+        setError(res.error || 'Não foi possível enviar o e-mail de redefinição.');
+      }
     } finally {
       setLoading(false);
     }
@@ -165,7 +186,7 @@ export const LoginScreen: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer mt-2"
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer mt-2 disabled:opacity-60"
             >
               <Lock className="w-4 h-4" />
               {loading
@@ -174,6 +195,19 @@ export const LoginScreen: React.FC = () => {
                 ? 'Criar Conta de Acesso'
                 : 'Entrar na Plataforma'}
             </button>
+
+            {!isSignUp && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleResetPassword}
+                  className="text-[11px] text-slate-500 hover:text-blue-700 font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
           </form>
 
           {/* GOOGLE SOCIAL LOGIN */}
