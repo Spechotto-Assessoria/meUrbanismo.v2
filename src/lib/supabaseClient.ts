@@ -14,8 +14,8 @@ import { createClient } from '@supabase/supabase-js';
  * projeto Supabase oficial (Project Settings → API). Nunca substitua por
  * uma "service_role key" (essa sim é secreta e nunca deve ir ao cliente).
  */
-const FALLBACK_SUPABASE_URL = 'https://tvokopoxxwhimejwkzlr.supabase.co';
-const FALLBACK_SUPABASE_ANON_KEY = 'sb_publishable_QzML-0lqjfNnHMoBx4t9ww_rNS1xdE9';
+const FALLBACK_SUPABASE_URL = 'https://jckwmrwskgtbfttfgykb.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'sb_publishable_F7zjReeDw-Dlwb2X_bouQA_zIk5Z9Ft';
 
 /** Padrões que indicam um valor de ambiente ausente, vazio ou apenas um placeholder. */
 const INVALID_VALUE_PATTERNS = [
