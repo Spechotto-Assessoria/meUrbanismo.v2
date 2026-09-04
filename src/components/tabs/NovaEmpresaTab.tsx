@@ -11,7 +11,7 @@ interface NovaEmpresaTabProps {
 }
 
 export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSuccess, empresaToEdit }) => {
-    const { addEmpresa, updateEmpresa, updateEmpresaLogo } = useAuth();
+    const { addEmpresa, updateEmpresa, updateEmpresaLogo, isMasterAdmin } = useAuth();
     const isEditing = Boolean(empresaToEdit?.id);
 
     const [nome, setNome] = useState(empresaToEdit?.nome ?? '');
@@ -41,6 +41,11 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErro(null);
+
+        if (!isMasterAdmin) {
+            setErro('Apenas o administrador pode cadastrar ou editar empresas.');
+            return;
+        }
 
         if (!nome.trim()) {
             setErro('Por favor, preencha o Nome / Razão Social da empresa.');

@@ -88,9 +88,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             </button>
           )}
 
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
+          <div className="w-20 h-20 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
             <img
-              src="/logo-meurbanismo.png"
+              src="/logo-meurbanismo.jpg"
               alt="meUrbanismo"
               className="w-full h-full object-contain mix-blend-multiply"
             />

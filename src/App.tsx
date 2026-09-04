@@ -35,10 +35,6 @@ const AuthenticatedApp: React.FC = () => {
 
   useEffect(() => {
     if (
-      activeTab !== 'dashboard' &&
-      activeTab !== 'admin' &&
-      activeTab !== 'nova-empresa' &&
-      activeTab !== 'nova-obra' &&
       activeTab !== 'estudo-viabilidade' &&
       canAccessTab &&
       !canAccessTab(activeTab as TabId)
@@ -83,8 +79,17 @@ const AuthenticatedApp: React.FC = () => {
       return <EstudoViabilidadeTab onBack={() => setActiveTab('dashboard')} />;
     }
 
-    // Formulário de Nova Empresa (Global Admin)
+    // Formulário de Nova Empresa (somente administrador)
     if (activeTab === 'nova-empresa') {
+      if (!isMasterAdmin) {
+        return (
+          <DashboardTab
+            onSelectObra={handleSelectObra}
+            onSelectAdmin={handleSelectAdmin}
+            onNavigateToEmpresas={() => setActiveTab('empresas')}
+          />
+        );
+      }
       const voltar = () => {
         setEmpresaToEdit(null);
         setActiveTab(empresaFormOrigem === 'empresas' ? 'empresas' : 'dashboard');
@@ -110,22 +115,39 @@ const AuthenticatedApp: React.FC = () => {
       return (
         <EmpresasTab
           onBack={() => setActiveTab('dashboard')}
-          onNovaEmpresa={() => {
-            setEmpresaToEdit(null);
-            setEmpresaFormOrigem('empresas');
-            setActiveTab('nova-empresa');
-          }}
-          onEditEmpresa={(empresa) => {
-            setEmpresaToEdit(empresa);
-            setEmpresaFormOrigem('empresas');
-            setActiveTab('nova-empresa');
-          }}
+          onNovaEmpresa={
+            isMasterAdmin
+              ? () => {
+                  setEmpresaToEdit(null);
+                  setEmpresaFormOrigem('empresas');
+                  setActiveTab('nova-empresa');
+                }
+              : undefined
+          }
+          onEditEmpresa={
+            isMasterAdmin
+              ? (empresa) => {
+                  setEmpresaToEdit(empresa);
+                  setEmpresaFormOrigem('empresas');
+                  setActiveTab('nova-empresa');
+                }
+              : undefined
+          }
         />
       );
     }
 
-    // Formulário de Nova Obra (Global Admin)
+    // Formulário de Nova Obra (somente administrador)
     if (activeTab === 'nova-obra') {
+      if (!isMasterAdmin) {
+        return (
+          <DashboardTab
+            onSelectObra={handleSelectObra}
+            onSelectAdmin={handleSelectAdmin}
+            onNavigateToEmpresas={() => setActiveTab('empresas')}
+          />
+        );
+      }
       return (
         <NovaObraTab
           onBack={() => {
@@ -139,8 +161,17 @@ const AuthenticatedApp: React.FC = () => {
       );
     }
 
-    // Gestão de Convites / Admin (Global Admin)
+    // Gestão de Convites / Admin (somente administrador)
     if (activeTab === 'admin') {
+      if (!isMasterAdmin) {
+        return (
+          <DashboardTab
+            onSelectObra={handleSelectObra}
+            onSelectAdmin={handleSelectAdmin}
+            onNavigateToEmpresas={() => setActiveTab('empresas')}
+          />
+        );
+      }
       return <ConvitesTab />;
     }
 
@@ -150,21 +181,33 @@ const AuthenticatedApp: React.FC = () => {
         <DashboardTab
           onSelectObra={handleSelectObra}
           onSelectAdmin={handleSelectAdmin}
-          onNavigateToNovaEmpresa={() => {
-            setEmpresaToEdit(null);
-            setEmpresaFormOrigem('dashboard');
-            setActiveTab('nova-empresa');
-          }}
-          onNavigateToNovaObra={() => {
-            setObraToEdit(null);
-            setActiveTab('nova-obra');
-          }}
-          onNavigateToViabilidade={() => setActiveTab('estudo-viabilidade')}
+          onNavigateToNovaEmpresa={
+            isMasterAdmin
+              ? () => {
+                  setEmpresaToEdit(null);
+                  setEmpresaFormOrigem('dashboard');
+                  setActiveTab('nova-empresa');
+                }
+              : undefined
+          }
+          onNavigateToNovaObra={
+            isMasterAdmin
+              ? () => {
+                  setObraToEdit(null);
+                  setActiveTab('nova-obra');
+                }
+              : undefined
+          }
+          onNavigateToViabilidade={isMasterAdmin ? () => setActiveTab('estudo-viabilidade') : undefined}
           onNavigateToEmpresas={() => setActiveTab('empresas')}
-          onEditObra={(obra) => {
-            setObraToEdit(obra);
-            setActiveTab('nova-obra');
-          }}
+          onEditObra={
+            isMasterAdmin
+              ? (obra) => {
+                  setObraToEdit(obra);
+                  setActiveTab('nova-obra');
+                }
+              : undefined
+          }
         />
       );
     }
@@ -229,6 +272,10 @@ const AuthenticatedApp: React.FC = () => {
       <Header
         onLogoClick={handleResetToDashboard}
         onNavigateAdmin={handleSelectAdmin}
+        onAbrirNotificacao={(tab) => {
+          setActiveTab(tab);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
 
       <main

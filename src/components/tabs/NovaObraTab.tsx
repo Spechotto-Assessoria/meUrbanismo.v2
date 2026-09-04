@@ -29,7 +29,7 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({
     preSelectedEmpresaId,
     obraToEdit
 }) => {
-    const { empresas, addObra, updateObra, updateObraFotoCapa, setActiveObra } = useAuth();
+    const { empresas, addObra, updateObra, updateObraFotoCapa, setActiveObra, isMasterAdmin } = useAuth();
     const isEditing = Boolean(obraToEdit?.id);
 
     const [nome, setNome] = useState(obraToEdit?.nome ?? '');
@@ -89,6 +89,11 @@ export const NovaObraTab: React.FC<NovaObraTabProps> = ({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErro(null);
+
+        if (!isMasterAdmin) {
+            setErro('Apenas o administrador pode cadastrar ou editar obras.');
+            return;
+        }
 
         if (!nome.trim()) {
             setErro('Informe o Nome da Obra.');

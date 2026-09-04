@@ -140,7 +140,7 @@ export const LoginScreen: React.FC = () => {
         
         {/* CABEÇALHO CORPORATIVO */}
         <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 p-8 text-white text-center relative">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
             <img
               src="/logo-meurbanismo.png"
               alt="meUrbanismo"
@@ -150,7 +150,7 @@ export const LoginScreen: React.FC = () => {
 
           <h1 className="text-2xl font-black tracking-tight">meUrbanismo</h1>
           <p className="text-xs text-blue-200 mt-1 font-medium">
-            Engenharia Urbana & Gestão Integrada de Obras
+            PLANEJAR - ACOMPANHAR - REALIZAR
           </p>
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-[10px] font-bold text-blue-300 uppercase tracking-wider">
             <ShieldCheck className="w-3.5 h-3.5" /> Acesso Restrito & Seguro

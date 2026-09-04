@@ -425,12 +425,31 @@ drop policy if exists "perfis_self_select" on public.perfis;
 create policy "perfis_self_select" on public.perfis for select
   using (id = auth.uid());
 
--- EMPRESAS: gestão exclusiva do admin master. Consultas indiretas (nome da empresa
--- dentro de obras_publicas) funcionam via view, que roda com privilégio de dono
--- e não depende de RLS de empresas.
+-- EMPRESAS: escrita exclusiva do administrador. Convidados só leem empresas
+-- das obras às quais têm convite (para visualizar a lista, sem editar).
 drop policy if exists "empresas_admin_all" on public.empresas;
 create policy "empresas_admin_all" on public.empresas for all
   using (public.is_admin()) with check (public.is_admin());
+
+create or replace function public.can_view_empresa(target_empresa_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or exists (
+      select 1 from public.obras o
+      where o.empresa_id = target_empresa_id
+        and public.has_obra_access(o.id)
+    );
+$$;
+
+drop policy if exists "empresas_convidado_select" on public.empresas;
+create policy "empresas_convidado_select" on public.empresas for select
+  using (public.can_view_empresa(id));
 
 -- LOGO DAS EMPRESAS (Storage): bucket público "logos_empresas" — leitura liberada
 -- para qualquer um (necessário para exibir o logo nas telas das obras), mas só o
@@ -657,6 +676,412 @@ where public.has_obra_access(m.obra_id)
   and (m.visivel_convidados = true or public.can_view_financials());
 
 grant select on public.medicoes_publicas to authenticated;
+
+-- ==============================================================================
+-- 8. NOTIFICAÇÕES DA OBRA (sino + push)
+--
+-- Cada atualização visível da obra gera um aviso para os CONVITES daquela
+-- obra (nunca para o administrador que fez a alteração). Fotos/arquivos
+-- enviados em sequência no mesmo horário são agrupados numa única linha.
+-- O app lê essa tabela no sino e, com permissão do navegador/dispositivo,
+-- exibe um push. Tokens FCM/Capacitor ficam em dispositivos_push para o
+-- app publicado.
+-- ==============================================================================
+
+create table if not exists public.notificacoes (
+  id uuid primary key default gen_random_uuid(),
+  obra_id uuid not null references public.obras(id) on delete cascade,
+  obra_nome text,
+  destinatario_email text not null,
+  tipo text not null default 'geral',
+  titulo text not null,
+  mensagem text not null,
+  quantidade integer not null default 1,
+  agrupamento_chave text,
+  lida boolean not null default false,
+  lida_em timestamp with time zone,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists notificacoes_destinatario_idx
+  on public.notificacoes (destinatario_email, lida, created_at desc);
+
+create table if not exists public.dispositivos_push (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  email text not null,
+  token text not null,
+  plataforma text not null default 'web',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique (token)
+);
+
+grant select, update on public.notificacoes to authenticated;
+grant select, insert, update, delete on public.dispositivos_push to authenticated;
+
+alter table public.notificacoes enable row level security;
+alter table public.dispositivos_push enable row level security;
+
+drop policy if exists "notificacoes_destinatario_select" on public.notificacoes;
+create policy "notificacoes_destinatario_select" on public.notificacoes for select
+  using (lower(destinatario_email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+drop policy if exists "notificacoes_destinatario_update" on public.notificacoes;
+create policy "notificacoes_destinatario_update" on public.notificacoes for update
+  using (lower(destinatario_email) = lower(coalesce(auth.jwt() ->> 'email', '')))
+  with check (lower(destinatario_email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+drop policy if exists "dispositivos_push_own" on public.dispositivos_push;
+create policy "dispositivos_push_own" on public.dispositivos_push for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create or replace function public.notificar_obra(
+  p_obra_id uuid,
+  p_tipo text,
+  p_titulo text,
+  p_mensagem_unitaria text,
+  p_mensagem_plural text,
+  p_agrupamento_chave text,
+  p_escopo text default 'todos',
+  p_incremento integer default 1
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_email_ator text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_obra_nome text;
+  r record;
+  v_existente uuid;
+  v_qtd integer;
+  v_msg text;
+begin
+  if p_obra_id is null then
+    return;
+  end if;
+
+  if not public.is_admin() then
+    raise exception 'Apenas o administrador pode emitir notificações da obra.';
+  end if;
+
+  select o.nome into v_obra_nome from public.obras o where o.id = p_obra_id;
+
+  for r in
+    select distinct lower(trim(c.email)) as email
+    from public.convites c
+    where c.obra_id = p_obra_id
+      and coalesce(c.ativo, true) = true
+      and nullif(trim(c.email), '') is not null
+      and lower(trim(c.email)) <> v_email_ator
+      and (
+        coalesce(p_escopo, 'todos') = 'todos'
+        or c.role in ('PROPRIETARIO_INVESTIDOR', 'INVESTIDOR', 'GESTOR', 'ENGENHEIRO', 'CONSULTOR')
+      )
+  loop
+    v_existente := null;
+    v_qtd := 0;
+
+    select n.id, n.quantidade
+      into v_existente, v_qtd
+    from public.notificacoes n
+    where lower(n.destinatario_email) = r.email
+      and n.obra_id = p_obra_id
+      and n.agrupamento_chave = p_agrupamento_chave
+      and n.lida = false
+      and n.created_at > timezone('utc', now()) - interval '30 minutes'
+    order by n.created_at desc
+    limit 1;
+
+    if v_existente is not null then
+      v_qtd := coalesce(v_qtd, 1) + coalesce(p_incremento, 1);
+      v_msg := case
+        when v_qtd > 1 then replace(p_mensagem_plural, '%s', v_qtd::text)
+        else p_mensagem_unitaria
+      end;
+      update public.notificacoes
+      set
+        quantidade = v_qtd,
+        titulo = p_titulo,
+        mensagem = v_msg,
+        obra_nome = v_obra_nome,
+        created_at = timezone('utc', now())
+      where id = v_existente;
+    else
+      v_qtd := coalesce(p_incremento, 1);
+      v_msg := case
+        when v_qtd > 1 then replace(p_mensagem_plural, '%s', v_qtd::text)
+        else p_mensagem_unitaria
+      end;
+      insert into public.notificacoes (
+        obra_id, obra_nome, destinatario_email, tipo, titulo, mensagem, quantidade, agrupamento_chave
+      ) values (
+        p_obra_id, v_obra_nome, r.email, p_tipo, p_titulo, v_msg, v_qtd, p_agrupamento_chave
+      );
+    end if;
+  end loop;
+end;
+$$;
+
+grant execute on function public.notificar_obra(uuid, text, text, text, text, text, text, integer) to authenticated;
+
+create or replace function public.chave_agrupamento(p_tipo text, p_obra_id uuid)
+returns text
+language sql
+stable
+as $$
+  select p_tipo || ':' || p_obra_id::text || ':' || to_char(timezone('utc', now()), 'YYYYMMDDHH24');
+$$;
+
+create or replace function public.trg_notificar_fotos_obra()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_nome text;
+begin
+  if tg_op = 'INSERT' and coalesce(new.visivel_convidados, false) is not true then
+    return new;
+  end if;
+  if tg_op = 'UPDATE' and not (
+    coalesce(old.visivel_convidados, false) is not true
+    and coalesce(new.visivel_convidados, false) is true
+  ) then
+    return new;
+  end if;
+
+  select nome into v_nome from public.obras where id = new.obra_id;
+  perform public.notificar_obra(
+    new.obra_id,
+    'fotos',
+    'Novas fotos no acompanhamento',
+    'Uma nova foto foi publicada em ' || coalesce(v_nome, 'a obra') || '.',
+    '%s novas fotos foram publicadas em ' || coalesce(v_nome, 'a obra') || '.',
+    public.chave_agrupamento('fotos', new.obra_id),
+    'todos',
+    1
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_fotos_obra_ins on public.fotos_obra;
+create trigger trg_notificar_fotos_obra_ins
+  after insert on public.fotos_obra
+  for each row execute function public.trg_notificar_fotos_obra();
+
+drop trigger if exists trg_notificar_fotos_obra_upd on public.fotos_obra;
+create trigger trg_notificar_fotos_obra_upd
+  after update of visivel_convidados on public.fotos_obra
+  for each row execute function public.trg_notificar_fotos_obra();
+
+create or replace function public.trg_notificar_arquivos_obra()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_nome text;
+begin
+  if tg_op = 'INSERT' and coalesce(new.visivel_convidados, false) is not true then
+    return new;
+  end if;
+  if tg_op = 'UPDATE' and not (
+    coalesce(old.visivel_convidados, false) is not true
+    and coalesce(new.visivel_convidados, false) is true
+  ) then
+    return new;
+  end if;
+
+  select nome into v_nome from public.obras where id = new.obra_id;
+  perform public.notificar_obra(
+    new.obra_id,
+    'documento',
+    'Novo documento disponível',
+    'Um novo arquivo foi anexado em ' || coalesce(v_nome, 'a obra') || ': ' || coalesce(new.titulo, 'documento') || '.',
+    '%s novos arquivos foram anexados em ' || coalesce(v_nome, 'a obra') || '.',
+    public.chave_agrupamento('documento', new.obra_id),
+    'todos',
+    1
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_arquivos_obra_ins on public.obra_arquivos;
+create trigger trg_notificar_arquivos_obra_ins
+  after insert on public.obra_arquivos
+  for each row execute function public.trg_notificar_arquivos_obra();
+
+drop trigger if exists trg_notificar_arquivos_obra_upd on public.obra_arquivos;
+create trigger trg_notificar_arquivos_obra_upd
+  after update of visivel_convidados on public.obra_arquivos
+  for each row execute function public.trg_notificar_arquivos_obra();
+
+create or replace function public.trg_notificar_diario_obra()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_nome text;
+begin
+  select nome into v_nome from public.obras where id = new.obra_id;
+  perform public.notificar_obra(
+    new.obra_id,
+    'diario',
+    'Diário de obra atualizado',
+    'Um novo registro de diário foi lançado em ' || coalesce(v_nome, 'a obra') || '.',
+    '%s novos registros de diário em ' || coalesce(v_nome, 'a obra') || '.',
+    public.chave_agrupamento('diario', new.obra_id),
+    'financeiro',
+    1
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_diario_obra_ins on public.diario_obra;
+create trigger trg_notificar_diario_obra_ins
+  after insert on public.diario_obra
+  for each row execute function public.trg_notificar_diario_obra();
+
+create or replace function public.trg_notificar_medicoes()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_nome text;
+  v_escopo text := 'financeiro';
+begin
+  if tg_op = 'UPDATE' and old.status is not distinct from new.status then
+    return new;
+  end if;
+  if coalesce(new.visivel_convidados, false) then
+    v_escopo := 'todos';
+  end if;
+  select nome into v_nome from public.obras where id = new.obra_id;
+  perform public.notificar_obra(
+    new.obra_id,
+    'medicao',
+    'Medição atualizada',
+    'A medição nº ' || coalesce(new.numero_medicao::text, '—') || ' de ' || coalesce(v_nome, 'a obra') || ' foi atualizada.',
+    '%s medições foram atualizadas em ' || coalesce(v_nome, 'a obra') || '.',
+    public.chave_agrupamento('medicao', new.obra_id),
+    v_escopo,
+    1
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_medicoes_ins on public.medicoes;
+create trigger trg_notificar_medicoes_ins
+  after insert on public.medicoes
+  for each row execute function public.trg_notificar_medicoes();
+
+drop trigger if exists trg_notificar_medicoes_upd on public.medicoes;
+create trigger trg_notificar_medicoes_upd
+  after update of status on public.medicoes
+  for each row execute function public.trg_notificar_medicoes();
+
+create or replace function public.trg_notificar_andamento_obra()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.percentual_concluido is not distinct from new.percentual_concluido
+     and old.status is not distinct from new.status then
+    return new;
+  end if;
+
+  if old.percentual_concluido is distinct from new.percentual_concluido then
+    perform public.notificar_obra(
+      new.id,
+      'andamento',
+      'Andamento da obra atualizado',
+      'O avanço físico de ' || coalesce(new.nome, 'a obra') || ' agora está em ' ||
+        coalesce(round(new.percentual_concluido)::text, '0') || '%.',
+      'O andamento de ' || coalesce(new.nome, 'a obra') || ' foi atualizado.',
+      public.chave_agrupamento('andamento', new.id),
+      'todos',
+      1
+    );
+  elsif old.status is distinct from new.status then
+    perform public.notificar_obra(
+      new.id,
+      'geral',
+      'Status da obra atualizado',
+      'O status de ' || coalesce(new.nome, 'a obra') || ' mudou para ' || coalesce(new.status, '—') || '.',
+      'O status de ' || coalesce(new.nome, 'a obra') || ' foi atualizado.',
+      public.chave_agrupamento('status', new.id),
+      'todos',
+      1
+    );
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_andamento_obra on public.obras;
+create trigger trg_notificar_andamento_obra
+  after update of percentual_concluido, status on public.obras
+  for each row execute function public.trg_notificar_andamento_obra();
+
+create or replace function public.trg_notificar_lote()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_nome text;
+begin
+  if old.status is not distinct from new.status then
+    return new;
+  end if;
+  if lower(coalesce(new.status, '')) not in ('vendido', 'reservado') then
+    return new;
+  end if;
+  select nome into v_nome from public.obras where id = new.obra_id;
+  perform public.notificar_obra(
+    new.obra_id,
+    'lote',
+    'Atualização no mapa de lotes',
+    'O lote ' || coalesce(new.quadra, '') || '-' || coalesce(new.numero, '') ||
+      ' de ' || coalesce(v_nome, 'a obra') || ' agora está ' || new.status || '.',
+    '%s lotes foram atualizados em ' || coalesce(v_nome, 'a obra') || '.',
+    public.chave_agrupamento('lote', new.obra_id),
+    'todos',
+    1
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notificar_lote_upd on public.lotes;
+create trigger trg_notificar_lote_upd
+  after update of status on public.lotes
+  for each row execute function public.trg_notificar_lote();
+
+alter table public.notificacoes replica identity full;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.notificacoes;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
 
 -- Recarrega o cache da Data API (PostgREST) para enxergar colunas/views novas.
 notify pgrst, 'reload schema';

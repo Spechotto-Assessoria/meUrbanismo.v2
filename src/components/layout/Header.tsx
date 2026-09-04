@@ -10,16 +10,22 @@ import {
   User as UserIcon,
   Save,
   LogOut,
-  Lock
+  Camera,
+  FileText,
+  TrendingUp,
+  BookOpen,
+  Ruler
 } from 'lucide-react';
-import { UserRole } from '../../types';
+import { TabId, UserRole } from '../../types';
+import { tabDestinoNotificacao, tempoRelativo, useNotificacoes } from '../../hooks/useNotificacoes';
 
 interface HeaderProps {
   onLogoClick?: () => void;
   onNavigateAdmin?: () => void;
+  onAbrirNotificacao?: (tab: TabId, obraId: string) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) => {
+export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin, onAbrirNotificacao }) => {
   const {
     user,
     role,
@@ -29,6 +35,10 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
     isMasterAdmin,
     logout
   } = useAuth();
+
+  const { itens: notificacoes, naoLidas, marcarLida, marcarTodas, pedirPermissaoPush } = useNotificacoes(
+    user?.email
+  );
 
   const [showObraMenu, setShowObraMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -95,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
           className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity text-left cursor-pointer select-none"
           title="Voltar ao Painel Geral"
         >
-          <div className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0">
+          <div className="h-14 w-14 sm:h-14 sm:w-14 flex items-center justify-center shrink-0">
             <img
               src="/logo-meurbanismo.png"
               alt="Logo meUrbanismo"
@@ -123,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
             }}
             className="w-full flex items-center justify-between gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs overflow-hidden cursor-pointer"
           >
-            <Building2 className="w-3.5 h-3.5 text-blue-900 shrink-0" />
+            <Building2 className="w-15 h-5 text-blue-900 shrink-0" />
             <span className="truncate text-left font-bold text-slate-800 text-[11px] sm:text-xs">
               {activeObra && activeObra.nome ? activeObra.nome : 'Selecionar Obra'}
             </span>
@@ -183,28 +193,90 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin }) 
                 setShowNotifications(!showNotifications);
                 setShowObraMenu(false);
                 setShowProfileDropdown(false);
+                void pedirPermissaoPush();
               }}
               className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 transition-colors relative shadow-xs cursor-pointer"
+              title="Notificações"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white animate-pulse"></span>
+              {naoLidas > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                  {naoLidas > 9 ? '9+' : naoLidas}
+                </span>
+              )}
             </button>
 
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 animate-fadeIn text-xs">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <span className="font-bold text-slate-900">Notificações Recentes</span>
-                  <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full">2 novas</span>
+                  {naoLidas > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => void marcarTodas()}
+                      className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full cursor-pointer hover:bg-blue-100"
+                    >
+                      {naoLidas} nova{naoLidas > 1 ? 's' : ''} · marcar lidas
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 font-semibold bg-slate-50 px-2 py-0.5 rounded-full">
+                      em dia
+                    </span>
+                  )}
                 </div>
-                <div className="space-y-2 mt-2">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="font-semibold text-slate-900">Medição Homologada</div>
-                    <div className="text-[11px] text-slate-600 mt-0.5">Medição nº 6 da Pavimentação aprovada pela Spechotto.</div>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <div className="font-semibold text-slate-900">Novo Documento Disponível</div>
-                    <div className="text-[11px] text-slate-600 mt-0.5">Projeto de Drenagem Pluvial (R02) anexado à pasta.</div>
-                  </div>
+                <div className="space-y-2 mt-2 max-h-80 overflow-y-auto">
+                  {notificacoes.length === 0 ? (
+                    <div className="p-4 text-center text-[11px] text-slate-400">
+                      Nenhuma atualização nas obras vinculadas ao seu convite.
+                    </div>
+                  ) : (
+                    notificacoes.map(n => {
+                      const Icone =
+                        n.tipo === 'fotos'
+                          ? Camera
+                          : n.tipo === 'documento'
+                            ? FileText
+                            : n.tipo === 'andamento'
+                              ? TrendingUp
+                              : n.tipo === 'diario'
+                                ? BookOpen
+                                : n.tipo === 'medicao'
+                                  ? Ruler
+                                  : MapPin;
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          onClick={() => {
+                            void marcarLida(n.id);
+                            setShowNotifications(false);
+                            const obra = getUserObras().find(o => o.id === n.obra_id);
+                            if (obra) setActiveObra(obra);
+                            onAbrirNotificacao?.(tabDestinoNotificacao(n.tipo), n.obra_id);
+                          }}
+                          className={`w-full text-left p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                            n.lida
+                              ? 'bg-white border-slate-200/80'
+                              : 'bg-blue-50/70 border-blue-100'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="mt-0.5 w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0">
+                              <Icone className="w-3.5 h-3.5 text-blue-700" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-slate-900 leading-snug">{n.titulo}</div>
+                              <div className="text-[11px] text-slate-600 mt-0.5 leading-snug">{n.mensagem}</div>
+                              <div className="text-[10px] text-slate-400 mt-1">
+                                {n.obra_nome ? `${n.obra_nome} · ` : ''}
+                                {tempoRelativo(n.created_at)}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}

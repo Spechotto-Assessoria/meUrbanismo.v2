@@ -44,6 +44,7 @@ export const DashboardTab: React.FC<DashboardProps> = ({
   const obrasEmAndamento = userObras.filter(o => o.status === 'Em Andamento').length;
 
   const handleDeleteObra = async (obra: Obra) => {
+    if (!isMasterAdmin) return;
     if (!confirm(`Deseja realmente excluir a obra "${obra.nome}"? Todos os dados associados serão excluídos. Esta ação não pode ser desfeita.`)) {
       return;
     }
@@ -55,6 +56,7 @@ export const DashboardTab: React.FC<DashboardProps> = ({
   };
 
   const handleArquivarObra = async (obra: Obra) => {
+    if (!isMasterAdmin) return;
     if (!confirm(`Arquivar "${obra.nome}"? Ela deixa de aparecer no Dashboard, mas permanece armazenada para o portfólio.`)) {
       return;
     }
@@ -121,12 +123,12 @@ export const DashboardTab: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {isMasterAdmin && onNavigateToEmpresas ? (
+        {onNavigateToEmpresas ? (
           <button
             type="button"
             onClick={onNavigateToEmpresas}
             className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-left hover:border-amber-300 hover:bg-amber-50/30 transition-colors cursor-pointer"
-            title="Ver empresas cadastradas"
+            title={isMasterAdmin ? 'Gerenciar empresas cadastradas' : 'Ver empresas vinculadas'}
           >
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <Briefcase className="w-4 h-4 text-amber-600" />

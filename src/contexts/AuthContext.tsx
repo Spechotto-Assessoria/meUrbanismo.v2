@@ -176,6 +176,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = Boolean(user);
   const isAdmin = isMasterAdmin;
+  const ERRO_SO_ADMIN =
+    'Apenas o administrador pode cadastrar, editar, arquivar ou excluir empresas e obras.';
+
+  const exigirAdministrador = () => {
+    if (!isMasterAdmin) {
+      throw new Error(ERRO_SO_ADMIN);
+    }
+  };
   const canViewFinancials = isMasterAdmin || role === 'PROPRIETARIO_INVESTIDOR' || role === 'GESTOR' || role === 'ENGENHEIRO' || role === 'CONSULTOR' || role === 'INVESTIDOR';
   const isCorretor = isMasterAdmin || role === 'CORRETOR';
 
@@ -221,12 +229,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addEmpresa = async (novaData: Omit<Empresa, 'id'>): Promise<Empresa> => {
+    exigirAdministrador();
     const novaEmpresa = await dataService.saveEmpresa(novaData);
     setEmpresas(prev => [novaEmpresa, ...prev]);
     return novaEmpresa;
   };
 
   const updateEmpresa = async (empresa: Empresa): Promise<Empresa> => {
+    exigirAdministrador();
     const atualizada = await dataService.saveEmpresa(empresa);
     setEmpresas(prev => prev.map(e => (e.id === atualizada.id ? atualizada : e)));
     return atualizada;
@@ -239,24 +249,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * seletor de empresa em Nova Obra), sem precisar recarregar a página.
    */
   const updateEmpresaLogo = async (id: string, logoUrl: string): Promise<Empresa> => {
+    exigirAdministrador();
     const empresaAtualizada = await dataService.updateEmpresaLogo(id, logoUrl);
     setEmpresas(prev => prev.map(e => (e.id === id ? empresaAtualizada : e)));
     return empresaAtualizada;
   };
 
   const deleteEmpresa = async (id: string): Promise<void> => {
+    exigirAdministrador();
     await dataService.deleteEmpresa(id);
     setEmpresas(prev => prev.filter(e => e.id !== id));
     await refreshObras();
   };
 
   const addObra = async (novaData: Omit<Obra, 'id'>): Promise<Obra> => {
+    exigirAdministrador();
     const novaObra = await dataService.saveObra(novaData);
     await refreshObras();
     return novaObra;
   };
 
   const updateObra = async (obra: Obra): Promise<Obra> => {
+    exigirAdministrador();
     const atualizada = await dataService.saveObra(obra);
     await refreshObras();
     if (activeObra?.id === atualizada.id) {
@@ -266,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateObraFotoCapa = async (id: string, fotoUrl: string): Promise<Obra> => {
+    exigirAdministrador();
     const atualizada = await dataService.updateObraFotoCapa(id, fotoUrl);
     await refreshObras();
     if (activeObra?.id === id) {
@@ -275,6 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteObra = async (id: string): Promise<void> => {
+    exigirAdministrador();
     await dataService.deleteObra(id);
     if (activeObra?.id === id) {
       setActiveObraState(null);
@@ -283,6 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const setObraArquivada = async (id: string, arquivada: boolean): Promise<Obra> => {
+    exigirAdministrador();
     const atualizada = await dataService.setObraArquivada(id, arquivada);
     await refreshObras();
     if (arquivada && activeObra?.id === id) {
@@ -478,8 +495,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const canAccessTab = (tabId: TabId): boolean => {
     if (!user) return false;
 
-    // Abas globais
-    if (tabId === 'dashboard' || tabId === 'nova-empresa' || tabId === 'nova-obra' || tabId === 'empresas') {
+    // Dashboard e lista de empresas: todos visualizam; cadastro/edição só o admin.
+    if (tabId === 'dashboard' || tabId === 'empresas') {
+      return true;
+    }
+    if (tabId === 'nova-empresa' || tabId === 'nova-obra' || tabId === 'admin') {
       return isMasterAdmin;
     }
 

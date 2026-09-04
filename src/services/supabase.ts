@@ -14,7 +14,8 @@ import {
   ViabilidadeEstudo,
   Lote,
   Convite,
-  UserProfile
+  UserProfile,
+  Notificacao
 } from '../types';
 
 /**
@@ -262,6 +263,17 @@ class SupabaseDataService {
         );
       }
       throw new Error('Não foi possível excluir a obra. Apenas administradores podem remover empreendimentos.');
+    }
+  }
+
+  async updateObraPercentual(id: string, percentual: number): Promise<void> {
+    const { error } = await supabase
+      .from('obras')
+      .update({ percentual_concluido: percentual })
+      .eq('id', id);
+    if (error) {
+      logSupabaseError('updateObraPercentual', error);
+      throw new Error('Não foi possível gravar o andamento da obra.');
     }
   }
 
@@ -590,6 +602,60 @@ class SupabaseDataService {
     if (error) {
       logSupabaseError('deleteConvite', error);
       throw new Error('Não foi possível excluir o convite.');
+    }
+  }
+
+  // ============================================================
+  // NOTIFICAÇÕES (sino do convidado)
+  // ============================================================
+  async getNotificacoes(): Promise<Notificacao[]> {
+    const { data, error } = await supabase
+      .from('notificacoes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(40);
+    if (error) {
+      logSupabaseError('getNotificacoes', error);
+      return [];
+    }
+    return (data || []) as Notificacao[];
+  }
+
+  async marcarNotificacaoLida(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('notificacoes')
+      .update({ lida: true, lida_em: new Date().toISOString() })
+      .eq('id', id);
+    if (error) {
+      logSupabaseError('marcarNotificacaoLida', error);
+    }
+  }
+
+  async marcarTodasNotificacoesLidas(): Promise<void> {
+    const { error } = await supabase
+      .from('notificacoes')
+      .update({ lida: true, lida_em: new Date().toISOString() })
+      .eq('lida', false);
+    if (error) {
+      logSupabaseError('marcarTodasNotificacoesLidas', error);
+    }
+  }
+
+  async registrarDispositivoPush(token: string, plataforma: 'web' | 'android' | 'ios' = 'web'): Promise<void> {
+    const { data: sessao } = await supabase.auth.getUser();
+    const user = sessao?.user;
+    if (!user?.email) return;
+    const { error } = await supabase.from('dispositivos_push').upsert(
+      {
+        user_id: user.id,
+        email: user.email.toLowerCase(),
+        token,
+        plataforma
+      },
+      { onConflict: 'token' }
+    );
+    if (error) {
+      logSupabaseError('registrarDispositivoPush', error);
     }
   }
 }

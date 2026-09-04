@@ -48,15 +48,22 @@ export const AndamentoTab: React.FC = () => {
     loadEtapas();
   }, [activeObra?.id]);
 
-  const handleSalvarProgresso = () => {
+  const handleSalvarProgresso = async () => {
     setSalvando(true);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(etapas));
-    setTimeout(() => {
-      setSalvando(false);
+    try {
+      if (activeObra?.id) {
+        await apiService.updateObraPercentual(activeObra.id, progressoGlobal);
+      }
       setEditando(false);
       setMensagemSucesso('Progresso físico atualizado com sucesso pela Spechotto!');
       setTimeout(() => setMensagemSucesso(null), 3000);
-    }, 500);
+    } catch (err: any) {
+      setMensagemSucesso(err?.message || 'Progresso salvo neste dispositivo, mas não foi possível notificar os convidados.');
+      setTimeout(() => setMensagemSucesso(null), 4000);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const handlePercentualChange = (id: string, novoValor: number) => {

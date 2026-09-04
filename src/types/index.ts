@@ -383,3 +383,31 @@ export interface Convite {
   perfil?: string;
   quadraLote?: string;
 }
+
+// ============================================================
+// NOTIFICAÇÕES (sino + push)
+// ============================================================
+
+export type TipoNotificacao =
+  | 'fotos'
+  | 'documento'
+  | 'andamento'
+  | 'diario'
+  | 'medicao'
+  | 'lote'
+  | 'geral';
+
+export interface Notificacao {
+  id: string;
+  obra_id: string;
+  obra_nome?: string | null;
+  destinatario_email: string;
+  tipo: TipoNotificacao | string;
+  titulo: string;
+  mensagem: string;
+  quantidade: number;
+  agrupamento_chave?: string | null;
+  lida: boolean;
+  lida_em?: string | null;
+  created_at: string;
+}

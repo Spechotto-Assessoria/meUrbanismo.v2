@@ -24,14 +24,16 @@ function isArquivada(obra: Obra): boolean {
 }
 
 export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa, onEditEmpresa }) => {
-  const { empresas, obras, deleteEmpresa, setObraArquivada } = useAuth();
+  const { empresas, obras, deleteEmpresa, setObraArquivada, isMasterAdmin } = useAuth();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const podeGerenciar = isMasterAdmin;
 
   const obrasDaEmpresa = (empresaId: string) =>
     obras.filter(o => (o.empresa_id || o.empresaId) === empresaId);
 
   const handleDeleteEmpresa = async (empresa: Empresa) => {
+    if (!podeGerenciar) return;
     const vinculadas = obrasDaEmpresa(empresa.id);
     const avisoObras = vinculadas.length
       ? ` Esta empresa possui ${vinculadas.length} obra(s). A exclusão pode remover também as obras vinculadas.`
@@ -51,6 +53,7 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
   };
 
   const handleToggleArquivo = async (obra: Obra) => {
+    if (!podeGerenciar) return;
     const arquivar = !isArquivada(obra);
     const msg = arquivar
       ? `Arquivar "${obra.nome}"? Ela sai do Dashboard, mas permanece armazenada para o portfólio.`
@@ -86,11 +89,13 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
               <Briefcase className="w-6 h-6 text-amber-600" /> Empresas cadastradas
             </h1>
             <p className="text-xs text-slate-500">
-              Edite ou exclua empresas. Arquive obras concluídas para tirá-las do Dashboard sem apagá-las.
+              {podeGerenciar
+                ? 'Edite ou exclua empresas. Arquive obras concluídas para tirá-las do Dashboard sem apagá-las.'
+                : 'Visualização das empresas vinculadas. Somente o administrador pode editar, arquivar ou excluir.'}
             </p>
           </div>
         </div>
-        {onNovaEmpresa && (
+        {podeGerenciar && onNovaEmpresa && (
           <button
             type="button"
             onClick={onNovaEmpresa}
@@ -109,7 +114,9 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
 
       {empresas.length === 0 ? (
         <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 text-xs text-slate-500">
-          Nenhuma empresa cadastrada. Use &quot;Nova Empresa&quot; para começar.
+          {podeGerenciar
+            ? 'Nenhuma empresa cadastrada. Use "Nova Empresa" para começar.'
+            : 'Nenhuma empresa vinculada aos seus empreendimentos.'}
         </div>
       ) : (
         <div className="space-y-4">
@@ -143,6 +150,7 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
                     </div>
                   </div>
 
+                  {podeGerenciar && (
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
@@ -162,6 +170,7 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
                       {busyId === empresa.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
+                  )}
                 </div>
 
                 {obrasEmp.length > 0 && (
@@ -183,6 +192,7 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
                               {arquivada ? ' • Arquivada (oculta no Dashboard)' : ''}
                             </p>
                           </div>
+                          {podeGerenciar && (
                           <button
                             type="button"
                             onClick={() => void handleToggleArquivo(obra)}
@@ -202,6 +212,7 @@ export const EmpresasTab: React.FC<EmpresasTabProps> = ({ onBack, onNovaEmpresa,
                             )}
                             {arquivada ? 'Desarquivar' : 'Arquivar'}
                           </button>
+                          )}
                         </div>
                       );
                     })}
