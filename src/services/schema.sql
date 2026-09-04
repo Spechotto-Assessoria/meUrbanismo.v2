@@ -22,7 +22,8 @@ values
   ('fotos_obra', 'fotos_obra', true),
   ('medicoes', 'medicoes', false),
   ('orcamentos', 'orcamentos', false),
-  ('cronograma', 'cronograma', false)
+  ('cronograma', 'cronograma', false),
+  ('logos_empresas', 'logos_empresas', true)
 on conflict (id) do nothing;
 
 -- ==============================================================================
@@ -34,6 +35,7 @@ create table if not exists public.empresas (
   nome text not null,
   cnpj text unique,
   logo_url text,
+  contato text,
   responsavel_tecnico text,
   crea_cau text,
   telefone text,
@@ -41,6 +43,11 @@ create table if not exists public.empresas (
   endereco text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Backfill idempotente: garante a coluna "contato" mesmo em bancos já criados
+-- por uma versão anterior deste schema (create table if not exists não adiciona
+-- colunas novas em tabelas já existentes).
+alter table public.empresas add column if not exists contato text;
 
 create table if not exists public.perfis (
   id uuid primary key references auth.users on delete cascade,
@@ -420,6 +427,18 @@ create policy "perfis_self_select" on public.perfis for select
 drop policy if exists "empresas_admin_all" on public.empresas;
 create policy "empresas_admin_all" on public.empresas for all
   using (public.is_admin()) with check (public.is_admin());
+
+-- LOGO DAS EMPRESAS (Storage): bucket público "logos_empresas" — leitura liberada
+-- para qualquer um (necessário para exibir o logo nas telas das obras), mas só o
+-- administrador master pode enviar/substituir/remover arquivos.
+drop policy if exists "logos_empresas_admin_write" on storage.objects;
+create policy "logos_empresas_admin_write" on storage.objects for all
+  using (bucket_id = 'logos_empresas' and public.is_admin())
+  with check (bucket_id = 'logos_empresas' and public.is_admin());
+
+drop policy if exists "logos_empresas_public_select" on storage.objects;
+create policy "logos_empresas_public_select" on storage.objects for select
+  using (bucket_id = 'logos_empresas');
 
 -- OBRAS (tabela base): SOMENTE administradores consultam/alteram diretamente.
 -- Todo mundo mais deve ler através da view "obras_publicas" (mascara campos

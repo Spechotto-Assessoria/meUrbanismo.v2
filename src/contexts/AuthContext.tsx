@@ -13,6 +13,7 @@ interface AuthContextType {
   activeObra: Obra | null;
   setActiveObra: (obra: Obra | null) => void;
   addEmpresa: (empresa: Omit<Empresa, 'id'>) => Promise<Empresa>;
+  updateEmpresaLogo: (id: string, logoUrl: string) => Promise<Empresa>;
   addObra: (obra: Omit<Obra, 'id'>) => Promise<Obra>;
   refreshObras: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
@@ -217,6 +218,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const novaEmpresa = await dataService.saveEmpresa(novaData);
     setEmpresas(prev => [novaEmpresa, ...prev]);
     return novaEmpresa;
+  };
+
+  /**
+   * Atualiza o logo de uma empresa já cadastrada (chamado após o upload do
+   * arquivo para o Storage) e sincroniza o estado local, para que o novo
+   * logo apareça imediatamente onde a lista de "empresas" é usada (ex.:
+   * seletor de empresa em Nova Obra), sem precisar recarregar a página.
+   */
+  const updateEmpresaLogo = async (id: string, logoUrl: string): Promise<Empresa> => {
+    const empresaAtualizada = await dataService.updateEmpresaLogo(id, logoUrl);
+    setEmpresas(prev => prev.map(e => (e.id === id ? empresaAtualizada : e)));
+    return empresaAtualizada;
   };
 
   const addObra = async (novaData: Omit<Obra, 'id'>): Promise<Obra> => {
@@ -493,6 +506,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeObra,
         setActiveObra,
         addEmpresa,
+        updateEmpresaLogo,
         addObra,
         refreshObras,
         loginWithEmail,

@@ -68,6 +68,7 @@ class SupabaseDataService {
     const payload = clean({
       nome: empresa.nome,
       cnpj: empresa.cnpj || null,
+      contato: empresa.contato || null,
       email: empresa.email || null,
       telefone: empresa.telefone || null,
       responsavel_tecnico: empresa.responsavel_tecnico || null,
@@ -78,7 +79,31 @@ class SupabaseDataService {
     const { data, error } = await supabase.from('empresas').insert(payload).select().single();
     if (error) {
       logSupabaseError('saveEmpresa', error);
+      // Código 23505 = violação de restrição "unique" no Postgres. Neste caso é
+      // sempre o CNPJ (única coluna com "unique" na tabela "empresas").
+      if (error.code === '23505' || /duplicate key|cnpj/i.test(error.message)) {
+        throw new Error('Já existe uma empresa cadastrada com este CNPJ.');
+      }
       throw new Error('Não foi possível salvar a empresa. Verifique suas permissões e a configuração do banco.');
+    }
+    return data as Empresa;
+  }
+
+  /**
+   * Atualiza apenas a URL do logo de uma empresa já cadastrada — usado após o
+   * upload do arquivo para o Storage (o registro precisa existir antes, pois
+   * o caminho do arquivo no bucket "logos_empresas" é organizado por empresa_id).
+   */
+  async updateEmpresaLogo(id: string, logoUrl: string): Promise<Empresa> {
+    const { data, error } = await supabase
+      .from('empresas')
+      .update({ logo_url: logoUrl })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) {
+      logSupabaseError('updateEmpresaLogo', error);
+      throw new Error('A empresa foi cadastrada, mas não foi possível salvar o logo. Tente enviá-lo novamente na edição.');
     }
     return data as Empresa;
   }
