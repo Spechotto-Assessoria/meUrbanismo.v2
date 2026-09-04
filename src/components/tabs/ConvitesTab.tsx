@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { dataService } from '../../services/supabase';
+import { supabase } from '../../lib/supabaseClient';
 import {
     Send,
     Mail,
@@ -19,7 +20,8 @@ import {
     X,
     Save,
     MapPin,
-    Loader2
+    Loader2,
+    AlertTriangle
 } from 'lucide-react';
 import { UserRole, Convite } from '../../types';
 
@@ -70,6 +72,12 @@ export const ConvitesTab: React.FC = () => {
     const [filtroRole, setFiltroRole] = useState<string>('TODOS');
     const [filtroObra, setFiltroObra] = useState<string>('TODAS');
     const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    // Envio automático de WhatsApp (via Edge Function + Z-API) — dispara a
+    // mensagem a partir do número comercial conectado, sem usar o WhatsApp
+    // pessoal do administrador.
+    const [whatsappSendingId, setWhatsappSendingId] = useState<string | null>(null);
+    const [whatsappFeedback, setWhatsappFeedback] = useState<{ id: string; type: 'success' | 'error'; message: string } | null>(null);
 
     const getAbasPreview = (r: UserRole) => {
         switch (r) {
@@ -184,12 +192,38 @@ export const ConvitesTab: React.FC = () => {
 
     const nomeObraDoConvite = (c: Convite) => obras?.find(o => o.id === c.obra_id)?.nome || (c as any).obraNome || 'Empreendimento';
 
-    const handleSendWhatsApp = (c: Convite) => {
-        const mensagem = encodeURIComponent(
-            `Olá ${c.nome || ''}!\n\nVocê está recebendo o acesso à plataforma *meUrbanismo* para acompanhar o empreendimento *${nomeObraDoConvite(c)}*.\n\nAcesse o link abaixo, crie seu acesso com este e-mail (${c.email}) e cadastre sua nova senha:\n${c.link_acesso}`
-        );
-        const num = c.telefone ? c.telefone.replace(/\D/g, '') : '';
-        window.open(`https://wa.me/${num}?text=${mensagem}`, '_blank');
+    const handleSendWhatsApp = async (c: Convite) => {
+        setWhatsappFeedback(null);
+
+        if (!c.telefone || !c.telefone.replace(/\D/g, '')) {
+            setWhatsappFeedback({ id: c.id, type: 'error', message: 'Este convite não tem um telefone/WhatsApp cadastrado. Edite o convite para adicionar um número.' });
+            return;
+        }
+
+        const mensagem = `Olá ${c.nome || ''}!\n\nVocê está recebendo o acesso à plataforma *meUrbanismo* para acompanhar o empreendimento *${nomeObraDoConvite(c)}*.\n\nAcesse o link abaixo, crie seu acesso com este e-mail (${c.email}) e cadastre sua nova senha:\n${c.link_acesso}`;
+
+        setWhatsappSendingId(c.id);
+        try {
+            const { data, error } = await supabase.functions.invoke('send-whatsapp-invite', {
+                body: { telefone: c.telefone, mensagem }
+            });
+
+            // O supabase-js só popula "error" para falhas de rede/infra; erros de
+            // negócio (ex.: Z-API não configurada) vêm no corpo com "data.error".
+            if (error || data?.error) {
+                throw new Error(data?.error || error?.message || 'Não foi possível enviar a mensagem pelo WhatsApp.');
+            }
+
+            setWhatsappFeedback({ id: c.id, type: 'success', message: 'Convite enviado por WhatsApp automaticamente!' });
+        } catch (err: any) {
+            setWhatsappFeedback({
+                id: c.id,
+                type: 'error',
+                message: err?.message || 'Não foi possível enviar a mensagem pelo WhatsApp. Tente novamente em instantes.'
+            });
+        } finally {
+            setWhatsappSendingId(null);
+        }
     };
 
     const handleSendEmail = (c: Convite) => {
@@ -453,13 +487,36 @@ export const ConvitesTab: React.FC = () => {
                                         ))}
                                     </div>
 
+                                    {whatsappFeedback && whatsappFeedback.id === c.id && (
+                                        <div
+                                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border ${
+                                                whatsappFeedback.type === 'success'
+                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                                            }`}
+                                        >
+                                            {whatsappFeedback.type === 'success' ? (
+                                                <Check className="w-3.5 h-3.5 shrink-0" />
+                                            ) : (
+                                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                            )}
+                                            {whatsappFeedback.message}
+                                        </div>
+                                    )}
+
                                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
                                         <button
                                             type="button"
                                             onClick={() => handleSendWhatsApp(c)}
-                                            className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 transition-colors cursor-pointer"
+                                            disabled={whatsappSendingId === c.id}
+                                            className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                         >
-                                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" /> Enviar por WhatsApp
+                                            {whatsappSendingId === c.id ? (
+                                                <Loader2 className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                                            ) : (
+                                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                            )}
+                                            {whatsappSendingId === c.id ? 'Enviando...' : 'Enviar por WhatsApp'}
                                         </button>
 
                                         <button
