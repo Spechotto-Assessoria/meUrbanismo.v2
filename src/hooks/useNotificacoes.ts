@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { dataService } from '../services/supabase';
-import type { Notificacao, TabId } from '../types';
+import type { Notificacao, TabId, UserRole } from '../types';
+import { perfilPodeVerNotificacao } from '../lib/permissoes';
 
 const PERMISSAO_PUSH_KEY = 'meurbanismo_push_asked_v1';
 
@@ -43,6 +44,14 @@ export function tabDestinoNotificacao(tipo?: string): TabId {
   }
 }
 
+export type SubAbaAcompanhamento = 'fotos' | 'diario' | 'medicoes';
+
+export function subAbaDestinoNotificacao(tipo?: string): SubAbaAcompanhamento {
+  if (tipo === 'diario') return 'diario';
+  if (tipo === 'medicao') return 'medicoes';
+  return 'fotos';
+}
+
 export function tempoRelativo(iso?: string): string {
   if (!iso) return '';
   const ms = Date.now() - new Date(iso).getTime();
@@ -56,12 +65,21 @@ export function tempoRelativo(iso?: string): string {
   return `há ${d} dias`;
 }
 
-export function useNotificacoes(email?: string | null) {
+export function useNotificacoes(email?: string | null, role?: UserRole | null, isAdmin = false) {
   const [itens, setItens] = useState<Notificacao[]>([]);
   const [carregando, setCarregando] = useState(false);
   const emailRef = useRef(email);
+  const roleRef = useRef(role);
+  const adminRef = useRef(isAdmin);
 
   emailRef.current = email;
+  roleRef.current = role;
+  adminRef.current = isAdmin;
+
+  const permitido = useCallback((n: Notificacao) => {
+    if (!roleRef.current) return false;
+    return perfilPodeVerNotificacao(n.tipo, roleRef.current, adminRef.current);
+  }, []);
 
   const carregar = useCallback(async () => {
     if (!emailRef.current) {
@@ -70,9 +88,9 @@ export function useNotificacoes(email?: string | null) {
     }
     setCarregando(true);
     const lista = await dataService.getNotificacoes();
-    setItens(lista);
+    setItens(lista.filter(permitido));
     setCarregando(false);
-  }, []);
+  }, [permitido]);
 
   useEffect(() => {
     if (!email) {
@@ -98,6 +116,8 @@ export function useNotificacoes(email?: string | null) {
           }
 
           const atual = payload.new as Notificacao;
+          if (!permitido(atual)) return;
+
           setItens(prev => {
             const sem = prev.filter(n => n.id !== atual.id);
             return [atual, ...sem].sort(
@@ -117,7 +137,7 @@ export function useNotificacoes(email?: string | null) {
     return () => {
       void supabase.removeChannel(canal);
     };
-  }, [email, carregar]);
+  }, [email, carregar, permitido]);
 
   const pedirPermissaoPush = useCallback(async () => {
     if (!podeUsarNotificationApi()) return;

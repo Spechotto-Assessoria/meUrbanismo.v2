@@ -24,14 +24,16 @@ import { PortfolioTab } from './components/tabs/PortfolioTab';
 import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab';
 import { TabId, Obra, Empresa } from './types';
 import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
+import { subAbaDestinoNotificacao, type SubAbaAcompanhamento } from './hooks/useNotificacoes';
 
 const AuthenticatedApp: React.FC = () => {
-  const { canAccessTab, canAccessObra, role, activeObra, setActiveObra, isMasterAdmin } = useAuth();
+  const { canAccessTab, canAccessObra, role, activeObra, setActiveObra, isMasterAdmin, obras } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId | 'estudo-viabilidade'>('dashboard');
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
   const [obraToEdit, setObraToEdit] = useState<Obra | null>(null);
   const [empresaToEdit, setEmpresaToEdit] = useState<Empresa | null>(null);
   const [empresaFormOrigem, setEmpresaFormOrigem] = useState<'dashboard' | 'empresas'>('dashboard');
+  const [focoAcompanhamento, setFocoAcompanhamento] = useState<SubAbaAcompanhamento>('fotos');
 
   useEffect(() => {
     if (
@@ -58,6 +60,21 @@ const AuthenticatedApp: React.FC = () => {
 
   const handleSelectAdmin = () => {
     setActiveTab('admin');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleAbrirNotificacao = (tab: TabId, obraId: string, tipo?: string) => {
+    const obra = obras.find(o => o.id === obraId);
+    if (obra) {
+      setActiveObra(obra);
+    }
+    if (tab === 'acompanhamento') {
+      setFocoAcompanhamento(subAbaDestinoNotificacao(tipo));
+    }
+    if (!canAccessTab(tab)) {
+      return;
+    }
+    setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -175,7 +192,8 @@ const AuthenticatedApp: React.FC = () => {
       return <ConvitesTab />;
     }
 
-    // Painel Geral de Obras Administradas
+    // Painel geral. Com obra ativa e aba de módulo (ex.: acompanhamento vinda
+    // do sino), este bloco não pode interceptar — senão a foto não abre.
     if (activeTab === 'dashboard' || !activeObra) {
       return (
         <DashboardTab
@@ -251,7 +269,7 @@ const AuthenticatedApp: React.FC = () => {
       case 'viabilidade':
         return <ViabilidadeTab />;
       case 'acompanhamento':
-        return <AcompanhamentoTab />;
+        return <AcompanhamentoTab focoInicial={focoAcompanhamento} />;
       case 'documentos':
         return <DocumentosTab />;
       case 'mapa':
@@ -272,10 +290,7 @@ const AuthenticatedApp: React.FC = () => {
       <Header
         onLogoClick={handleResetToDashboard}
         onNavigateAdmin={handleSelectAdmin}
-        onAbrirNotificacao={(tab) => {
-          setActiveTab(tab);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        onAbrirNotificacao={handleAbrirNotificacao}
       />
 
       <main

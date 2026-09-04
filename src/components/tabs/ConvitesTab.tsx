@@ -74,11 +74,11 @@ export const ConvitesTab: React.FC = () => {
     const getAbasPreview = (r: UserRole) => {
         switch (r) {
             case 'CLIENTE_COMPRADOR':
-                return ['Andamento da Obra', 'Acompanhamento', 'Projetos e Documentos', 'Mapa de Disponibilidade'];
+                return ['Resumo (sem valores)', 'Andamento', 'Acompanhamento (fotos liberadas)', 'Documentos liberados', 'Portfólio'];
             case 'CORRETOR':
-                return ['Andamento da Obra', 'Acompanhamento', 'Projetos e Documentos', 'Mapa de Disponibilidade', 'Vendas'];
+                return ['Resumo (sem valores)', 'Andamento', 'Acompanhamento (fotos liberadas)', 'Mapa de Lotes', 'Vendas', 'Portfólio'];
             case 'PROPRIETARIO_INVESTIDOR':
-                return ['Orçamento', 'Cronograma', 'Andamento da Obra', 'Viabilidade', 'Acompanhamento', 'Projetos e Documentos', 'Relatórios', 'Mapa de Disponibilidade', 'Vendas'];
+                return ['Todas as abas da obra (inclui financeiro)'];
             case 'ADMINISTRADOR':
                 return ['Acesso Total Irrestrito + Módulo de Convites & Gestão'];
             default:

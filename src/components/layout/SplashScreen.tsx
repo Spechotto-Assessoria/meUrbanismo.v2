@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Compass, Sparkles } from 'lucide-react';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -7,6 +6,8 @@ interface SplashScreenProps {
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   const [fadeState, setFadeState] = useState<'visible' | 'fading' | 'hidden'>('visible');
+  const [logoMeuOk, setLogoMeuOk] = useState(true);
+  const [logoSpeOk, setLogoSpeOk] = useState(true);
 
   useEffect(() => {
     const timer1 = setTimeout(() => {
@@ -27,64 +28,63 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   if (fadeState === 'hidden') return null;
 
   return (
-    <div 
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-gradient-to-b from-[#081726] via-[#0F2942] to-[#07101b] text-white p-6 transition-opacity duration-700 select-none ${
+    <div
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-gradient-to-b from-[#0b1a2b] via-[#12314d] to-[#07111c] text-white px-6 py-5 transition-opacity duration-700 select-none ${
         fadeState === 'fading' ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
-      {/* Background glow effects */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-brand-500/15 blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-sky-800/25 blur-3xl pointer-events-none" />
 
-      <div className="w-full flex justify-end pt-2">
-        <span className="text-[10px] text-brand-300/60 font-mono">v2.0 • PWA</span>
+      <div className="relative z-10 w-full flex justify-end pt-1">
+        <span className="text-[10px] text-sky-200/50 font-mono">v2.0 • PWA</span>
       </div>
 
-      {/* Centro: Bússola e Logotipo meUrbanismo */}
-      <div className="flex flex-col items-center text-center space-y-5">
-        <div className="relative animate-float">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-navy-800 to-navy-950 p-2 shadow-glow border border-brand-400/30 flex items-center justify-center">
-            <img 
-              src="/logo-meurbanismo.png" 
-              alt="meUrbanismo" 
-              className="w-full h-full object-contain drop-shadow-md"
-              onError={(e) => {
-                // Fallback se a imagem não carregar imediatamente
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            <Compass className="w-16 h-16 text-brand-400 animate-spin-slow absolute" style={{ display: 'none' }} />
-          </div>
-          <div className="absolute -bottom-2 -right-2 bg-brand-500 text-white p-1.5 rounded-full shadow-lg">
-            <Sparkles className="w-4 h-4" />
+      <div className="relative z-10 flex flex-col items-center text-center gap-6">
+        {/* Placa clara: a logo é navy e some no fundo escuro sem este contraste */}
+        <div className="animate-float">
+          <div className="w-[15.5rem] sm:w-72 overflow-hidden rounded-2xl bg-white px-5 py-3 shadow-lg shadow-black/30 ring-1 ring-slate-200/90">
+            {logoMeuOk ? (
+              <img
+                src="/logo-meurbanismo.png"
+                alt="meUrbanismo"
+                className="w-full h-auto max-h-48 origin-center scale-[1.35] object-contain"
+                onError={() => setLogoMeuOk(false)}
+              />
+            ) : (
+              <p className="py-8 text-2xl font-extrabold tracking-tight text-slate-800">
+                me<span className="text-sky-600">U</span>rbanismo
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="space-y-1">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-brand-300 bg-clip-text text-transparent">
-            meUrbanismo
-          </h1>
-          <p className="text-xs sm:text-sm font-semibold tracking-widest text-brand-300/90 uppercase">
+        <div className="space-y-3">
+          <p className="text-[11px] sm:text-xs font-semibold tracking-[0.22em] text-sky-100/90 uppercase">
             Planejar • Acompanhar • Realizar
           </p>
-        </div>
-
-        {/* Barra de progresso animada */}
-        <div className="w-44 h-1.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700/50 mt-4">
-          <div className="h-full bg-gradient-to-r from-brand-500 to-cyan-300 rounded-full animate-[loading_2s_ease-in-out_infinite]"></div>
+          <div className="mx-auto w-44 h-1.5 bg-slate-900/70 rounded-full overflow-hidden border border-slate-600/40">
+            <div className="h-full w-2/3 bg-sky-500 rounded-full animate-pulse" />
+          </div>
         </div>
       </div>
 
-      {/* Rodapé: Desenvolvido por Spechotto */}
-      <div className="flex flex-col items-center text-center pb-4 space-y-1">
-        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Desenvolvido por</span>
-        <div className="flex items-center gap-2">
-          <img 
-            src="/logo-spechotto.png" 
-            alt="Spechotto Assessoria & Construção" 
-            className="h-6 object-contain"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-          <span className="text-xs font-bold text-slate-200">SPECHOTTO ASSESSORIA & CONSTRUÇÃO</span>
+      <div className="relative z-10 flex flex-col items-center text-center pb-2 gap-2.5">
+        <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-[0.18em]">
+          Desenvolvido por
+        </span>
+        <div className="overflow-hidden rounded-xl bg-white px-5 py-2.5 shadow-md shadow-black/25 ring-1 ring-slate-200/90">
+          {logoSpeOk ? (
+            <img
+              src="/logo-spechotto.png"
+              alt="Spechotto Assessoria & Construção"
+              className="h-16 sm:h-[4.75rem] w-auto origin-center scale-125 object-contain"
+              onError={() => setLogoSpeOk(false)}
+            />
+          ) : (
+            <span className="text-sm font-bold text-slate-800">
+              Spechotto Assessoria & Construção
+            </span>
+          )}
         </div>
       </div>
     </div>

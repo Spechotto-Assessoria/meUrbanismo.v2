@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { UserRole, Obra, Empresa, TabId, User } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { dataService } from '../services/supabase';
+import { abasDoPerfil } from '../lib/permissoes';
 
 interface AuthContextType {
   user: User | null;
@@ -506,66 +507,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Administrador tem acesso total irrestrito a todas as abas
     if (isMasterAdmin) return true;
 
-    // Menu dos módulos da Obra
-    switch (role) {
-      case 'PROPRIETARIO_INVESTIDOR':
-      case 'INVESTIDOR':
-        return [
-          'resumo',
-          'orcamento',
-          'cronograma',
-          'andamento',
-          'viabilidade',
-          'acompanhamento',
-          'documentos',
-          'mapa',
-          'vendas',
-          'relatorios',
-          'portfolio'
-        ].includes(tabId);
-
-      case 'CORRETOR':
-        return [
-          'resumo',
-          'andamento',
-          'mapa',
-          'vendas',
-          'documentos',
-          'acompanhamento',
-          'portfolio',
-          'relatorios'
-        ].includes(tabId);
-
-      case 'CLIENTE_COMPRADOR':
-        return [
-          'resumo',
-          'andamento',
-          'mapa',
-          'acompanhamento',
-          'documentos',
-          'portfolio'
-        ].includes(tabId);
-
-      case 'GESTOR':
-      case 'ENGENHEIRO':
-      case 'CONSULTOR':
-        return [
-          'resumo',
-          'orcamento',
-          'cronograma',
-          'andamento',
-          'viabilidade',
-          'acompanhamento',
-          'documentos',
-          'mapa',
-          'vendas',
-          'relatorios',
-          'portfolio'
-        ].includes(tabId);
-
-      default:
-        return ['resumo', 'andamento', 'portfolio'].includes(tabId);
-    }
+    return abasDoPerfil(role, false).includes(tabId);
   };
 
   return (

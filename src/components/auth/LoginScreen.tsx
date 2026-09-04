@@ -139,20 +139,13 @@ export const LoginScreen: React.FC = () => {
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-md overflow-hidden relative animate-fadeIn z-10">
         
         {/* CABEÇALHO CORPORATIVO */}
-        <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-blue-900 p-8 text-white text-center relative">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-blue-950/50 ring-1 ring-white/40 mb-3">
-            <img
-              src="/logo-meurbanismo.png"
-              alt="meUrbanismo"
-              className="w-full h-full object-contain mix-blend-multiply"
-            />
-          </div>
-
-          <h1 className="text-2xl font-black tracking-tight">meUrbanismo</h1>
-          <p className="text-xs text-blue-200 mt-1 font-medium">
-            PLANEJAR - ACOMPANHAR - REALIZAR
-          </p>
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-[10px] font-bold text-blue-300 uppercase tracking-wider">
+        <div className="bg-white px-5 pt-6 pb-4 text-center border-b border-slate-100">
+          <img
+            src="/logo-geral.png"
+            alt="meUrbanismo"
+            className="w-full max-w-[280px] max-h-56 sm:max-h-64 mx-auto h-auto object-contain"
+          />
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-800 uppercase tracking-wider">
             <ShieldCheck className="w-3.5 h-3.5" /> Acesso Restrito & Seguro
           </div>
         </div>

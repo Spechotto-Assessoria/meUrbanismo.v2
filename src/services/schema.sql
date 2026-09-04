@@ -736,6 +736,36 @@ create policy "dispositivos_push_own" on public.dispositivos_push for all
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
+create or replace function public.papel_recebe_notificacao(p_tipo text, p_role text)
+returns boolean
+language sql
+immutable
+as $$
+  select case
+    when coalesce(p_tipo, 'geral') in ('fotos', 'andamento', 'geral') then
+      p_role in (
+        'PROPRIETARIO_INVESTIDOR', 'INVESTIDOR', 'CORRETOR', 'CLIENTE_COMPRADOR',
+        'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'ADMINISTRADOR'
+      )
+    when p_tipo = 'documento' then
+      p_role in (
+        'PROPRIETARIO_INVESTIDOR', 'INVESTIDOR', 'CLIENTE_COMPRADOR',
+        'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'ADMINISTRADOR'
+      )
+    when p_tipo in ('diario', 'medicao') then
+      p_role in (
+        'PROPRIETARIO_INVESTIDOR', 'INVESTIDOR',
+        'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'ADMINISTRADOR'
+      )
+    when p_tipo = 'lote' then
+      p_role in (
+        'PROPRIETARIO_INVESTIDOR', 'INVESTIDOR', 'CORRETOR',
+        'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'ADMINISTRADOR'
+      )
+    else false
+  end;
+$$;
+
 create or replace function public.notificar_obra(
   p_obra_id uuid,
   p_tipo text,
@@ -775,6 +805,7 @@ begin
       and coalesce(c.ativo, true) = true
       and nullif(trim(c.email), '') is not null
       and lower(trim(c.email)) <> v_email_ator
+      and public.papel_recebe_notificacao(p_tipo, c.role)
       and (
         coalesce(p_escopo, 'todos') = 'todos'
         or c.role in ('PROPRIETARIO_INVESTIDOR', 'INVESTIDOR', 'GESTOR', 'ENGENHEIRO', 'CONSULTOR')
@@ -825,6 +856,7 @@ end;
 $$;
 
 grant execute on function public.notificar_obra(uuid, text, text, text, text, text, text, integer) to authenticated;
+grant execute on function public.papel_recebe_notificacao(text, text) to authenticated;
 
 create or replace function public.chave_agrupamento(p_tipo text, p_obra_id uuid)
 returns text
