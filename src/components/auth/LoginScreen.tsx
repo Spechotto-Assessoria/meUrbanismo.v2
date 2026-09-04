@@ -96,10 +96,6 @@ export const LoginScreen: React.FC = () => {
       setError('Informe seu e-mail no campo acima para receber o link de redefinição.');
       return;
     }
-    if (!isValidEmail(email)) {
-      setError('E-mail inválido. Verifique o endereço informado antes de solicitar a redefinição.');
-      return;
-    }
     setError(null);
     setSuccess(null);
     setLoading(true);

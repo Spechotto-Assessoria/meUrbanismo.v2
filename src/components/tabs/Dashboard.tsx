@@ -11,8 +11,12 @@ import {
   Send,
   ChevronRight,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Pencil,
+  Trash2,
+  Archive
 } from 'lucide-react';
+import type { Obra } from '../../types';
 
 interface DashboardProps {
   onSelectObra?: () => void;
@@ -20,6 +24,8 @@ interface DashboardProps {
   onNavigateToNovaEmpresa?: () => void;
   onNavigateToNovaObra?: () => void;
   onNavigateToViabilidade?: () => void;
+  onEditObra?: (obra: Obra) => void;
+  onNavigateToEmpresas?: () => void;
 }
 
 export const DashboardTab: React.FC<DashboardProps> = ({
@@ -27,12 +33,37 @@ export const DashboardTab: React.FC<DashboardProps> = ({
   onSelectAdmin,
   onNavigateToNovaEmpresa,
   onNavigateToNovaObra,
-  onNavigateToViabilidade
+  onNavigateToViabilidade,
+  onEditObra,
+  onNavigateToEmpresas
 }) => {
-  const { user, empresas, setActiveObra, getUserObras } = useAuth();
+  const { user, empresas, setActiveObra, getUserObras, deleteObra, setObraArquivada } = useAuth();
   const { isMasterAdmin, canAccessManagement, canViewFinancials } = useObraAccess();
 
   const userObras = getUserObras();
+  const obrasEmAndamento = userObras.filter(o => o.status === 'Em Andamento').length;
+
+  const handleDeleteObra = async (obra: Obra) => {
+    if (!confirm(`Deseja realmente excluir a obra "${obra.nome}"? Todos os dados associados serão excluídos. Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    try {
+      await deleteObra(obra.id);
+    } catch (err: any) {
+      alert(err?.message || 'Não foi possível excluir a obra.');
+    }
+  };
+
+  const handleArquivarObra = async (obra: Obra) => {
+    if (!confirm(`Arquivar "${obra.nome}"? Ela deixa de aparecer no Dashboard, mas permanece armazenada para o portfólio.`)) {
+      return;
+    }
+    try {
+      await setObraArquivada(obra.id, true);
+    } catch (err: any) {
+      alert(err?.message || 'Não foi possível arquivar a obra. Execute o schema.sql atualizado no Supabase.');
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-fadeIn">
@@ -77,7 +108,7 @@ export const DashboardTab: React.FC<DashboardProps> = ({
             <TrendingUp className="w-4 h-4 text-emerald-600" />
             <span className="text-[11px] font-bold uppercase tracking-wider">Em Andamento</span>
           </div>
-          <div className="text-xl font-extrabold text-slate-900">{userObras.length}</div>
+          <div className="text-xl font-extrabold text-slate-900">{obrasEmAndamento}</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
@@ -90,13 +121,31 @@ export const DashboardTab: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center gap-2 text-slate-500 mb-1">
-            <Briefcase className="w-4 h-4 text-amber-600" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Empresas</span>
+        {isMasterAdmin && onNavigateToEmpresas ? (
+          <button
+            type="button"
+            onClick={onNavigateToEmpresas}
+            className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs text-left hover:border-amber-300 hover:bg-amber-50/30 transition-colors cursor-pointer"
+            title="Ver empresas cadastradas"
+          >
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+              <Briefcase className="w-4 h-4 text-amber-600" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Empresas</span>
+            </div>
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-xl font-extrabold text-slate-900">{empresas.length}</div>
+              <ChevronRight className="w-4 h-4 text-slate-400 mb-0.5" />
+            </div>
+          </button>
+        ) : (
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+              <Briefcase className="w-4 h-4 text-amber-600" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Empresas</span>
+            </div>
+            <div className="text-xl font-extrabold text-slate-900">{empresas.length}</div>
           </div>
-          <div className="text-xl font-extrabold text-slate-900">{empresas.length}</div>
-        </div>
+        )}
       </div>
 
       {/* ACESSOS RÁPIDOS & GESTÃO (EXCLUSIVO ADMINISTRADOR MASTER) */}
@@ -195,22 +244,52 @@ export const DashboardTab: React.FC<DashboardProps> = ({
                     <p className="text-[11px] font-semibold text-blue-600 mt-0.5">Empresa: {o.empresaNome || o.empresa_nome}</p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveObra(o);
-                      if (onSelectObra) onSelectObra();
-                    }}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-600 transition-colors cursor-pointer border border-slate-200 shrink-0"
-                    title="Abrir Empreendimento"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {isMasterAdmin && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onEditObra?.(o)}
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-600 hover:text-amber-700 transition-colors cursor-pointer border border-slate-200"
+                          title="Editar obra"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleArquivarObra(o)}
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-colors cursor-pointer border border-slate-200"
+                          title="Arquivar obra"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteObra(o)}
+                          className="p-2 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-700 transition-colors cursor-pointer border border-slate-200"
+                          title="Excluir obra"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveObra(o);
+                        if (onSelectObra) onSelectObra();
+                      }}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-600 transition-colors cursor-pointer border border-slate-200"
+                      title="Abrir Empreendimento"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-xs text-slate-500">
-                    Evolução Física: <strong className="text-slate-800">{o.percentual_concluido || 64.5}%</strong>
+                    Evolução Física: <strong className="text-slate-800">{o.percentual_concluido ?? 0}%</strong>
                   </span>
                   <button
                     type="button"

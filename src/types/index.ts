@@ -17,7 +17,8 @@ export type TabId =
   | 'portfolio'
   | 'admin'
   | 'nova-empresa'
-  | 'nova-obra';
+  | 'nova-obra'
+  | 'empresas';
 
 // Roles internas do sistema
 export type UserRole =
@@ -112,6 +113,7 @@ export interface Obra {
   custo_orcado?: number;
   valor_vgv?: number;
   valorGlobal?: number;
+  arquivada?: boolean;
 }
 
 // ============================================================

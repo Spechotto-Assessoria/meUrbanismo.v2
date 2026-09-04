@@ -8,6 +8,7 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { DashboardTab } from './components/tabs/Dashboard';
 import { ConvitesTab } from './components/tabs/ConvitesTab';
 import { NovaEmpresaTab } from './components/tabs/NovaEmpresaTab';
+import { EmpresasTab } from './components/tabs/EmpresasTab';
 import { NovaObraTab } from './components/tabs/NovaObraTab';
 import { ResumoObraTab } from './components/tabs/ResumoObraTab';
 import { OrcamentoTab } from './components/tabs/OrcamentoTab';
@@ -21,13 +22,16 @@ import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
 import { PortfolioTab } from './components/tabs/PortfolioTab';
 import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab';
-import { TabId } from './types';
+import { TabId, Obra, Empresa } from './types';
 import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 
 const AuthenticatedApp: React.FC = () => {
   const { canAccessTab, canAccessObra, role, activeObra, setActiveObra, isMasterAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId | 'estudo-viabilidade'>('dashboard');
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
+  const [obraToEdit, setObraToEdit] = useState<Obra | null>(null);
+  const [empresaToEdit, setEmpresaToEdit] = useState<Empresa | null>(null);
+  const [empresaFormOrigem, setEmpresaFormOrigem] = useState<'dashboard' | 'empresas'>('dashboard');
 
   useEffect(() => {
     if (
@@ -45,6 +49,8 @@ const AuthenticatedApp: React.FC = () => {
 
   const handleResetToDashboard = () => {
     setActiveObra(null as any);
+    setObraToEdit(null);
+    setEmpresaToEdit(null);
     setActiveTab('dashboard');
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -60,7 +66,13 @@ const AuthenticatedApp: React.FC = () => {
   };
 
   const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra' || activeTab === 'estudo-viabilidade';
-  const showBottomNav = Boolean(activeObra && activeTab !== 'dashboard' && activeTab !== 'admin' && !isFormPage);
+  const showBottomNav = Boolean(
+    activeObra &&
+    activeTab !== 'dashboard' &&
+    activeTab !== 'admin' &&
+    activeTab !== 'empresas' &&
+    !isFormPage
+  );
 
   // Verificação estrita de acesso por convite da obra ativa
   const hasAccessToActiveObra = activeObra ? canAccessObra(activeObra.id) : true;
@@ -73,12 +85,40 @@ const AuthenticatedApp: React.FC = () => {
 
     // Formulário de Nova Empresa (Global Admin)
     if (activeTab === 'nova-empresa') {
+      const voltar = () => {
+        setEmpresaToEdit(null);
+        setActiveTab(empresaFormOrigem === 'empresas' ? 'empresas' : 'dashboard');
+      };
       return (
         <NovaEmpresaTab
-          onBack={() => setActiveTab('dashboard')}
+          onBack={voltar}
+          empresaToEdit={empresaToEdit}
           onSuccess={(empresaId) => {
-            setLastEmpresaCreatedId(empresaId);
-            setActiveTab('nova-obra');
+            setEmpresaToEdit(null);
+            if (empresaFormOrigem === 'empresas' || empresaToEdit) {
+              setActiveTab('empresas');
+            } else {
+              setLastEmpresaCreatedId(empresaId);
+              setActiveTab('nova-obra');
+            }
+          }}
+        />
+      );
+    }
+
+    if (activeTab === 'empresas') {
+      return (
+        <EmpresasTab
+          onBack={() => setActiveTab('dashboard')}
+          onNovaEmpresa={() => {
+            setEmpresaToEdit(null);
+            setEmpresaFormOrigem('empresas');
+            setActiveTab('nova-empresa');
+          }}
+          onEditEmpresa={(empresa) => {
+            setEmpresaToEdit(empresa);
+            setEmpresaFormOrigem('empresas');
+            setActiveTab('nova-empresa');
           }}
         />
       );
@@ -88,9 +128,13 @@ const AuthenticatedApp: React.FC = () => {
     if (activeTab === 'nova-obra') {
       return (
         <NovaObraTab
-          onBack={() => setActiveTab('dashboard')}
+          onBack={() => {
+            setObraToEdit(null);
+            setActiveTab('dashboard');
+          }}
           onGoToNovaEmpresa={() => setActiveTab('nova-empresa')}
           preSelectedEmpresaId={lastEmpresaCreatedId}
+          obraToEdit={obraToEdit}
         />
       );
     }
@@ -106,9 +150,21 @@ const AuthenticatedApp: React.FC = () => {
         <DashboardTab
           onSelectObra={handleSelectObra}
           onSelectAdmin={handleSelectAdmin}
-          onNavigateToNovaEmpresa={() => setActiveTab('nova-empresa')}
-          onNavigateToNovaObra={() => setActiveTab('nova-obra')}
+          onNavigateToNovaEmpresa={() => {
+            setEmpresaToEdit(null);
+            setEmpresaFormOrigem('dashboard');
+            setActiveTab('nova-empresa');
+          }}
+          onNavigateToNovaObra={() => {
+            setObraToEdit(null);
+            setActiveTab('nova-obra');
+          }}
           onNavigateToViabilidade={() => setActiveTab('estudo-viabilidade')}
+          onNavigateToEmpresas={() => setActiveTab('empresas')}
+          onEditObra={(obra) => {
+            setObraToEdit(obra);
+            setActiveTab('nova-obra');
+          }}
         />
       );
     }

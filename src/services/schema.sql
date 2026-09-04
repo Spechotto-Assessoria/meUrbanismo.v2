@@ -83,8 +83,12 @@ create table if not exists public.obras (
   custo_orcado numeric(15,2) default 0,
   custo_realizado numeric(15,2) default 0,
   foto_capa text,
+  arquivada boolean not null default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Backfill: bancos já existentes não recebem a coluna pelo CREATE TABLE IF NOT EXISTS.
+alter table public.obras add column if not exists arquivada boolean not null default false;
 
 create table if not exists public.orcamentos (
   id uuid primary key default gen_random_uuid(),
@@ -440,6 +444,17 @@ drop policy if exists "logos_empresas_public_select" on storage.objects;
 create policy "logos_empresas_public_select" on storage.objects for select
   using (bucket_id = 'logos_empresas');
 
+-- CAPA / FOTOS DA OBRA (Storage): bucket público "fotos_obra" — leitura liberada
+-- (necessário para exibir a capa nos cards e módulos), escrita só do admin.
+drop policy if exists "fotos_obra_admin_write" on storage.objects;
+create policy "fotos_obra_admin_write" on storage.objects for all
+  using (bucket_id = 'fotos_obra' and public.is_admin())
+  with check (bucket_id = 'fotos_obra' and public.is_admin());
+
+drop policy if exists "fotos_obra_public_select" on storage.objects;
+create policy "fotos_obra_public_select" on storage.objects for select
+  using (bucket_id = 'fotos_obra');
+
 -- OBRAS (tabela base): SOMENTE administradores consultam/alteram diretamente.
 -- Todo mundo mais deve ler através da view "obras_publicas" (mascara campos
 -- financeiros conforme o papel do usuário).
@@ -562,7 +577,10 @@ create policy "lotes_corretor_update" on public.lotes for update
 -- retornam NULL de verdade, aplicado no banco, não apenas escondido na tela.
 -- ==============================================================================
 
-create or replace view public.obras_publicas as
+-- CREATE OR REPLACE VIEW não pode trocar nome/ordem de colunas já existentes.
+-- A coluna "arquivada" precisa entrar no FINAL (ou a view precisa ser dropada).
+drop view if exists public.obras_publicas;
+create view public.obras_publicas as
 select
   o.id,
   o.empresa_id,
@@ -587,7 +605,8 @@ select
   o.created_at,
   case when public.can_view_financials() then o.valor_vgv end as valor_vgv,
   case when public.can_view_financials() then o.custo_orcado end as custo_orcado,
-  case when public.can_view_financials() then o.custo_realizado end as custo_realizado
+  case when public.can_view_financials() then o.custo_realizado end as custo_realizado,
+  coalesce(o.arquivada, false) as arquivada
 from public.obras o
 left join public.empresas e on e.id = o.empresa_id
 where public.has_obra_access(o.id);
@@ -638,6 +657,9 @@ where public.has_obra_access(m.obra_id)
   and (m.visivel_convidados = true or public.can_view_financials());
 
 grant select on public.medicoes_publicas to authenticated;
+
+-- Recarrega o cache da Data API (PostgREST) para enxergar colunas/views novas.
+notify pgrst, 'reload schema';
 
 -- ==============================================================================
 -- FIM DA MIGRAÇÃO

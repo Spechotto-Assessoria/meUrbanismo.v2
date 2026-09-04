@@ -85,7 +85,7 @@ class SupabaseDataService {
     return (data || []) as Empresa[];
   }
 
-  async saveEmpresa(empresa: Omit<Empresa, 'id'>): Promise<Empresa> {
+  async saveEmpresa(empresa: Omit<Empresa, 'id'> & { id?: string }): Promise<Empresa> {
     const payload = clean({
       nome: empresa.nome,
       cnpj: empresa.cnpj || null,
@@ -97,12 +97,9 @@ class SupabaseDataService {
       logo_url: empresa.logo_url || null
     });
 
-    const { data, error } = await supabase.from('empresas').insert(payload).select().single();
-    if (error) {
+    const throwSaveError = (error: { code?: string; message?: string }) => {
       logSupabaseError('saveEmpresa', error);
-      // Código 23505 = violação de restrição "unique" no Postgres. Neste caso é
-      // sempre o CNPJ (única coluna com "unique" na tabela "empresas").
-      if (error.code === '23505' || /duplicate key|cnpj/i.test(error.message)) {
+      if (error.code === '23505' || /duplicate key|cnpj/i.test(error.message || '')) {
         throw new Error('Já existe uma empresa cadastrada com este CNPJ.');
       }
       if (isSchemaCacheError(error)) {
@@ -111,7 +108,16 @@ class SupabaseDataService {
         );
       }
       throw new Error('Não foi possível salvar a empresa. Verifique suas permissões e a configuração do banco.');
+    };
+
+    if (empresa.id) {
+      const { data, error } = await supabase.from('empresas').update(payload).eq('id', empresa.id).select().single();
+      if (error) throwSaveError(error);
+      return data as Empresa;
     }
+
+    const { data, error } = await supabase.from('empresas').insert(payload).select().single();
+    if (error) throwSaveError(error);
     return data as Empresa;
   }
 
@@ -134,6 +140,14 @@ class SupabaseDataService {
     return data as Empresa;
   }
 
+  async deleteEmpresa(id: string): Promise<void> {
+    const { error } = await supabase.from('empresas').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteEmpresa', error);
+      throw new Error('Não foi possível excluir a empresa. Se houver obras vinculadas, arquive-as ou exclua-as antes.');
+    }
+  }
+
   // ============================================================
   // OBRAS — leitura sempre via view mascarada "obras_publicas"
   // ============================================================
@@ -149,37 +163,127 @@ class SupabaseDataService {
     return (data || []) as Obra[];
   }
 
-  async saveObra(obra: Omit<Obra, 'id'>): Promise<Obra> {
+  async saveObra(obra: Omit<Obra, 'id'> & { id?: string }): Promise<Obra> {
     // Aceita tanto o formato snake_case (banco) quanto o camelCase legado
     // usado pelo formulário "Nova Obra".
     const anyObra = obra as any;
-    const payload = clean({
-      empresa_id: anyObra.empresa_id || anyObra.empresaId || null,
-      nome: obra.nome,
+    const nome = String(obra.nome || '').trim();
+    const cidade = String(obra.cidade || '').trim();
+    const empresaId = anyObra.empresa_id || anyObra.empresaId || null;
+    const totalLotes = obra.total_lotes ?? anyObra.qtdLotes ?? 0;
+    const dataInicio = obra.data_inicio || anyObra.dataInicio || null;
+    const dataPrevisao = obra.data_previsao || anyObra.dataEntrega || null;
+
+    if (!nome) {
+      throw new Error('Nome da obra é obrigatório.');
+    }
+    if (!empresaId) {
+      throw new Error('Selecione uma empresa.');
+    }
+    if (!cidade) {
+      throw new Error('Informe a cidade da obra.');
+    }
+
+    const camposFormulario = clean({
+      empresa_id: empresaId,
+      nome,
       tipo: obra.tipo || 'Loteamento Fechado',
-      cidade: obra.cidade || '',
-      uf: obra.uf || 'SP',
+      cidade,
+      uf: (obra.uf || 'SP').trim().toUpperCase().slice(0, 2) || 'SP',
       status: obra.status || 'Planejamento',
-      descricao: obra.descricao || null,
-      endereco: obra.endereco || null,
-      data_inicio: obra.data_inicio || anyObra.dataInicio || null,
-      data_previsao: obra.data_previsao || anyObra.dataEntrega || null,
+      descricao: obra.descricao?.trim() || null,
+      endereco: obra.endereco?.trim() || null,
+      data_inicio: dataInicio || null,
+      data_previsao: dataPrevisao || null,
       area_total_m2: obra.area_total_m2 ?? anyObra.areaM2 ?? 0,
-      metragem_padrao_lote: anyObra.metragemPadraoLote ?? 0,
-      total_lotes: obra.total_lotes ?? anyObra.qtdLotes ?? 0,
-      lotes_vendidos: obra.lotes_vendidos ?? 0,
-      lotes_disponiveis: obra.lotes_disponiveis ?? (obra.total_lotes ?? anyObra.qtdLotes ?? 0),
+      metragem_padrao_lote: anyObra.metragem_padrao_lote ?? anyObra.metragemPadraoLote ?? 0,
+      total_lotes: totalLotes,
       valor_vgv: obra.valor_vgv ?? anyObra.valorGlobal ?? 0,
-      custo_orcado: obra.custo_orcado ?? 0,
-      custo_realizado: obra.custo_realizado ?? 0,
-      percentual_concluido: obra.percentual_concluido ?? 0,
-      foto_capa: obra.foto_capa || null
+      foto_capa: obra.foto_capa || null,
+      arquivada: obra.arquivada === true || obra.status === 'Arquivada'
     });
 
-    const { data, error } = await supabase.from('obras').insert(payload).select().single();
-    if (error) {
+    const throwSaveError = (error: { code?: string; message?: string }) => {
       logSupabaseError('saveObra', error);
-      throw new Error('Não foi possível salvar a obra. Apenas administradores podem cadastrar novas obras.');
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'O banco de dados está com o cache da API desatualizado. Peça ao administrador para recarregar o schema no painel do Supabase (SQL Editor → executar "NOTIFY pgrst, \'reload schema\';") e tente novamente.'
+        );
+      }
+      throw new Error('Não foi possível salvar a obra. Apenas administradores podem cadastrar ou editar obras.');
+    };
+
+    if (obra.id) {
+      const { data, error } = await supabase
+        .from('obras')
+        .update(camposFormulario)
+        .eq('id', obra.id)
+        .select()
+        .single();
+      if (error) throwSaveError(error);
+      return data as Obra;
+    }
+
+    const payloadInsert = {
+      ...camposFormulario,
+      lotes_vendidos: obra.lotes_vendidos ?? 0,
+      lotes_disponiveis: obra.lotes_disponiveis ?? totalLotes,
+      custo_orcado: obra.custo_orcado ?? 0,
+      custo_realizado: obra.custo_realizado ?? 0,
+      percentual_concluido: obra.percentual_concluido ?? 0
+    };
+
+    const { data, error } = await supabase.from('obras').insert(payloadInsert).select().single();
+    if (error) throwSaveError(error);
+    return data as Obra;
+  }
+
+  async updateObraFotoCapa(id: string, fotoCapa: string): Promise<Obra> {
+    const { data, error } = await supabase
+      .from('obras')
+      .update({ foto_capa: fotoCapa })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) {
+      logSupabaseError('updateObraFotoCapa', error);
+      throw new Error('A obra foi salva, mas não foi possível gravar a imagem de capa. Tente enviá-la novamente na edição.');
+    }
+    return data as Obra;
+  }
+
+  async deleteObra(id: string): Promise<void> {
+    const { error } = await supabase.from('obras').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteObra', error);
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'O banco de dados está com o cache da API desatualizado. Recarregue o schema no painel do Supabase e tente novamente.'
+        );
+      }
+      throw new Error('Não foi possível excluir a obra. Apenas administradores podem remover empreendimentos.');
+    }
+  }
+
+  async setObraArquivada(id: string, arquivada: boolean): Promise<Obra> {
+    const payload: { arquivada: boolean; status?: string } = { arquivada };
+
+    if (!arquivada) {
+      const { data: atual } = await supabase.from('obras').select('status').eq('id', id).single();
+      if (atual?.status === 'Arquivada') {
+        payload.status = 'Concluída';
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('obras')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) {
+      logSupabaseError('setObraArquivada', error);
+      throw new Error('Não foi possível arquivar a obra. Verifique se o schema.sql atualizado já foi executado no Supabase.');
     }
     return data as Obra;
   }

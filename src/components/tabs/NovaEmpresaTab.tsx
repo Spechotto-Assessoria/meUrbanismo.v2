@@ -2,22 +2,25 @@ import React, { useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadEmpresaLogo } from '../../lib/storage';
 import { Building2, Save, Upload, ArrowLeft, Loader2 } from 'lucide-react';
+import type { Empresa } from '../../types';
 
 interface NovaEmpresaTabProps {
     onBack?: () => void;
     onSuccess?: (empresaId: string) => void;
+    empresaToEdit?: Empresa | null;
 }
 
-export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSuccess }) => {
-    const { addEmpresa, updateEmpresaLogo } = useAuth();
+export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSuccess, empresaToEdit }) => {
+    const { addEmpresa, updateEmpresa, updateEmpresaLogo } = useAuth();
+    const isEditing = Boolean(empresaToEdit?.id);
 
-    const [nome, setNome] = useState('');
-    const [cnpj, setCnpj] = useState('');
-    const [contato, setContato] = useState('');
-    const [email, setEmail] = useState('');
-    const [telefone, setTelefone] = useState('');
+    const [nome, setNome] = useState(empresaToEdit?.nome ?? '');
+    const [cnpj, setCnpj] = useState(empresaToEdit?.cnpj ?? '');
+    const [contato, setContato] = useState(empresaToEdit?.contato ?? '');
+    const [email, setEmail] = useState(empresaToEdit?.email ?? '');
+    const [telefone, setTelefone] = useState(empresaToEdit?.telefone ?? '');
     const [logoFile, setLogoFile] = useState<File | null>(null);
-    const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+    const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(empresaToEdit?.logo_url || null);
     const [salvando, setSalvando] = useState(false);
     const [erro, setErro] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,8 +33,8 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
         const file = e.target.files?.[0] || null;
         setLogoFile(file);
         setLogoPreviewUrl(prev => {
-            if (prev) URL.revokeObjectURL(prev);
-            return file ? URL.createObjectURL(file) : null;
+            if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return file ? URL.createObjectURL(file) : empresaToEdit?.logo_url || null;
         });
     };
 
@@ -40,34 +43,36 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
         setErro(null);
 
         if (!nome.trim()) {
-            alert('Por favor, preencha o Nome / Razão Social da empresa.');
+            setErro('Por favor, preencha o Nome / Razão Social da empresa.');
             return;
         }
 
         setSalvando(true);
         try {
-            const criada = await addEmpresa({
+            const dados = {
                 nome: nome.trim(),
                 cnpj: cnpj.trim(),
                 contato: contato.trim(),
                 email: email.trim(),
-                telefone: telefone.trim()
-            });
+                telefone: telefone.trim(),
+                logo_url: empresaToEdit?.logo_url
+            };
 
-            // O logo é enviado em uma segunda etapa, pois o caminho do arquivo
-            // no Storage é organizado por ID da empresa (só existe após o insert).
-            // Uma falha aqui não desfaz o cadastro já concluído com sucesso.
+            const salva = isEditing && empresaToEdit
+                ? await updateEmpresa({ ...empresaToEdit, ...dados, id: empresaToEdit.id })
+                : await addEmpresa(dados);
+
             if (logoFile) {
                 try {
-                    const url = await uploadEmpresaLogo(logoFile, criada.id);
-                    await updateEmpresaLogo(criada.id, url);
+                    const url = await uploadEmpresaLogo(logoFile, salva.id);
+                    await updateEmpresaLogo(salva.id, url);
                 } catch (logoErr: any) {
-                    setErro(logoErr?.message || 'Empresa cadastrada, mas o logo não pôde ser enviado. Tente novamente na edição.');
+                    setErro(logoErr?.message || 'Empresa salva, mas o logo não pôde ser enviado. Tente novamente na edição.');
                 }
             }
 
             if (onSuccess) {
-                onSuccess(criada.id);
+                onSuccess(salva.id);
             } else if (onBack) {
                 onBack();
             }
@@ -93,7 +98,7 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
                     )}
                     <div>
                         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <Building2 className="w-6 h-6 text-blue-600" /> Nova Empresa
+                            <Building2 className="w-6 h-6 text-blue-600" /> {isEditing ? 'Editar Empresa' : 'Nova Empresa'}
                         </h1>
                         <p className="text-xs text-slate-500">Dados da empresa e logo para exibir nas obras.</p>
                     </div>
@@ -213,7 +218,7 @@ export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSucces
                         className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
                     >
                         {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        {salvando ? 'Salvando...' : 'Cadastrar Empresa'}
+                        {salvando ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Cadastrar Empresa'}
                     </button>
                 </div>
             </form>

@@ -13,8 +13,14 @@ interface AuthContextType {
   activeObra: Obra | null;
   setActiveObra: (obra: Obra | null) => void;
   addEmpresa: (empresa: Omit<Empresa, 'id'>) => Promise<Empresa>;
+  updateEmpresa: (empresa: Empresa) => Promise<Empresa>;
   updateEmpresaLogo: (id: string, logoUrl: string) => Promise<Empresa>;
+  deleteEmpresa: (id: string) => Promise<void>;
   addObra: (obra: Omit<Obra, 'id'>) => Promise<Obra>;
+  updateObra: (obra: Obra) => Promise<Obra>;
+  updateObraFotoCapa: (id: string, fotoUrl: string) => Promise<Obra>;
+  deleteObra: (id: string) => Promise<void>;
+  setObraArquivada: (id: string, arquivada: boolean) => Promise<Obra>;
   refreshObras: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (email: string, pass: string, nome?: string) => Promise<{ success: boolean; error?: string }>;
@@ -220,6 +226,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return novaEmpresa;
   };
 
+  const updateEmpresa = async (empresa: Empresa): Promise<Empresa> => {
+    const atualizada = await dataService.saveEmpresa(empresa);
+    setEmpresas(prev => prev.map(e => (e.id === atualizada.id ? atualizada : e)));
+    return atualizada;
+  };
+
   /**
    * Atualiza o logo de uma empresa já cadastrada (chamado após o upload do
    * arquivo para o Storage) e sincroniza o estado local, para que o novo
@@ -232,10 +244,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return empresaAtualizada;
   };
 
+  const deleteEmpresa = async (id: string): Promise<void> => {
+    await dataService.deleteEmpresa(id);
+    setEmpresas(prev => prev.filter(e => e.id !== id));
+    await refreshObras();
+  };
+
   const addObra = async (novaData: Omit<Obra, 'id'>): Promise<Obra> => {
     const novaObra = await dataService.saveObra(novaData);
     await refreshObras();
     return novaObra;
+  };
+
+  const updateObra = async (obra: Obra): Promise<Obra> => {
+    const atualizada = await dataService.saveObra(obra);
+    await refreshObras();
+    if (activeObra?.id === atualizada.id) {
+      setActiveObraState(atualizada);
+    }
+    return atualizada;
+  };
+
+  const updateObraFotoCapa = async (id: string, fotoUrl: string): Promise<Obra> => {
+    const atualizada = await dataService.updateObraFotoCapa(id, fotoUrl);
+    await refreshObras();
+    if (activeObra?.id === id) {
+      setActiveObraState(atualizada);
+    }
+    return atualizada;
+  };
+
+  const deleteObra = async (id: string): Promise<void> => {
+    await dataService.deleteObra(id);
+    if (activeObra?.id === id) {
+      setActiveObraState(null);
+    }
+    await refreshObras();
+  };
+
+  const setObraArquivada = async (id: string, arquivada: boolean): Promise<Obra> => {
+    const atualizada = await dataService.setObraArquivada(id, arquivada);
+    await refreshObras();
+    if (arquivada && activeObra?.id === id) {
+      setActiveObraState(null);
+    }
+    return atualizada;
   };
 
   const loginWithEmail = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
@@ -418,14 +471,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // A lista de obras já reflete exatamente o que o usuário tem permissão de
   // ver (filtrado pelo próprio banco), então basta devolvê-la diretamente.
-  const getUserObras = (): Obra[] => obras;
+  const getUserObras = (): Obra[] =>
+    obras.filter(o => !o.arquivada && o.status !== 'Arquivada');
 
   // Validação de acesso a cada uma das abas da obra e abas globais
   const canAccessTab = (tabId: TabId): boolean => {
     if (!user) return false;
 
     // Abas globais
-    if (tabId === 'dashboard' || tabId === 'nova-empresa' || tabId === 'nova-obra') {
+    if (tabId === 'dashboard' || tabId === 'nova-empresa' || tabId === 'nova-obra' || tabId === 'empresas') {
       return isMasterAdmin;
     }
 
@@ -506,8 +560,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeObra,
         setActiveObra,
         addEmpresa,
+        updateEmpresa,
         updateEmpresaLogo,
+        deleteEmpresa,
         addObra,
+        updateObra,
+        updateObraFotoCapa,
+        deleteObra,
+        setObraArquivada,
         refreshObras,
         loginWithEmail,
         signUpWithEmail,
