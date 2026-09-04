@@ -9,6 +9,28 @@ import {
   User as UserIcon
 } from 'lucide-react';
 
+/**
+ * Validações de formato replicadas do fluxo antigo (_codigo_antigo/auth.tsx),
+ * porém com checagens manuais simples — sem a dependência "zod", que não
+ * existe neste projeto. Rodam ANTES de chamar o Supabase, para dar feedback
+ * imediato ao usuário sem depender de uma ida ao servidor.
+ */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= 255 && EMAIL_REGEX.test(trimmed);
+}
+
+function isValidPassword(value: string): boolean {
+  return value.length >= 6 && value.length <= 128;
+}
+
+function isValidNome(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.length >= 2 && trimmed.length <= 120;
+}
+
 export const LoginScreen: React.FC = () => {
   const { loginWithEmail, signUpWithEmail, loginWithGoogle, resetPassword } = useAuth();
 
@@ -24,6 +46,23 @@ export const LoginScreen: React.FC = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    // Validação de formato ANTES de chamar o Supabase, replicando a lógica
+    // do fluxo antigo (_codigo_antigo/auth.tsx): evita uma ida ao servidor
+    // para erros óbvios e dá feedback amigável e imediato ao usuário.
+    if (isSignUp && !isValidNome(nome)) {
+      setError('Informe seu nome completo (mínimo 2 caracteres).');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('E-mail inválido. Verifique o endereço informado.');
+      return;
+    }
+    if (!isValidPassword(password)) {
+      setError('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,6 +94,10 @@ export const LoginScreen: React.FC = () => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Informe seu e-mail no campo acima para receber o link de redefinição.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('E-mail inválido. Verifique o endereço informado antes de solicitar a redefinição.');
       return;
     }
     setError(null);

@@ -9,3 +9,14 @@
 # Diretrizes de Segurança e RBAC
 - **Controle de Acesso por Papel (RBAC):** Os perfis de `Cliente / Comprador` e `Corretor de Imóveis` possuem restrição absoluta a dados financeiros. Nenhuma informação de custo, orçamento detalhado em dinheiro, margem de lucro, VGV global ou TIR/VPL pode ser exibida para esses papéis.
 - **Mascaramento Obrigatório:** Se um componente financeiro for renderizado para um usuário sem permissão, exiba valores mascarados (`—`) ou oculte completamente o elemento.
+
+# Persona: Ponytail & Caveman
+Aja como um engenheiro sênior eficiente. Pare na opção mais simples que resolve o problema de verdade, antes de escrever qualquer código. Não crie abstrações desnecessárias. 
+Comunicação: Seja direto. Sem enrolação, sem gentileza forçada, sem "hedging" (respostas evasivas). Me dê apenas o plano, o código e a explicação técnica.
+
+# Workflow: Superpowers
+Antes de implementar qualquer funcionalidade ou refatoração, siga este fluxo obrigatoriamente: Brainstorm -> Plano -> Implementação -> Revisão. 
+Sempre me apresente o plano em tópicos e faça perguntas de esclarecimento antes de começar a codificar. Nunca pule direto para o código se o pedido for aberto ou complexo.
+
+# Quality Gates
+Nenhum arquivo deve ultrapassar o teto de 350 linhas. Se um arquivo estiver ficando maior que isso, pare e sugira a quebra dele em componentes menores por responsabilidade (ex: hooks separados, UI separada), um arquivo por commit.
