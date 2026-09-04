@@ -34,11 +34,32 @@ import {
  * devolve uma lista/objeto vazio, em vez de quebrar a aplicação.
  */
 
+/**
+ * Detecta o erro PGRST205 do PostgREST: "Could not find the table/column X
+ * in the schema cache". Isso NÃO significa que a tabela não existe (ela pode
+ * existir e aparecer normalmente no Table Editor) — significa que o cache de
+ * metadados da API REST do Supabase está desatualizado e precisa ser
+ * recarregado. É comum acontecer após rodar DDL manualmente no SQL Editor ou
+ * após o projeto (plano free) "hibernar" por inatividade e voltar.
+ *
+ * Correção: no SQL Editor do Supabase, executar `NOTIFY pgrst, 'reload schema';`
+ * (ou em Project Settings → API → "Reload schema" / reiniciar o projeto).
+ */
+function isSchemaCacheError(error: any): boolean {
+  return error?.code === 'PGRST205' || /schema cache/i.test(error?.message || '');
+}
+
+const SCHEMA_CACHE_HINT =
+  'Verifique se o script src/services/schema.sql já foi executado no SQL Editor do seu projeto Supabase.';
+
+const SCHEMA_CACHE_RELOAD_HINT =
+  'Cache da API do Supabase desatualizado (PGRST205). Rode "NOTIFY pgrst, \'reload schema\';" no SQL Editor do projeto, ou em Project Settings → API clique em "Reload schema" / reinicie o projeto.';
+
 function logSupabaseError(context: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(
     `[dataService] ❌ Falha em "${context}": ${message}\n` +
-    'Verifique se o script src/services/schema.sql já foi executado no SQL Editor do seu projeto Supabase.'
+    (isSchemaCacheError(error) ? SCHEMA_CACHE_RELOAD_HINT : SCHEMA_CACHE_HINT)
   );
 }
 
@@ -83,6 +104,11 @@ class SupabaseDataService {
       // sempre o CNPJ (única coluna com "unique" na tabela "empresas").
       if (error.code === '23505' || /duplicate key|cnpj/i.test(error.message)) {
         throw new Error('Já existe uma empresa cadastrada com este CNPJ.');
+      }
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'O banco de dados está com o cache da API desatualizado. Peça ao administrador para recarregar o schema no painel do Supabase (SQL Editor → executar "NOTIFY pgrst, \'reload schema\';") e tente novamente.'
+        );
       }
       throw new Error('Não foi possível salvar a empresa. Verifique suas permissões e a configuração do banco.');
     }
