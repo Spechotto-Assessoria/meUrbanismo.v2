@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useViabilidadeObra } from '../../hooks/useViabilidadeObra';
-import { brlCents, mesesBR, pctBR } from '../../lib/viabilidade';
+import { brlCents, paybackBR, pctBR } from '../../lib/viabilidade';
 import { AuditoriaPremissasViabilidade } from '../viabilidade/AuditoriaPremissasViabilidade';
+import { AJUDA_KPI, KpiHelp } from '../viabilidade/KpiHelp';
 import { WaterfallVGV } from '../viabilidade/WaterfallVGV';
 import { ViabilidadeObraCharts } from '../viabilidade/ViabilidadeObraCharts';
 import { SkeletonTable } from '../common/SkeletonLoader';
@@ -47,18 +48,18 @@ const ViabilidadeConteudo: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   if (v.loading) return <SkeletonTable />;
 
   const kpis = [
-    { label: 'VGV Reajustado', value: brlCents(r.vgvReajustado), hint: `${brlCents(v.precoEfetivoM2)}/m²`, icon: DollarSign, tone: 'text-navy-800', iconTone: 'text-navy-800' },
-    { label: 'Lucro Estimado', value: brlCents(r.lucro), hint: 'Líquido projetado', icon: TrendingUp, tone: r.lucro >= 0 ? 'text-emerald-600' : 'text-rose-600', iconTone: r.lucro >= 0 ? 'text-emerald-600' : 'text-rose-600' },
-    { label: 'Margem s/ VGV', value: pctBR(r.margem), hint: 'Eficiência comercial', icon: Percent, tone: 'text-slate-800', iconTone: 'text-slate-600' },
-    { label: 'ROI Global', value: pctBR(r.roi), hint: 'Retorno s/ capital investido', icon: Sparkles, tone: 'text-amber-700', iconTone: 'text-amber-600' },
-    { label: 'TIR Anual', value: r.tirAnual != null && r.tirConfiavel ? `${pctBR(r.tirAnual)} a.a.` : '—', hint: 'Taxa interna de retorno', icon: TrendingUp, tone: 'text-cyan-700', iconTone: 'text-cyan-600' },
-    { label: `VPL @ ${pctBR(v.form.taxa_minima_aa, 0)} a.a.`, value: brlCents(r.vpl), hint: 'Valor presente líquido', icon: Calculator, tone: r.vpl >= 0 ? 'text-indigo-700' : 'text-rose-600', iconTone: 'text-indigo-600' },
-    { label: 'Payback', value: mesesBR(r.paybackMeses), hint: 'Ponto de equilíbrio', icon: Clock, tone: 'text-orange-700', iconTone: 'text-orange-600' },
-    { label: 'Exposição Máxima', value: brlCents(Math.abs(r.exposicaoMaxima)), hint: `Pico no mês ${r.exposicaoMes}`, icon: TrendingDown, tone: 'text-rose-600', iconTone: 'text-rose-600' },
+    { label: 'VGV Reajustado', value: brlCents(r.vgvReajustado), hint: `${brlCents(v.precoEfetivoM2)}/m²`, icon: DollarSign, tone: 'text-navy-800', iconTone: 'text-navy-800', help: AJUDA_KPI.vgv },
+    { label: 'Lucro Estimado', value: brlCents(r.lucro), hint: 'Líquido projetado', icon: TrendingUp, tone: r.lucro >= 0 ? 'text-emerald-600' : 'text-rose-600', iconTone: r.lucro >= 0 ? 'text-emerald-600' : 'text-rose-600', help: AJUDA_KPI.lucro },
+    { label: 'Margem s/ VGV', value: pctBR(r.margem), hint: 'Eficiência comercial', icon: Percent, tone: 'text-slate-800', iconTone: 'text-slate-600', help: AJUDA_KPI.margem },
+    { label: 'ROI Global', value: pctBR(r.roi), hint: 'Retorno s/ capital investido', icon: Sparkles, tone: 'text-amber-700', iconTone: 'text-amber-600', help: AJUDA_KPI.roi },
+    { label: 'TIR Anual', value: r.tirAnual != null && r.tirConfiavel ? `${pctBR(r.tirAnual)} a.a.` : '—', hint: 'Taxa interna de retorno', icon: TrendingUp, tone: 'text-cyan-700', iconTone: 'text-cyan-600', help: AJUDA_KPI.tir },
+    { label: `VPL @ ${pctBR(v.form.taxa_minima_aa, 0)} a.a.`, value: brlCents(r.vpl), hint: 'Valor presente líquido', icon: Calculator, tone: r.vpl >= 0 ? 'text-indigo-700' : 'text-rose-600', iconTone: 'text-indigo-600', help: AJUDA_KPI.vpl },
+    { label: 'Payback', value: paybackBR(r.paybackDescontadoMeses), hint: 'Descontado pela TMA', icon: Clock, tone: 'text-orange-700', iconTone: 'text-orange-600', help: AJUDA_KPI.payback },
+    { label: 'Exposição Máxima', value: brlCents(Math.abs(r.exposicaoMaxima)), hint: `Pico no mês ${r.exposicaoMes}`, icon: TrendingDown, tone: 'text-rose-600', iconTone: 'text-rose-600', help: AJUDA_KPI.exposicao },
   ];
 
   return (
-    <div className="space-y-6 pb-16 max-w-7xl mx-auto animate-fadeIn">
+    <div className="space-y-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] max-w-7xl mx-auto animate-fadeIn overflow-x-hidden">
       {v.sucesso && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between shadow-sm">
           <span>{v.sucesso}</span>
@@ -139,19 +140,21 @@ const ViabilidadeConteudo: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
         </p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpis.map((k, i) => (
+          <div key={k.label} className="relative bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1 min-w-0">
             <div className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${k.iconTone}`}>
-              <k.icon className="w-3.5 h-3.5" /> {k.label}
+              <k.icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="min-w-0 flex-1">{k.label}</span>
+              <KpiHelp texto={k.help} align={i % 2 === 1 || i >= 6 ? 'right' : 'left'} />
             </div>
-            <div className={`text-lg sm:text-xl font-black truncate ${k.tone}`}>{k.value}</div>
+            <div className={`text-base sm:text-xl font-black tabular-nums break-words ${k.tone}`}>{k.value}</div>
             <div className="text-[10px] text-slate-500">{k.hint}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm min-w-0 overflow-hidden">
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
             Resultado operacional — quebra do VGV

@@ -44,11 +44,11 @@ function montar(i: WaterfallInput): Barra[] {
     acc = fim;
   };
 
-  push('VGV reajustado', i.vgvReajustado, '#10B981', true);
-  push('(−) Impostos e comissões', -i.impostosComissoes, '#F97316');
-  push('(−) Terreno', -i.custoTerreno, SLATE);
-  push('(−) Obra + indiretos', -i.custoObraIndiretos, '#1E3A8A');
-  push('(=) Lucro líquido', i.lucro, i.lucro >= 0 ? '#047857' : '#EF4444', true);
+  push('VGV', i.vgvReajustado, '#10B981', true);
+  push('Imp./com.', -i.impostosComissoes, '#F97316');
+  push('Terreno', -i.custoTerreno, SLATE);
+  push('Obra', -i.custoObraIndiretos, '#1E3A8A');
+  push('Lucro', i.lucro, i.lucro >= 0 ? '#047857' : '#EF4444', true);
   return barras;
 }
 
@@ -69,10 +69,10 @@ function WaterfallTooltip({ active, payload }: TooltipProps<number, string>) {
 export function WaterfallVGV(props: WaterfallInput) {
   const dados = montar(props);
   return (
-    <div className="-mx-2 overflow-x-auto px-2">
-      <div className="h-72 min-w-[520px]">
+    <div className="w-full min-w-0 overflow-hidden">
+      <div className="h-64 sm:h-72 w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dados} margin={{ top: 8, right: 8, left: 4, bottom: 8 }}>
+          <BarChart data={dados} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={SLATE} opacity={0.2} vertical={false} />
             <XAxis
               dataKey="nome"
@@ -85,7 +85,7 @@ export function WaterfallVGV(props: WaterfallInput) {
               tick={{ fontSize: 10, fill: SLATE }}
               tickLine={false}
               axisLine={false}
-              width={58}
+              width={48}
               tickFormatter={(v: number) => brlShort(v)}
             />
             <Tooltip content={<WaterfallTooltip />} cursor={{ fill: SLATE, fillOpacity: 0.08 }} />

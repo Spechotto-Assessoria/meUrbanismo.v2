@@ -139,18 +139,27 @@ export function paybackInterpolado(fluxo: PontoFluxo[]): number | null {
   return null;
 }
 
-/** Payback descontado pela TMA mensal, interpolado no acumulado em VP. */
+/**
+ * Payback descontado pela TMA mensal: mês em que o acumulado em VP passa a ≥ 0.
+ * Interpolado: t-1 + |S_{t-1}| / PV_t. Se nunca ficou negativo, retorna 0.
+ */
 export function paybackDescontado(flows: number[], rate: number): number | null {
+  if (!flows.length) return null;
+  const EPS = 1e-12;
   let acc = 0;
+  let everNeg = false;
   for (let t = 0; t < flows.length; t++) {
     const prev = acc;
-    const pv = flows[t] / Math.pow(1 + rate, t);
+    const den = Math.pow(1 + rate, t);
+    const pv = isFinite(den) && den !== 0 ? flows[t] / den : 0;
     acc += pv;
-    if (t > 0 && prev < 0 && acc >= 0) {
-      if (pv <= 1e-12) return t;
+    if (acc < -EPS) everNeg = true;
+    if (prev < -EPS && acc >= -EPS) {
+      if (pv <= EPS) return t;
       return t - 1 + -prev / pv;
     }
   }
+  if (!everNeg) return 0;
   return null;
 }
 

@@ -30,8 +30,10 @@ export type ViabilidadeInput = {
 };
 
 export const TMA_PADRAO_AA = 12;
-export const ENTRADA_PADRAO_PCT = 20;
-export const PARCELAS_PADRAO = 36;
+export const ENTRADA_PADRAO_PCT = 10;
+export const PRAZO_OBRA_PADRAO = 36;
+export const PRAZO_VENDAS_PADRAO = 60;
+export const PARCELAS_PADRAO = PRAZO_VENDAS_PADRAO;
 export const LINHA_INDIRETOS = /indiret|administrativ/i;
 
 export type FluxoMes = {
@@ -42,6 +44,7 @@ export type FluxoMes = {
   entrada: number;
   liquido: number;
   acumulado: number;
+  acumuladoDescontado: number;
 };
 
 export type ViabilidadeResult = {
@@ -120,10 +123,11 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
   const rReceita = (i.reajuste_receita_pct_am ?? 0) / 100;
   const rIncc = (i.incc_pct_am ?? 0) / 100;
   const entradaPct = Math.min(100, Math.max(0, i.entrada_pct ?? ENTRADA_PADRAO_PCT)) / 100;
-  const nParcelas = Math.max(1, Math.round(i.parcelas_meses ?? PARCELAS_PADRAO));
-  const nObra = Math.max(1, Math.round(i.prazo_meses) || 1);
-  const nVendas = Math.max(1, Math.round(i.prazo_vendas_meses) || 1);
+  const nObra = Math.max(1, Math.round(i.prazo_meses) || PRAZO_OBRA_PADRAO);
+  const nVendas = Math.max(1, Math.round(i.prazo_vendas_meses) || PRAZO_VENDAS_PADRAO);
+  const nParcelas = Math.max(1, Math.round(i.parcelas_meses ?? nVendas));
   const horizonte = Math.max(nObra, nVendas + nParcelas);
+  const taxaMensal = taxaMensalEquivalente(i.taxa_minima_aa);
 
   const pesosObra = curvaSPesos(nObra);
   const indiretosTotal = (i.custo_obra * i.custos_indiretos_pct) / 100;
@@ -144,6 +148,7 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
   const fluxo: FluxoMes[] = [];
   const flows: number[] = [-i.custo_terreno];
   let acumulado = -i.custo_terreno;
+  let acumuladoDescontado = -i.custo_terreno;
   fluxo.push({
     mes: 0,
     receita: 0,
@@ -152,6 +157,7 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
     entrada: 0,
     liquido: -i.custo_terreno,
     acumulado,
+    acumuladoDescontado,
   });
 
   let vgvReajustado = 0;
@@ -178,8 +184,18 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
 
     const liquido = receita - despesa;
     acumulado += liquido;
+    acumuladoDescontado += liquido / Math.pow(1 + taxaMensal, m);
     flows.push(liquido);
-    fluxo.push({ mes: m, receita, despesa, saida: despesa, entrada: receita, liquido, acumulado });
+    fluxo.push({
+      mes: m,
+      receita,
+      despesa,
+      saida: despesa,
+      entrada: receita,
+      liquido,
+      acumulado,
+      acumuladoDescontado,
+    });
   }
 
   const capitalInvestido = i.custo_terreno + custoObraReajustado + custosIndiretos;
@@ -188,7 +204,6 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
   const margem = vgvReajustado > 0 ? (lucro / vgvReajustado) * 100 : 0;
   const roi = capitalInvestido > 0 ? (lucro / capitalInvestido) * 100 : 0;
 
-  const taxaMensal = taxaMensalEquivalente(i.taxa_minima_aa);
   const vpl = npv(taxaMensal, flows);
   const tirMensal = irr(flows);
   const tirAnual = tirMensal != null ? tirAnualEfetiva(tirMensal) : null;
@@ -228,6 +243,9 @@ export const mesesBR = (n: number | null | undefined) =>
   n == null || !isFinite(n)
     ? '—'
     : `${n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} meses`;
+
+export const paybackBR = (n: number | null | undefined) =>
+  n == null || !isFinite(n) ? 'não atingido no horizonte' : mesesBR(n);
 
 export const brlCents = (n: number) =>
   (isFinite(n) ? n : 0).toLocaleString('pt-BR', {

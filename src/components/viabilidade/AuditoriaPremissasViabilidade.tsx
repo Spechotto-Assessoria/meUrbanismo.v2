@@ -1,21 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ClipboardCheck, Loader2, Save, X } from 'lucide-react';
-import { brlCents, calcViabilidade, mesesBR, pctBR } from '../../lib/viabilidade';
+import { brlCents, calcViabilidade, paybackBR, pctBR } from '../../lib/viabilidade';
+import { formatarDataIndice, rotuloFonteIndice } from '../../lib/indices-economicos';
+import { useIndicesEconomicos } from '../../hooks/useIndicesEconomicos';
 import type { PremissasObra } from '../../hooks/useViabilidadeObra';
+import { PremissaCampo, type PremissaKind } from './PremissaCampo';
 
-const CAMPOS: { key: keyof PremissasObra; label: string; suffix: string; step: number }[] = [
-  { key: 'custo_terreno', label: 'Custo do terreno', suffix: 'R$', step: 1000 },
-  { key: 'custos_indiretos_pct', label: 'Custos indiretos', suffix: '% da obra', step: 0.01 },
-  { key: 'comissao_pct', label: 'Comissão de vendas', suffix: '% da receita', step: 0.1 },
-  { key: 'impostos_pct', label: 'Impostos', suffix: '% da receita', step: 0.1 },
-  { key: 'reajuste_receita_pct_am', label: 'Projeção do IPCA', suffix: '% a.m.', step: 0.01 },
-  { key: 'incc_pct_am', label: 'Projeção do INCC', suffix: '% a.m.', step: 0.01 },
-  { key: 'taxa_minima_aa', label: 'TMA — taxa mínima de atratividade', suffix: '% a.a.', step: 0.01 },
-  { key: 'prazo_meses', label: 'Prazo de obra', suffix: 'meses', step: 1 },
-  { key: 'prazo_vendas_meses', label: 'Prazo de vendas', suffix: 'meses', step: 1 },
-  { key: 'entrada_pct', label: 'Entrada na venda', suffix: '% do lote', step: 1 },
-  { key: 'parcelas_meses', label: 'Parcelamento do saldo', suffix: 'meses', step: 1 },
+const CAMPOS: {
+  key: keyof PremissasObra;
+  label: string;
+  suffix: string;
+  kind: PremissaKind;
+  decimals?: number;
+}[] = [
+  { key: 'custo_terreno', label: 'Custo do terreno', suffix: 'R$', kind: 'money' },
+  { key: 'custos_indiretos_pct', label: 'Custos indiretos', suffix: '% obra', kind: 'percent' },
+  { key: 'comissao_pct', label: 'Comissão de vendas', suffix: '% rec.', kind: 'percent' },
+  { key: 'impostos_pct', label: 'Impostos', suffix: '% rec.', kind: 'percent' },
+  { key: 'reajuste_receita_pct_am', label: 'Projeção do IPCA', suffix: '% a.m.', kind: 'percent' },
+  { key: 'incc_pct_am', label: 'Projeção do INCC', suffix: '% a.m.', kind: 'percent' },
+  { key: 'taxa_minima_aa', label: 'TMA — taxa mínima de atratividade', suffix: '% a.a.', kind: 'percent' },
+  { key: 'prazo_meses', label: 'Prazo de obra', suffix: 'meses', kind: 'integer' },
+  { key: 'prazo_vendas_meses', label: 'Prazo de vendas', suffix: 'meses', kind: 'integer' },
+  { key: 'entrada_pct', label: 'Entrada na venda', suffix: '% lote', kind: 'percent', decimals: 0 },
+  { key: 'parcelas_meses', label: 'Parcelamento do saldo', suffix: 'meses', kind: 'integer' },
 ];
 
 type Props = {
@@ -39,10 +48,31 @@ export function AuditoriaPremissasViabilidade({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<PremissasObra>(premissas);
+  const [parcelasManuais, setParcelasManuais] = useState(false);
+  const parcelasManuaisRef = useRef(false);
+  const { indices, loading: loadingIndices } = useIndicesEconomicos();
 
   useEffect(() => {
-    if (open) setDraft(premissas);
+    if (!open) return;
+    setDraft(premissas);
+    const manual = premissas.parcelas_meses !== premissas.prazo_vendas_meses;
+    setParcelasManuais(manual);
+    parcelasManuaisRef.current = manual;
   }, [open, premissas]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   const r = useMemo(
     () => calcViabilidade({ ...draft, vgv, custo_obra: custoObra }),
@@ -50,6 +80,29 @@ export function AuditoriaPremissasViabilidade({
   );
 
   const fechar = () => setOpen(false);
+
+  const alterar = (key: keyof PremissasObra, value: number) => {
+    if (key === 'parcelas_meses') {
+      parcelasManuaisRef.current = true;
+      setParcelasManuais(true);
+    }
+    setDraft((d) => {
+      const next = { ...d, [key]: value };
+      if (key === 'prazo_vendas_meses' && !parcelasManuaisRef.current) {
+        next.parcelas_meses = Math.max(1, Math.round(value) || 1);
+      }
+      return next;
+    });
+  };
+
+  const aplicarIndices = () => {
+    if (!indices) return;
+    setDraft((d) => ({
+      ...d,
+      reajuste_receita_pct_am: indices.ipcaAm,
+      incc_pct_am: indices.inccAm,
+    }));
+  };
 
   const confirmar = async () => {
     if (!canEdit) {
@@ -65,16 +118,23 @@ export function AuditoriaPremissasViabilidade({
     { label: 'TIR (a.a.)', value: r.tirAnual != null && r.tirConfiavel ? pctBR(r.tirAnual) : '—' },
     { label: 'ROI', value: pctBR(r.roi) },
     { label: 'Lucro estimado', value: brlCents(r.lucro) },
-    { label: 'Payback', value: mesesBR(r.paybackMeses) },
-    { label: 'Payback descontado', value: mesesBR(r.paybackDescontadoMeses) },
+    { label: 'Payback', value: paybackBR(r.paybackMeses) },
+    { label: 'Payback descontado', value: paybackBR(r.paybackDescontadoMeses) },
     { label: 'TMA mensal equivalente', value: pctBR(r.taxaMensalTMA, 4) },
   ];
+
+  const dataIndice = formatarDataIndice(indices?.atualizadoEm ?? null);
+  const chipFonte = indices
+    ? `Projeção ${rotuloFonteIndice(indices.ipcaFonte)}${dataIndice ? ` · ${dataIndice}` : ''}`
+    : loadingIndices
+      ? 'Buscando IPCA/INCC…'
+      : 'Projeção padrão';
 
   const modal =
     open &&
     createPortal(
       <div
-        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60"
         onClick={fechar}
         role="presentation"
       >
@@ -82,10 +142,10 @@ export function AuditoriaPremissasViabilidade({
           role="dialog"
           aria-modal="true"
           aria-labelledby="auditoria-premissas-titulo"
-          className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] z-50 w-[calc(100%-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl"
+          className="w-full max-w-4xl max-h-[min(90vh,calc(100dvh-2rem))] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-soft"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-start justify-between gap-3">
+          <div className="sticky top-0 z-10 bg-white/95 border-b border-slate-100 px-5 py-4 flex items-start justify-between gap-3">
             <div>
               <h3 id="auditoria-premissas-titulo" className="text-sm font-black text-slate-900">
                 Auditoria de premissas e cálculos
@@ -94,54 +154,59 @@ export function AuditoriaPremissasViabilidade({
                 Ajuste TMA, IPCA, INCC, prazos e condições. O recálculo é imediato; grave para confirmar.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={fechar}
-              className="p-1.5 rounded-xl hover:bg-slate-100"
-              aria-label="Fechar"
-            >
+            <button type="button" onClick={fechar} className="p-1.5 rounded-xl hover:bg-slate-100" aria-label="Fechar">
               <X className="w-4 h-4 text-slate-500" />
             </button>
           </div>
 
           <div className="p-5 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="text-[11px] text-slate-600">{chipFonte}. Campos permanecem editáveis.</p>
+              {canEdit && indices && (
+                <button
+                  type="button"
+                  onClick={aplicarIndices}
+                  className="text-[11px] font-bold text-navy-800 hover:underline"
+                >
+                  Aplicar IPCA {pctBR(indices.ipcaAm)} e INCC {pctBR(indices.inccAm)}
+                </button>
+              )}
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {CAMPOS.map((c) => (
-                <div key={c.key} className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    {c.label} <span className="text-slate-400">({c.suffix})</span>
-                  </label>
-                  <input
-                    type="number"
-                    step={c.step}
-                    min={0}
-                    disabled={!canEdit}
-                    value={draft[c.key]}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, [c.key]: Number(e.target.value) || 0 }))
-                    }
-                    className="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-right font-mono text-xs tabular-nums text-slate-800 disabled:opacity-60 focus:outline-none focus:ring-1 focus:ring-navy-800"
-                  />
-                  {c.key === 'custos_indiretos_pct' && sugeridoPct > 0 && (
-                    <div className="flex items-center justify-between text-[10px] text-slate-500">
-                      <span>Sugerido pelo orçamento: {pctBR(sugeridoPct)}</span>
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDraft((d) => ({
-                              ...d,
-                              custos_indiretos_pct: Number(sugeridoPct.toFixed(2)),
-                            }))
-                          }
-                          className="font-bold text-navy-800 hover:underline"
-                        >
-                          Aplicar
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <PremissaCampo
+                  key={c.key}
+                  label={c.label}
+                  suffix={c.suffix}
+                  kind={c.kind}
+                  decimals={c.decimals}
+                  value={draft[c.key]}
+                  disabled={!canEdit}
+                  onChange={(v) => alterar(c.key, v)}
+                  hint={
+                    c.key === 'custos_indiretos_pct' && sugeridoPct > 0 ? (
+                      <div className="flex items-center justify-between text-[10px] text-slate-500">
+                        <span>Sugerido pelo orçamento: {pctBR(sugeridoPct)}</span>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => alterar('custos_indiretos_pct', Number(sugeridoPct.toFixed(2)))}
+                            className="font-bold text-navy-800 hover:underline"
+                          >
+                            Aplicar
+                          </button>
+                        )}
+                      </div>
+                    ) : c.key === 'parcelas_meses' ? (
+                      <p className="text-[10px] text-slate-500">
+                        {parcelasManuais
+                          ? 'Editado manualmente — desvinculado do prazo de vendas.'
+                          : 'Vinculado ao prazo de vendas. Edite para desvincular.'}
+                      </p>
+                    ) : undefined
+                  }
+                />
               ))}
             </div>
 
@@ -155,7 +220,7 @@ export function AuditoriaPremissasViabilidade({
               {kpis.map((k) => (
                 <div key={k.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
                   <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{k.label}</p>
-                  <p className="mt-0.5 text-sm font-black tabular-nums text-slate-900">{k.value}</p>
+                  <p className="mt-0.5 text-sm font-black tabular-nums break-words text-slate-900">{k.value}</p>
                 </div>
               ))}
             </div>
@@ -165,7 +230,7 @@ export function AuditoriaPremissasViabilidade({
                 Curva J — recebimentos e desembolsos
               </h4>
               <div className="max-h-72 overflow-auto rounded-2xl border border-slate-200">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs min-w-[640px]">
                   <thead className="sticky top-0 bg-slate-50">
                     <tr className="text-left">
                       <th className="px-3 py-2 font-semibold text-slate-600">Mês</th>
@@ -173,6 +238,7 @@ export function AuditoriaPremissasViabilidade({
                       <th className="px-3 py-2 text-right font-semibold text-slate-600">Desembolsos</th>
                       <th className="px-3 py-2 text-right font-semibold text-slate-600">Líquido</th>
                       <th className="px-3 py-2 text-right font-semibold text-slate-600">Acumulado</th>
+                      <th className="px-3 py-2 text-right font-semibold text-slate-600">Acum. descontado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -187,6 +253,9 @@ export function AuditoriaPremissasViabilidade({
                         <td className={`px-3 py-1.5 text-right font-mono tabular-nums ${f.acumulado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {brlCents(f.acumulado)}
                         </td>
+                        <td className={`px-3 py-1.5 text-right font-mono tabular-nums ${f.acumuladoDescontado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {brlCents(f.acumuladoDescontado)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -195,7 +264,7 @@ export function AuditoriaPremissasViabilidade({
             </div>
           </div>
 
-          <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-100 px-5 py-3 flex flex-wrap justify-end gap-2">
+          <div className="sticky bottom-0 bg-white/95 border-t border-slate-100 px-5 py-3 flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={fechar}

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiService } from '../services/supabase';
 import type { Obra } from '../types';
+import { buscarIndicesEconomicos, INCC_FALLBACK_AM, IPCA_FALLBACK_AM } from '../lib/indices-economicos';
 import {
   calcViabilidade,
   custoObraDoOrcamento,
   ENTRADA_PADRAO_PCT,
   PARCELAS_PADRAO,
+  PRAZO_OBRA_PADRAO,
+  PRAZO_VENDAS_PADRAO,
   TMA_PADRAO_AA,
   vgvDosLotes,
   type ViabilidadeResult,
@@ -33,10 +36,10 @@ export const PREMISSAS_DEFAULT: PremissasObra = {
   comissao_pct: 5,
   impostos_pct: 6,
   taxa_minima_aa: TMA_PADRAO_AA,
-  prazo_meses: 24,
-  prazo_vendas_meses: 60,
-  reajuste_receita_pct_am: 0.4,
-  incc_pct_am: 0.5,
+  prazo_meses: PRAZO_OBRA_PADRAO,
+  prazo_vendas_meses: PRAZO_VENDAS_PADRAO,
+  reajuste_receita_pct_am: IPCA_FALLBACK_AM,
+  incc_pct_am: INCC_FALLBACK_AM,
   entrada_pct: ENTRADA_PADRAO_PCT,
   parcelas_meses: PARCELAS_PADRAO,
 };
@@ -109,6 +112,25 @@ export function useViabilidadeObra(obraId?: string, obra?: Obra | null) {
       }
       setForm(next);
       setDirty(false);
+
+      if (saved.reajuste_receita_pct_am == null || saved.incc_pct_am == null) {
+        void buscarIndicesEconomicos()
+          .then((indices) => {
+            setForm((f) => ({
+              ...f,
+              reajuste_receita_pct_am:
+                saved.reajuste_receita_pct_am == null &&
+                f.reajuste_receita_pct_am === PREMISSAS_DEFAULT.reajuste_receita_pct_am
+                  ? indices.ipcaAm
+                  : f.reajuste_receita_pct_am,
+              incc_pct_am:
+                saved.incc_pct_am == null && f.incc_pct_am === PREMISSAS_DEFAULT.incc_pct_am
+                  ? indices.inccAm
+                  : f.incc_pct_am,
+            }));
+          })
+          .catch(() => undefined);
+      }
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : 'Erro ao carregar a viabilidade.');
     } finally {
