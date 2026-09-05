@@ -15,7 +15,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
-import { brlCents, brlShort, paybackBR, pctBR, type ViabilidadeResult } from '../../lib/viabilidade';
+import { brlCents, brlShort, pctBR, rotuloPayback, type ViabilidadeResult } from '../../lib/viabilidade';
 
 const NAVY = '#1E3A8A';
 const COBALT = '#2563EB';
@@ -83,6 +83,7 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
   const expoPonto = chart.find((d) => d.mes === r.exposicaoMes) ?? null;
   const paybackMes = r.paybackDescontadoMeses != null ? Math.ceil(r.paybackDescontadoMeses) : null;
   const paybackPonto = paybackMes != null ? (chart.find((d) => d.mes === paybackMes) ?? null) : null;
+  const paybackTxt = rotuloPayback(r.paybackDescontadoMeses, r.paybackMeses);
 
   const composicao = [
     { nome: 'Terreno', valor: custoTerreno, cor: NAVY },
@@ -128,7 +129,8 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
             Exposição máxima: <strong>{brlCents(Math.abs(r.exposicaoMaxima))}</strong> no mês {r.exposicaoMes}
             {' • '}
             <span className="mr-1 inline-block h-2 w-2 rounded-full align-middle bg-emerald-500" />
-            Payback: <strong>{paybackBR(r.paybackDescontadoMeses)}</strong>
+            Payback: <strong>{paybackTxt.value}</strong>
+            {r.paybackDescontadoMeses == null && r.paybackMeses != null ? ` (${paybackTxt.hint})` : ''}
           </p>
         </div>
 

@@ -245,7 +245,24 @@ export const mesesBR = (n: number | null | undefined) =>
     : `${n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} meses`;
 
 export const paybackBR = (n: number | null | undefined) =>
-  n == null || !isFinite(n) ? 'não atingido no horizonte' : mesesBR(n);
+  n == null || !isFinite(n) ? 'Não se paga neste prazo' : mesesBR(n);
+
+/** Card/legenda: descontado se existir; senão frase amigável + payback simples no hint. */
+export function rotuloPayback(
+  descontado: number | null | undefined,
+  simples?: number | null
+): { value: string; hint: string } {
+  if (descontado != null && isFinite(descontado)) {
+    return { value: mesesBR(descontado), hint: 'Descontado pela TMA' };
+  }
+  if (simples != null && isFinite(simples)) {
+    return { value: 'Não se paga neste prazo', hint: `Payback simples: ${mesesBR(simples)}` };
+  }
+  return {
+    value: 'Não se paga neste prazo',
+    hint: 'O caixa não vira positivo no horizonte projetado',
+  };
+}
 
 export const brlCents = (n: number) =>
   (isFinite(n) ? n : 0).toLocaleString('pt-BR', {

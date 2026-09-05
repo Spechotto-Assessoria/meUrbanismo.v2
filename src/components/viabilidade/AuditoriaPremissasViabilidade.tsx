@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ClipboardCheck, Loader2, Save, X } from 'lucide-react';
-import { brlCents, calcViabilidade, paybackBR, pctBR } from '../../lib/viabilidade';
+import { brlCents, calcViabilidade, mesesBR, pctBR, rotuloPayback } from '../../lib/viabilidade';
 import { formatarDataIndice, rotuloFonteIndice } from '../../lib/indices-economicos';
 import { useIndicesEconomicos } from '../../hooks/useIndicesEconomicos';
 import type { PremissasObra } from '../../hooks/useViabilidadeObra';
@@ -118,8 +118,8 @@ export function AuditoriaPremissasViabilidade({
     { label: 'TIR (a.a.)', value: r.tirAnual != null && r.tirConfiavel ? pctBR(r.tirAnual) : '—' },
     { label: 'ROI', value: pctBR(r.roi) },
     { label: 'Lucro estimado', value: brlCents(r.lucro) },
-    { label: 'Payback', value: paybackBR(r.paybackMeses) },
-    { label: 'Payback descontado', value: paybackBR(r.paybackDescontadoMeses) },
+    { label: 'Payback', value: r.paybackMeses != null ? mesesBR(r.paybackMeses) : 'Não se paga neste prazo' },
+    { label: 'Payback descontado', value: rotuloPayback(r.paybackDescontadoMeses, r.paybackMeses).value },
     { label: 'TMA mensal equivalente', value: pctBR(r.taxaMensalTMA, 4) },
   ];
 
@@ -294,7 +294,7 @@ export function AuditoriaPremissasViabilidade({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
+        className="inline-flex h-10 items-center gap-1.5 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm"
       >
         <ClipboardCheck className="w-4 h-4 text-navy-800" /> Auditoria de premissas
       </button>
