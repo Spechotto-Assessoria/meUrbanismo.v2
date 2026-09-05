@@ -136,6 +136,18 @@ export interface MacroEtapa {
   data_fim_real?: string;
 }
 
+export interface AndamentoEtapa {
+  id: string;
+  obra_id?: string;
+  nome: string;
+  avanco_manual?: number | null;
+  visivel_convidados: boolean;
+  previsto: number;
+  realizado: number;
+  valor_total?: number | null;
+  peso_fracao: number;
+}
+
 // ============================================================
 // ORÇAMENTO
 // ============================================================

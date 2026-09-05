@@ -104,8 +104,13 @@ create table if not exists public.orcamentos (
   valor_total numeric(15,2) not null default 0,
   percentual_executado numeric(5,2) default 0,
   valor_executado numeric(15,2) default 0,
+  avanco_manual numeric(5,2),
+  visivel_convidados boolean not null default true,
   data_atualizacao timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.orcamentos add column if not exists avanco_manual numeric(5,2);
+alter table public.orcamentos add column if not exists visivel_convidados boolean not null default true;
 
 create table if not exists public.cronograma (
   id uuid primary key default gen_random_uuid(),
@@ -719,6 +724,52 @@ where public.has_obra_access(c.obra_id);
 
 grant select on public.cronograma_publico to authenticated;
 
+-- Andamento físico: etapas do orçamento visíveis a quem tem acesso à obra.
+-- R$ só para quem vê financeiro. Convidado (não admin) só vê etapas com olho aberto.
+create or replace view public.andamento_publico as
+with base as (
+  select
+    o.id,
+    o.obra_id,
+    o.descricao as nome,
+    o.avanco_manual,
+    coalesce(o.visivel_convidados, true) as visivel_convidados,
+    o.valor_total,
+    least(100::numeric, greatest(0::numeric, coalesce((
+      select sum(cm.percentual_previsto) from public.cronograma_meses cm where cm.etapa_id = o.id
+    ), 0))) as previsto,
+    least(100::numeric, greatest(0::numeric, coalesce(
+      o.avanco_manual,
+      (
+        select sum(cm.percentual_realizado) from public.cronograma_meses cm where cm.etapa_id = o.id
+      ),
+      0
+    ))) as realizado
+  from public.orcamentos o
+  where public.has_obra_access(o.obra_id)
+    and (
+      public.is_admin()
+      or coalesce(o.visivel_convidados, true)
+    )
+)
+select
+  b.id,
+  b.obra_id,
+  b.nome,
+  b.avanco_manual,
+  b.visivel_convidados,
+  b.previsto,
+  b.realizado,
+  case when public.can_view_financials() then b.valor_total end as valor_total,
+  case
+    when sum(b.valor_total) over (partition by b.obra_id) > 0
+    then b.valor_total / sum(b.valor_total) over (partition by b.obra_id)
+    else 0
+  end as peso_fracao
+from base b;
+
+grant select on public.andamento_publico to authenticated;
+
 create or replace view public.medicoes_publicas as
 select
   m.id,
@@ -1097,42 +1148,29 @@ security definer
 set search_path = public
 as $$
 begin
-  if old.percentual_concluido is not distinct from new.percentual_concluido
-     and old.status is not distinct from new.status then
+  -- O % concluído é atualizado pelo save do andamento, que já chama notificar_obra.
+  -- Este trigger só avisa mudança de status para não duplicar o sino.
+  if old.status is not distinct from new.status then
     return new;
   end if;
 
-  if old.percentual_concluido is distinct from new.percentual_concluido then
-    perform public.notificar_obra(
-      new.id,
-      'andamento',
-      'Andamento da obra atualizado',
-      'O avanço físico de ' || coalesce(new.nome, 'a obra') || ' agora está em ' ||
-        coalesce(round(new.percentual_concluido)::text, '0') || '%.',
-      'O andamento de ' || coalesce(new.nome, 'a obra') || ' foi atualizado.',
-      public.chave_agrupamento('andamento', new.id),
-      'todos',
-      1
-    );
-  elsif old.status is distinct from new.status then
-    perform public.notificar_obra(
-      new.id,
-      'geral',
-      'Status da obra atualizado',
-      'O status de ' || coalesce(new.nome, 'a obra') || ' mudou para ' || coalesce(new.status, '—') || '.',
-      'O status de ' || coalesce(new.nome, 'a obra') || ' foi atualizado.',
-      public.chave_agrupamento('status', new.id),
-      'todos',
-      1
-    );
-  end if;
+  perform public.notificar_obra(
+    new.id,
+    'geral',
+    'Status da obra atualizado',
+    'O status de ' || coalesce(new.nome, 'a obra') || ' mudou para ' || coalesce(new.status, '—') || '.',
+    'O status de ' || coalesce(new.nome, 'a obra') || ' foi atualizado.',
+    public.chave_agrupamento('status', new.id),
+    'todos',
+    1
+  );
   return new;
 end;
 $$;
 
 drop trigger if exists trg_notificar_andamento_obra on public.obras;
 create trigger trg_notificar_andamento_obra
-  after update of percentual_concluido, status on public.obras
+  after update of status on public.obras
   for each row execute function public.trg_notificar_andamento_obra();
 
 create or replace function public.trg_notificar_lote()

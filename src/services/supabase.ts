@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { MOCK_MACRO_ETAPAS } from './mockData';
+import { progressoPonderado } from '../lib/andamento';
 
 import {
   Empresa,
@@ -8,6 +9,7 @@ import {
   OrcamentoItem,
   CronogramaItem,
   CronogramaMes,
+  AndamentoEtapa,
   DiarioObra,
   MedicaoItem,
   FotoObra,
@@ -319,6 +321,71 @@ class SupabaseDataService {
   // ============================================================
   async getMacroEtapas(): Promise<MacroEtapa[]> {
     return MOCK_MACRO_ETAPAS;
+  }
+
+  async getAndamento(obraId: string): Promise<AndamentoEtapa[]> {
+    const { data, error } = await supabase
+      .from('andamento_publico')
+      .select('*')
+      .eq('obra_id', obraId)
+      .order('nome');
+    if (error) {
+      logSupabaseError('getAndamento', error);
+      return [];
+    }
+    return (data || []).map((r: any) => ({
+      id: r.id,
+      obra_id: r.obra_id,
+      nome: r.nome,
+      avanco_manual: r.avanco_manual == null ? null : Number(r.avanco_manual),
+      visivel_convidados: r.visivel_convidados !== false,
+      previsto: Number(r.previsto) || 0,
+      realizado: Number(r.realizado) || 0,
+      valor_total: r.valor_total == null ? null : Number(r.valor_total),
+      peso_fracao: Number(r.peso_fracao) || 0
+    }));
+  }
+
+  async salvarAvanco(obraId: string, etapa: AndamentoEtapa, percentual: number): Promise<void> {
+    const pct = Math.max(0, Math.min(100, percentual));
+    const { error } = await supabase
+      .from('orcamentos')
+      .update({ avanco_manual: pct, data_atualizacao: new Date().toISOString() })
+      .eq('id', etapa.id);
+    if (error) {
+      logSupabaseError('salvarAvanco', error);
+      throw new Error('Não foi possível salvar o avanço da etapa.');
+    }
+
+    const todas = await this.getAndamento(obraId);
+    const geral = progressoPonderado(todas, 'realizado');
+    await this.updateObraPercentual(obraId, Number(geral.toFixed(1)));
+
+    const visivel = etapa.visivel_convidados !== false;
+    const { error: nErr } = await supabase.rpc('notificar_obra', {
+      p_obra_id: obraId,
+      p_tipo: 'andamento',
+      p_titulo: 'Andamento da obra atualizado',
+      p_mensagem_unitaria: `A etapa ${etapa.nome} está em ${Math.round(pct)}%.`,
+      p_mensagem_plural: '%s etapas tiveram o andamento atualizado.',
+      p_agrupamento_chave: `andamento:${obraId}`,
+      p_escopo: visivel ? 'todos' : 'financeiro',
+      p_incremento: 1
+    });
+    if (nErr) {
+      logSupabaseError('salvarAvanco.notificar', nErr);
+    }
+  }
+
+  async salvarVisibilidade(etapaId: string, visivel: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('orcamentos')
+      .update({ visivel_convidados: visivel })
+      .eq('id', etapaId);
+    if (error) {
+      logSupabaseError('salvarVisibilidade', error);
+      throw new Error('Não foi possível alterar a visibilidade da etapa.');
+    }
   }
 
   // ============================================================
