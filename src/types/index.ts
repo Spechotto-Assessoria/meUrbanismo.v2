@@ -189,6 +189,14 @@ export interface CronogramaItem {
 /** @deprecated Use CronogramaItem */
 export type ItemCronograma = CronogramaItem;
 
+export interface CronogramaMes {
+  id?: string;
+  etapa_id: string;
+  ano_mes: string;
+  percentual_previsto: number;
+  percentual_realizado: number;
+}
+
 // ============================================================
 // DIÁRIO DE OBRA
 // ============================================================

@@ -124,6 +124,16 @@ create table if not exists public.cronograma (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Grade físico-financeira: % previsto/realizado por etapa (orcamentos.id) e mês.
+create table if not exists public.cronograma_meses (
+  id uuid primary key default gen_random_uuid(),
+  etapa_id uuid not null references public.orcamentos(id) on delete cascade,
+  ano_mes date not null,
+  percentual_previsto numeric(6,2) not null default 0,
+  percentual_realizado numeric(6,2) not null default 0,
+  unique (etapa_id, ano_mes)
+);
+
 create table if not exists public.diario_obra (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
@@ -422,6 +432,7 @@ grant select, insert, update, delete on
   public.obras,
   public.orcamentos,
   public.cronograma,
+  public.cronograma_meses,
   public.diario_obra,
   public.medicoes,
   public.fotos_obra,
@@ -441,6 +452,7 @@ alter table public.perfis enable row level security;
 alter table public.obras enable row level security;
 alter table public.orcamentos enable row level security;
 alter table public.cronograma enable row level security;
+alter table public.cronograma_meses enable row level security;
 alter table public.diario_obra enable row level security;
 alter table public.medicoes enable row level security;
 alter table public.fotos_obra enable row level security;
@@ -544,6 +556,21 @@ create policy "cronograma_admin_all" on public.cronograma for all
 drop policy if exists "cronograma_financeiro_select" on public.cronograma;
 create policy "cronograma_financeiro_select" on public.cronograma for select
   using (public.can_view_financials() and public.has_obra_access(obra_id));
+
+-- CRONOGRAMA_MESES: % por etapa/mês. Admin grava; quem vê financeiro lê na obra.
+drop policy if exists "cronograma_meses_admin_all" on public.cronograma_meses;
+create policy "cronograma_meses_admin_all" on public.cronograma_meses for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "cronograma_meses_financeiro_select" on public.cronograma_meses;
+create policy "cronograma_meses_financeiro_select" on public.cronograma_meses for select
+  using (
+    public.can_view_financials()
+    and exists (
+      select 1 from public.orcamentos o
+      where o.id = etapa_id and public.has_obra_access(o.obra_id)
+    )
+  );
 
 -- DIÁRIO DE OBRA: staff interno (financeiro) vê tudo; convidados só o que
 -- estiver marcado como público.

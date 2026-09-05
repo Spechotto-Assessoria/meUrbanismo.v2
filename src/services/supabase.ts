@@ -7,6 +7,7 @@ import {
   MacroEtapa,
   OrcamentoItem,
   CronogramaItem,
+  CronogramaMes,
   DiarioObra,
   MedicaoItem,
   FotoObra,
@@ -419,6 +420,47 @@ class SupabaseDataService {
       return [];
     }
     return (data || []) as CronogramaItem[];
+  }
+
+  async getCronogramaMeses(etapaIds: string[]): Promise<CronogramaMes[]> {
+    if (etapaIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('cronograma_meses')
+      .select('*')
+      .in('etapa_id', etapaIds);
+    if (error) {
+      logSupabaseError('getCronogramaMeses', error);
+      return [];
+    }
+    return (data || []) as CronogramaMes[];
+  }
+
+  async salvarCronogramaMeses(
+    etapaIds: string[],
+    rows: Omit<CronogramaMes, 'id'>[]
+  ): Promise<void> {
+    if (etapaIds.length > 0) {
+      const { error: delErr } = await supabase
+        .from('cronograma_meses')
+        .delete()
+        .in('etapa_id', etapaIds);
+      if (delErr) {
+        logSupabaseError('salvarCronogramaMeses.delete', delErr);
+        throw new Error('Não foi possível atualizar o cronograma.');
+      }
+    }
+    if (rows.length === 0) return;
+    const payload = rows.map((r) => ({
+      etapa_id: r.etapa_id,
+      ano_mes: r.ano_mes,
+      percentual_previsto: r.percentual_previsto,
+      percentual_realizado: r.percentual_realizado
+    }));
+    const { error } = await supabase.from('cronograma_meses').insert(payload);
+    if (error) {
+      logSupabaseError('salvarCronogramaMeses.insert', error);
+      throw new Error('Não foi possível salvar o cronograma.');
+    }
   }
 
   // ============================================================
