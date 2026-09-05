@@ -235,7 +235,23 @@ export const DashboardTab: React.FC<DashboardProps> = ({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {userObras.map(o => (
-              <div key={o.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 hover:border-blue-300 transition-colors">
+              <div
+                key={o.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setActiveObra(o);
+                  onSelectObra?.();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActiveObra(o);
+                    onSelectObra?.();
+                  }
+                }}
+                className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3 hover:border-blue-300 transition-colors cursor-pointer"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-100 uppercase">
@@ -251,7 +267,10 @@ export const DashboardTab: React.FC<DashboardProps> = ({
                       <>
                         <button
                           type="button"
-                          onClick={() => onEditObra?.(o)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditObra?.(o);
+                          }}
                           className="p-2 rounded-xl bg-slate-50 hover:bg-amber-50 text-slate-600 hover:text-amber-700 transition-colors cursor-pointer border border-slate-200"
                           title="Editar obra"
                         >
@@ -259,7 +278,10 @@ export const DashboardTab: React.FC<DashboardProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleArquivarObra(o)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleArquivarObra(o);
+                          }}
                           className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-colors cursor-pointer border border-slate-200"
                           title="Arquivar obra"
                         >
@@ -267,7 +289,10 @@ export const DashboardTab: React.FC<DashboardProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => void handleDeleteObra(o)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDeleteObra(o);
+                          }}
                           className="p-2 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-700 transition-colors cursor-pointer border border-slate-200"
                           title="Excluir obra"
                         >
@@ -277,9 +302,10 @@ export const DashboardTab: React.FC<DashboardProps> = ({
                     )}
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setActiveObra(o);
-                        if (onSelectObra) onSelectObra();
+                        onSelectObra?.();
                       }}
                       className="p-2 rounded-xl bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-600 transition-colors cursor-pointer border border-slate-200"
                       title="Abrir Empreendimento"
@@ -293,16 +319,9 @@ export const DashboardTab: React.FC<DashboardProps> = ({
                   <span className="text-xs text-slate-500">
                     Evolução Física: <strong className="text-slate-800">{o.percentual_concluido ?? 0}%</strong>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveObra(o);
-                      if (onSelectObra) onSelectObra();
-                    }}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-0.5 cursor-pointer"
-                  >
+                  <span className="text-xs font-bold text-blue-600 flex items-center gap-0.5">
                     Acessar Módulos <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  </span>
                 </div>
               </div>
             ))}
