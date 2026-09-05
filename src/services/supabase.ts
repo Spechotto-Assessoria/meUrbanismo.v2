@@ -363,6 +363,50 @@ class SupabaseDataService {
     return data as OrcamentoItem;
   }
 
+  async deleteOrcamento(id: string): Promise<void> {
+    const { error } = await supabase.from('orcamentos').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteOrcamento', error);
+      throw new Error('Não foi possível excluir a etapa.');
+    }
+  }
+
+  async deleteOrcamentosDaObra(obraId: string): Promise<void> {
+    const { error } = await supabase.from('orcamentos').delete().eq('obra_id', obraId);
+    if (error) {
+      logSupabaseError('deleteOrcamentosDaObra', error);
+      throw new Error('Não foi possível limpar o orçamento da obra.');
+    }
+  }
+
+  async importarEtapasOrcamento(
+    obraId: string,
+    etapas: { nome: string; valor_total: number; codigo?: string | null }[]
+  ): Promise<void> {
+    await this.deleteOrcamentosDaObra(obraId);
+    const agora = new Date().toISOString();
+    const payload = etapas.map((e) => ({
+      obra_id: obraId,
+      descricao: e.nome,
+      categoria: e.nome,
+      macro_etapa_nome: e.nome,
+      codigo_sinapi: e.codigo || null,
+      unidade: 'vb',
+      quantidade: 1,
+      valor_unitario: e.valor_total,
+      valor_total: e.valor_total,
+      valor_executado: 0,
+      percentual_executado: 0,
+      data_atualizacao: agora
+    }));
+    if (payload.length === 0) return;
+    const { error } = await supabase.from('orcamentos').insert(payload);
+    if (error) {
+      logSupabaseError('importarEtapasOrcamento', error);
+      throw new Error('Não foi possível importar as etapas do orçamento.');
+    }
+  }
+
   // ============================================================
   // CRONOGRAMA — leitura sempre via view mascarada "cronograma_publico"
   // ============================================================
