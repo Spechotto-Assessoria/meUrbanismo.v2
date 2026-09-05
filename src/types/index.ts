@@ -328,6 +328,37 @@ export interface ViabilidadeEstudo {
 /** @deprecated Use ViabilidadeEstudo */
 export type Viabilidade = ViabilidadeEstudo;
 
+/** Estudo de viabilidade INICIAL (pré-obra). Tabela public.estudos_viabilidade. */
+export type EstudoViabilidadeStatus = 'rascunho' | 'enviado' | 'aprovado' | 'arquivado';
+
+export interface EstudoViabilidade {
+  id: string;
+  titulo: string;
+  empresa_nome: string | null;
+  cnpj: string | null;
+  localizacao: string | null;
+  destinatario: string | null;
+  tipo: string;
+  status: string | null;
+  taxa_desconto_aa: number | null;
+  area_terreno: number;
+  area_app: number;
+  pct_vendavel: number;
+  pct_viario: number;
+  pct_verde: number;
+  pct_institucional: number;
+  lote_medio: number;
+  custo_m2_privativo: number;
+  valor_venda_m2: number | null;
+  custo_total: number;
+  vgv_total: number;
+  valor_lote: number;
+  prazo_obra_meses: number;
+  prazo_vendas_meses: number;
+  created_at?: string;
+  updated_at: string;
+}
+
 // ============================================================
 // LOTES / MAPA DE DISPONIBILIDADE
 // ============================================================

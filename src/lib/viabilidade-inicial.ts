@@ -4,13 +4,13 @@ export const PRESETS_AREAS = {
     loteamento: {
         label: "Loteamento Aberto",
         lei: "Lei 6.766/1979",
-        custoM2: 80.00,
+        custoM2: 150.00,
         padrao: { viario: 22, verde: 12, institucional: 6 },
     },
     condominio: {
         label: "Condominio Fechado / Condominio de Lotes",
         lei: "Lei 13.465/2017",
-        custoM2: 150.00,
+        custoM2: 350.00,
         padrao: { viario: 20, verde: 12, institucional: 6 },
     }
 };
@@ -90,7 +90,7 @@ function calcularTIR(fluxo: number[], guess = 0.01): number | null {
 }
 
 export function calcViabilidadeInicial(input: ViabilidadeInicialInput): ViabilidadeInicialResult {
-    const areaBase = input.areaTerreno - input.areaApp;
+    const areaBase = Math.max(0, input.areaTerreno - input.areaApp);
     const somaPct = (input.percentuais.viario + input.percentuais.verde + input.percentuais.institucional);
     const pctVendavel = Math.max(0, 100 - somaPct);
     const areaVendavel = areaBase * (pctVendavel / 100);

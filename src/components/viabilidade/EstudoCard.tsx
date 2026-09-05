@@ -6,6 +6,7 @@ import {
     type TipoEmpreendimento,
     type ViabilidadeInicialInput,
 } from "../../lib/viabilidade-inicial";
+import type { EstudoViabilidade } from "../../types";
 
 const brlShort = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -55,31 +56,17 @@ export function normalizeStatus(s: string | null | undefined): EstudoStatus {
     return (STATUS_PIPELINE.find((x) => x.id === s)?.id ?? "rascunho") as EstudoStatus;
 }
 
-export type EstudoRow = {
-    id: string;
-    titulo: string;
-    empresa_nome: string | null;
-    cnpj: string | null;
-    localizacao: string | null;
-    destinatario: string | null;
-    tipo: string;
-    status: string | null;
-    taxa_desconto_aa: number | null;
-    area_terreno: number;
-    area_app: number;
-    pct_vendavel: number;
-    pct_viario: number;
-    pct_verde: number;
-    pct_institucional: number;
-    lote_medio: number;
-    custo_m2_privativo: number;
-    custo_total: number;
-    vgv_total: number;
-    valor_lote: number;
-    prazo_obra_meses: number;
-    prazo_vendas_meses: number;
-    updated_at: string;
-};
+export type EstudoRow = EstudoViabilidade;
+
+export function inferirValorVendaM2(e: EstudoRow): number {
+    const salvo = Number(e.valor_venda_m2);
+    if (salvo > 0) return salvo;
+    const areaBase = Math.max(0, Number(e.area_terreno) - Number(e.area_app));
+    const somaPct = Number(e.pct_viario) + Number(e.pct_verde) + Number(e.pct_institucional);
+    const pctVendavel = Math.max(0, 100 - somaPct);
+    const areaVendavel = areaBase * (pctVendavel / 100);
+    return areaVendavel > 0 ? Number(e.vgv_total) / areaVendavel : 600;
+}
 
 export function rowToInput(e: EstudoRow): ViabilidadeInicialInput {
     const tipo: TipoEmpreendimento = e.tipo === "condominio" ? "condominio" : "loteamento";
@@ -99,9 +86,10 @@ export function rowToInput(e: EstudoRow): ViabilidadeInicialInput {
         },
         loteMedio: Number(e.lote_medio) || 250,
         custoM2Privativo: Number(e.custo_m2_privativo) || PRESETS_AREAS[tipo].custoM2,
+        valorVendaM2: inferirValorVendaM2(e),
         taxaDescontoAA: Number(e.taxa_desconto_aa) || 12,
-        prazoObraMeses: Number(e.prazo_obra_meses) || 24,
-        prazoVendasMeses: Number(e.prazo_vendas_meses) || 36,
+        prazoObraMeses: Number(e.prazo_obra_meses) || 36,
+        prazoVendasMeses: Number(e.prazo_vendas_meses) || 60,
     };
 }
 

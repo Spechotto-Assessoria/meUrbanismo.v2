@@ -216,6 +216,38 @@ create table if not exists public.viabilidade (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Estudos de viabilidade INICIAL (pré-obra, N por empresa). NÃO confundir com
+-- public.viabilidade, que é 1:1 com obra_id e alimenta a aba financeira da obra.
+create table if not exists public.estudos_viabilidade (
+  id uuid primary key default gen_random_uuid(),
+  titulo text not null,
+  empresa_nome text,
+  destinatario text,
+  cnpj text,
+  localizacao text,
+  tipo text not null default 'loteamento',
+  status text not null default 'rascunho',
+  area_terreno numeric(14,2) not null default 0,
+  area_app numeric(14,2) not null default 0,
+  pct_viario numeric(6,2) not null default 0,
+  pct_verde numeric(6,2) not null default 0,
+  pct_institucional numeric(6,2) not null default 0,
+  pct_vendavel numeric(6,2) not null default 0,
+  lote_medio numeric(10,2) not null default 0,
+  custo_m2_privativo numeric(12,2) not null default 0,
+  valor_venda_m2 numeric(12,2) not null default 0,
+  custo_total numeric(15,2) not null default 0,
+  vgv_total numeric(15,2) not null default 0,
+  valor_lote numeric(12,2) not null default 0,
+  prazo_obra_meses integer not null default 24,
+  prazo_vendas_meses integer not null default 36,
+  taxa_desconto_aa numeric(6,2) not null default 12,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  constraint estudos_viabilidade_tipo_check check (tipo in ('loteamento', 'condominio')),
+  constraint estudos_viabilidade_status_check check (status in ('rascunho', 'enviado', 'aprovado', 'arquivado'))
+);
+
 create table if not exists public.lotes (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
@@ -395,6 +427,7 @@ grant select, insert, update, delete on
   public.fotos_obra,
   public.obra_arquivos,
   public.viabilidade,
+  public.estudos_viabilidade,
   public.lotes,
   public.convites
 to authenticated;
@@ -413,6 +446,7 @@ alter table public.medicoes enable row level security;
 alter table public.fotos_obra enable row level security;
 alter table public.obra_arquivos enable row level security;
 alter table public.viabilidade enable row level security;
+alter table public.estudos_viabilidade enable row level security;
 alter table public.lotes enable row level security;
 alter table public.convites enable row level security;
 
@@ -566,6 +600,11 @@ create policy "viabilidade_admin_all" on public.viabilidade for all
 drop policy if exists "viabilidade_financeiro_select" on public.viabilidade;
 create policy "viabilidade_financeiro_select" on public.viabilidade for select
   using (public.can_view_financials() and public.has_obra_access(obra_id));
+
+-- ESTUDOS DE VIABILIDADE INICIAL: 100% financeiro, pré-obra, só admin.
+drop policy if exists "estudos_viabilidade_admin_all" on public.estudos_viabilidade;
+create policy "estudos_viabilidade_admin_all" on public.estudos_viabilidade for all
+  using (public.is_admin()) with check (public.is_admin());
 
 -- LOTES: preço de venda do lote é informação comercial (não "financeiro interno"),
 -- visível a todos com acesso à obra — corretores e clientes precisam ver preços

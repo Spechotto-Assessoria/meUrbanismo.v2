@@ -12,6 +12,7 @@ import {
   FotoObra,
   DocumentoObra,
   ViabilidadeEstudo,
+  EstudoViabilidade,
   Lote,
   Convite,
   UserProfile,
@@ -524,6 +525,82 @@ class SupabaseDataService {
       return {} as ViabilidadeEstudo;
     }
     return (data || {}) as ViabilidadeEstudo;
+  }
+
+  // ============================================================
+  // ESTUDOS DE VIABILIDADE INICIAL (pré-obra, tabela estudos_viabilidade)
+  // ============================================================
+  async listEstudosViabilidade(): Promise<EstudoViabilidade[]> {
+    const { data, error } = await supabase
+      .from('estudos_viabilidade')
+      .select('*')
+      .order('updated_at', { ascending: false });
+    if (error) {
+      logSupabaseError('listEstudosViabilidade', error);
+      throw new Error('Não foi possível carregar os estudos de viabilidade.');
+    }
+    return (data || []) as EstudoViabilidade[];
+  }
+
+  async saveEstudoViabilidade(
+    estudo: Partial<EstudoViabilidade> & { titulo: string }
+  ): Promise<EstudoViabilidade> {
+    const agora = new Date().toISOString();
+    const payload = clean({
+      titulo: estudo.titulo,
+      empresa_nome: estudo.empresa_nome || null,
+      destinatario: estudo.destinatario || null,
+      cnpj: estudo.cnpj || null,
+      localizacao: estudo.localizacao || null,
+      tipo: estudo.tipo || 'loteamento',
+      status: estudo.status || 'rascunho',
+      area_terreno: estudo.area_terreno ?? 0,
+      area_app: estudo.area_app ?? 0,
+      pct_viario: estudo.pct_viario ?? 0,
+      pct_verde: estudo.pct_verde ?? 0,
+      pct_institucional: estudo.pct_institucional ?? 0,
+      pct_vendavel: estudo.pct_vendavel ?? 0,
+      lote_medio: estudo.lote_medio ?? 0,
+      custo_m2_privativo: estudo.custo_m2_privativo ?? 0,
+      valor_venda_m2: estudo.valor_venda_m2 ?? 0,
+      custo_total: estudo.custo_total ?? 0,
+      vgv_total: estudo.vgv_total ?? 0,
+      valor_lote: estudo.valor_lote ?? 0,
+      prazo_obra_meses: estudo.prazo_obra_meses ?? 24,
+      prazo_vendas_meses: estudo.prazo_vendas_meses ?? 36,
+      taxa_desconto_aa: estudo.taxa_desconto_aa ?? 12,
+      updated_at: agora
+    });
+
+    const query = estudo.id
+      ? supabase.from('estudos_viabilidade').update(payload).eq('id', estudo.id).select().single()
+      : supabase.from('estudos_viabilidade').insert(payload).select().single();
+
+    const { data, error } = await query;
+    if (error) {
+      logSupabaseError('saveEstudoViabilidade', error);
+      throw new Error('Não foi possível salvar o estudo de viabilidade.');
+    }
+    return data as EstudoViabilidade;
+  }
+
+  async updateEstudoViabilidadeStatus(id: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('estudos_viabilidade')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) {
+      logSupabaseError('updateEstudoViabilidadeStatus', error);
+      throw new Error('Não foi possível atualizar o status do estudo.');
+    }
+  }
+
+  async deleteEstudoViabilidade(id: string): Promise<void> {
+    const { error } = await supabase.from('estudos_viabilidade').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteEstudoViabilidade', error);
+      throw new Error('Não foi possível excluir o estudo de viabilidade.');
+    }
   }
 
   // ============================================================
