@@ -330,6 +330,7 @@ export interface ViabilidadeEstudo {
   custo_marketing_admin?: number;
   comissoes_vendas?: number;
   impostos_receita?: number;
+  custo_total?: number;
   // Resultados
   lucro_estimado?: number;
   lucro_liquido_projetado?: number;
@@ -343,6 +344,7 @@ export interface ViabilidadeEstudo {
   ponto_equilibrio_meses?: number;
   ponto_equilibrio_lotes?: number;
   prazo_meses?: number;
+  premissas?: Record<string, unknown>;
 }
 
 /** @deprecated Use ViabilidadeEstudo */

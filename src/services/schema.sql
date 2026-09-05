@@ -228,8 +228,13 @@ create table if not exists public.viabilidade (
   prazo_meses integer default 24,
   ponto_equilibrio_meses integer default 8,
   ponto_equilibrio_lotes integer default 45,
+  premissas jsonb not null default '{}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Backfill: bancos criados antes desta coluna.
+alter table public.viabilidade
+  add column if not exists premissas jsonb not null default '{}'::jsonb;
 
 -- Estudos de viabilidade INICIAL (pré-obra, N por empresa). NÃO confundir com
 -- public.viabilidade, que é 1:1 com obra_id e alimenta a aba financeira da obra.

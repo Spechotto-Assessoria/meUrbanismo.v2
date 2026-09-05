@@ -701,6 +701,21 @@ class SupabaseDataService {
     return (data || {}) as ViabilidadeEstudo;
   }
 
+  async saveViabilidade(
+    payload: Partial<ViabilidadeEstudo> & { obra_id: string }
+  ): Promise<ViabilidadeEstudo> {
+    const { data, error } = await supabase
+      .from('viabilidade')
+      .upsert(payload, { onConflict: 'obra_id' })
+      .select()
+      .single();
+    if (error) {
+      logSupabaseError('saveViabilidade', error);
+      throw new Error('Não foi possível salvar o estudo de viabilidade.');
+    }
+    return data as ViabilidadeEstudo;
+  }
+
   // ============================================================
   // ESTUDOS DE VIABILIDADE INICIAL (pré-obra, tabela estudos_viabilidade)
   // ============================================================
