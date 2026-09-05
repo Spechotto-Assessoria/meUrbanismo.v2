@@ -102,7 +102,9 @@ export interface Obra {
   dataEntrega?: string;
   // Métricas
   area_total_m2?: number;
+  area_vendavel_m2?: number;
   areaM2?: number;
+  metragem_padrao_lote?: number;
   metragemPadraoLote?: number;
   percentual_concluido?: number;
   total_lotes?: number;

@@ -58,7 +58,8 @@ export const ResumoObraTab: React.FC<ResumoObraTabProps> = ({ onNavigateTab }) =
     new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(v);
 
   const areaTotal = activeObra.area_total_m2 || activeObra.areaM2 || 245000;
-  const areaVendavel = areaTotal * 0.55; // Média de aproveitamento vendável
+  const areaVendavelSalva = Number(activeObra.area_vendavel_m2) || 0;
+  const areaVendavel = areaVendavelSalva > 0 ? areaVendavelSalva : areaTotal * 0.55;
   const qtdLotes = activeObra.total_lotes || activeObra.qtdLotes || 312;
   const lotesVendidos = activeObra.lotes_vendidos || 198;
   const lotesDisponiveis = activeObra.lotes_disponiveis || Math.max(0, qtdLotes - lotesVendidos);
@@ -76,7 +77,7 @@ export const ResumoObraTab: React.FC<ResumoObraTabProps> = ({ onNavigateTab }) =
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 uppercase tracking-wider">
-              {activeObra.tipo || 'Loteamento Fechado'}
+              {activeObra.tipo || 'Condomínio Horizontal Fechado'}
             </span>
             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
               Em Obras

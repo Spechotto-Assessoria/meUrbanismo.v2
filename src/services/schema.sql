@@ -64,7 +64,7 @@ create table if not exists public.obras (
   id uuid primary key default gen_random_uuid(),
   empresa_id uuid references public.empresas(id) on delete cascade,
   nome text not null,
-  tipo text not null default 'Loteamento Fechado',
+  tipo text not null default 'Condomínio Horizontal Fechado',
   cidade text not null,
   uf text not null default 'SP',
   status text not null default 'Em Andamento',
@@ -74,6 +74,7 @@ create table if not exists public.obras (
   data_previsao date,
   percentual_concluido numeric(5,2) default 0,
   area_total_m2 numeric(12,2) default 0,
+  area_vendavel_m2 numeric(12,2) default 0,
   metragem_padrao_lote numeric(8,2) default 0,
   total_lotes integer default 0,
   lotes_disponiveis integer default 0,
@@ -89,6 +90,8 @@ create table if not exists public.obras (
 
 -- Backfill: bancos já existentes não recebem a coluna pelo CREATE TABLE IF NOT EXISTS.
 alter table public.obras add column if not exists arquivada boolean not null default false;
+alter table public.obras add column if not exists area_vendavel_m2 numeric(12,2) default 0;
+alter table public.obras alter column tipo set default 'Condomínio Horizontal Fechado';
 
 create table if not exists public.orcamentos (
   id uuid primary key default gen_random_uuid(),
@@ -691,6 +694,7 @@ select
   o.data_previsao,
   o.percentual_concluido,
   o.area_total_m2,
+  o.area_vendavel_m2,
   o.metragem_padrao_lote,
   o.total_lotes,
   o.lotes_disponiveis,

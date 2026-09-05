@@ -68,7 +68,8 @@ export function useViabilidadeObra(obraId?: string, obra?: Obra | null) {
   const [sucesso, setSucesso] = useState<string | null>(null);
 
   const areaGleba = obra?.area_total_m2 || obra?.areaM2 || 0;
-  const areaVendavel = areaGleba > 0 ? areaGleba * 0.55 : 0;
+  const areaVendavelSalva = Number(obra?.area_vendavel_m2) || 0;
+  const areaVendavel = areaVendavelSalva > 0 ? areaVendavelSalva : (areaGleba > 0 ? areaGleba * 0.55 : 0);
   const qtdLotes = obra?.total_lotes || obra?.qtdLotes || 0;
 
   const carregar = useCallback(async () => {

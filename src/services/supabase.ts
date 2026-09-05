@@ -51,7 +51,31 @@ import {
  * (ou em Project Settings → API → "Reload schema" / reiniciar o projeto).
  */
 function isSchemaCacheError(error: any): boolean {
-  return error?.code === 'PGRST205' || /schema cache/i.test(error?.message || '');
+  const code = String(error?.code || '');
+  const message = String(error?.message || '');
+  return (
+    code === 'PGRST205' ||
+    code === 'PGRST204' ||
+    code === '42703' ||
+    /schema cache/i.test(message) ||
+    /could not find the .* column/i.test(message)
+  );
+}
+
+function isRlsError(error: any): boolean {
+  const code = String(error?.code || '');
+  const message = String(error?.message || '');
+  return code === '42501' || /row-level security|permission denied/i.test(message);
+}
+
+function mensagemErroObra(error: { code?: string; message?: string }): string {
+  if (isRlsError(error)) {
+    return 'Permissão negada (RLS). Apenas administradores podem cadastrar ou editar obras.';
+  }
+  if (isSchemaCacheError(error)) {
+    return 'O banco de dados está com o schema ou o cache da API desatualizado. Execute o schema.sql atualizado no SQL Editor e rode "NOTIFY pgrst, \'reload schema\';".';
+  }
+  return error?.message || 'Não foi possível salvar a obra. Tente novamente.';
 }
 
 const SCHEMA_CACHE_HINT =
@@ -192,7 +216,7 @@ class SupabaseDataService {
     const camposFormulario = clean({
       empresa_id: empresaId,
       nome,
-      tipo: obra.tipo || 'Loteamento Fechado',
+      tipo: obra.tipo || 'Condomínio Horizontal Fechado',
       cidade,
       uf: (obra.uf || 'SP').trim().toUpperCase().slice(0, 2) || 'SP',
       status: obra.status || 'Planejamento',
@@ -201,6 +225,7 @@ class SupabaseDataService {
       data_inicio: dataInicio || null,
       data_previsao: dataPrevisao || null,
       area_total_m2: obra.area_total_m2 ?? anyObra.areaM2 ?? 0,
+      area_vendavel_m2: obra.area_vendavel_m2 ?? anyObra.areaVendavelM2 ?? 0,
       metragem_padrao_lote: anyObra.metragem_padrao_lote ?? anyObra.metragemPadraoLote ?? 0,
       total_lotes: totalLotes,
       valor_vgv: obra.valor_vgv ?? anyObra.valorGlobal ?? 0,
@@ -210,12 +235,7 @@ class SupabaseDataService {
 
     const throwSaveError = (error: { code?: string; message?: string }) => {
       logSupabaseError('saveObra', error);
-      if (isSchemaCacheError(error)) {
-        throw new Error(
-          'O banco de dados está com o cache da API desatualizado. Peça ao administrador para recarregar o schema no painel do Supabase (SQL Editor → executar "NOTIFY pgrst, \'reload schema\';") e tente novamente.'
-        );
-      }
-      throw new Error('Não foi possível salvar a obra. Apenas administradores podem cadastrar ou editar obras.');
+      throw new Error(mensagemErroObra(error));
     };
 
     if (obra.id) {
