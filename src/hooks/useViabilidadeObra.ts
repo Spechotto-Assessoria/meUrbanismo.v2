@@ -144,35 +144,50 @@ export function useViabilidadeObra(obraId?: string, obra?: Obra | null) {
     setPremissa('custos_indiretos_pct', Number(orcamento.sugeridoPct.toFixed(2)));
   };
 
-  const salvar = async () => {
-    if (!obraId) return;
+  const aplicarPremissas = (next: PremissasObra) => {
+    setForm(next);
+    setDirty(true);
+    setSucesso(null);
+  };
+
+  const salvar = async (premissas?: PremissasObra) => {
+    if (!obraId) return false;
+    const p = premissas ?? form;
+    const vgvEfetivo = vgvLotes > 0 ? vgvLotes : areaVendavel * p.preco_m2;
+    const res = premissas
+      ? calcViabilidade({ ...p, vgv: vgvEfetivo, custo_obra: orcamento.custoObra })
+      : resultado;
     setSalvando(true);
     setErro(null);
     try {
       await apiService.saveViabilidade({
         obra_id: obraId,
-        premissas: form,
+        premissas: p,
         area_total: areaVendavel || areaLotes || undefined,
         quantidade_lotes: qtdLotes || undefined,
-        vgv_bruto: resultado.vgvNominal,
-        vgv_liquido: resultado.vgvReajustado,
-        custo_terreno: form.custo_terreno,
-        custo_obras_infra: resultado.custoObraReajustado,
-        custo_marketing_admin: resultado.custosIndiretos,
-        comissoes_vendas: resultado.comissao,
-        impostos_receita: resultado.impostos,
-        custo_total: resultado.custoTotal,
-        lucro_liquido_projetado: resultado.lucro,
-        margem_liquida_percentual: resultado.margem,
-        roi_percentual: resultado.roi,
-        tir_anual_percentual: resultado.tirAnual ?? undefined,
-        prazo_meses: form.prazo_meses,
-        ponto_equilibrio_meses: resultado.paybackMeses ?? undefined,
+        vgv_bruto: res.vgvNominal,
+        vgv_liquido: res.vgvReajustado,
+        custo_terreno: p.custo_terreno,
+        custo_obras_infra: res.custoObraReajustado,
+        custo_marketing_admin: res.custosIndiretos,
+        comissoes_vendas: res.comissao,
+        impostos_receita: res.impostos,
+        custo_total: res.custoTotal,
+        lucro_liquido_projetado: res.lucro,
+        margem_liquida_percentual: res.margem,
+        roi_percentual: res.roi,
+        tir_anual_percentual: res.tirAnual ?? undefined,
+        prazo_meses: p.prazo_meses,
+        ponto_equilibrio_meses:
+          res.paybackMeses != null ? Math.round(res.paybackMeses) : undefined,
       });
+      setForm(p);
       setDirty(false);
       setSucesso('Estudo de viabilidade salvo.');
+      return true;
     } catch (e: unknown) {
       setErro(e instanceof Error ? e.message : 'Não foi possível salvar.');
+      return false;
     } finally {
       setSalvando(false);
     }
@@ -196,6 +211,7 @@ export function useViabilidadeObra(obraId?: string, obra?: Obra | null) {
     setErro,
     setSucesso,
     setPremissa,
+    aplicarPremissas,
     aplicarIndiretosSugeridos,
     salvar,
   };

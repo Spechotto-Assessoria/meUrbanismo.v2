@@ -15,7 +15,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
-import { brlCents, brlShort, pctBR, type ViabilidadeResult } from '../../lib/viabilidade';
+import { brlCents, brlShort, mesesBR, pctBR, type ViabilidadeResult } from '../../lib/viabilidade';
 
 const NAVY = '#1E3A8A';
 const COBALT = '#2563EB';
@@ -28,7 +28,7 @@ type Props = { resultado: ViabilidadeResult; custoTerreno: number };
 function FluxoTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         Mês {String(label).replace('M', '')}
       </p>
@@ -45,7 +45,7 @@ function ReceitaDespesaTooltip({ active, payload, label }: TooltipProps<number, 
   const receita = Number(payload.find((p) => p.dataKey === 'receita')?.value ?? 0);
   const despesa = Math.abs(Number(payload.find((p) => p.dataKey === 'despesa')?.value ?? 0));
   return (
-    <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         Mês {String(label).replace('M', '')}
       </p>
@@ -62,7 +62,7 @@ function DonutTooltip({ active, payload, total }: TooltipProps<number, string> &
   if (!active || !payload?.length) return null;
   const v = Number(payload[0].value);
   return (
-    <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{payload[0].name}</p>
       <p className="text-sm font-black tabular-nums" style={{ color: NAVY }}>{brlCents(v)}</p>
       <p className="text-[10px] text-slate-500">{pctBR(total > 0 ? (v / total) * 100 : 0)} do custo total</p>
@@ -81,7 +81,8 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
   const passo = Math.max(1, Math.ceil(chart.length / 6));
   const ticks = chart.filter((_, i) => i % passo === 0).map((d) => d.label);
   const expoPonto = chart.find((d) => d.mes === r.exposicaoMes) ?? null;
-  const paybackPonto = r.paybackMeses != null ? (chart.find((d) => d.mes === r.paybackMeses) ?? null) : null;
+  const paybackMes = r.paybackMeses != null ? Math.ceil(r.paybackMeses) : null;
+  const paybackPonto = paybackMes != null ? (chart.find((d) => d.mes === paybackMes) ?? null) : null;
 
   const composicao = [
     { nome: 'Terreno', valor: custoTerreno, cor: NAVY },
@@ -95,7 +96,7 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">
             Fluxo de caixa acumulado (curva J)
           </h3>
@@ -127,11 +128,11 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
             Exposição máxima: <strong>{brlCents(Math.abs(r.exposicaoMaxima))}</strong> no mês {r.exposicaoMes}
             {' • '}
             <span className="mr-1 inline-block h-2 w-2 rounded-full align-middle bg-emerald-500" />
-            Payback: <strong>{r.paybackMeses != null ? `mês ${r.paybackMeses}` : 'não atingido'}</strong>
+            Payback: <strong>{r.paybackMeses != null ? mesesBR(r.paybackMeses) : 'não atingido'}</strong>
           </p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">
             Receitas x Despesas por mês
           </h3>
@@ -143,15 +144,15 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
                 <YAxis tick={{ fontSize: 10, fill: SLATE }} tickLine={false} axisLine={false} width={58} tickFormatter={(v: number) => brlShort(v)} />
                 <Tooltip content={<ReceitaDespesaTooltip />} cursor={{ fill: SLATE, fillOpacity: 0.08 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="receita" name="Receitas" stackId="rd" fill={EMERALD} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="despesa" name="Despesas" stackId="rd" fill={CORAL} radius={[0, 0, 4, 4]} />
+                <Bar dataKey="receita" name="Receitas" stackId="rd" fill={EMERALD} radius={[8, 8, 0, 0]} />
+                <Bar dataKey="despesa" name="Despesas" stackId="rd" fill={CORAL} radius={[0, 0, 8, 8]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Composição de custos</h3>
           <p className="text-xs text-slate-500">
@@ -176,7 +177,7 @@ export function ViabilidadeObraCharts({ resultado: r, custoTerreno }: Props) {
             {composicao.map((c) => {
               const p = r.custoTotal > 0 ? (c.valor / r.custoTotal) * 100 : 0;
               return (
-                <div key={c.nome} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div key={c.nome} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-sm font-medium text-slate-800">{c.nome}</span>
                     <span className="font-mono text-xs tabular-nums" style={{ color: c.cor }}>{pctBR(p)}</span>

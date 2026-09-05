@@ -56,7 +56,7 @@ function WaterfallTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload as Barra;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white/95 px-3 py-2 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{d.nome}</p>
       <p className="text-sm font-black tabular-nums" style={{ color: d.cor }}>
         {d.delta < 0 ? '-' : ''}
@@ -90,7 +90,7 @@ export function WaterfallVGV(props: WaterfallInput) {
             />
             <Tooltip content={<WaterfallTooltip />} cursor={{ fill: SLATE, fillOpacity: 0.08 }} />
             <Bar dataKey="base" stackId="w" fill="transparent" isAnimationActive={false} />
-            <Bar dataKey="valor" stackId="w" radius={[4, 4, 0, 0]} isAnimationActive>
+            <Bar dataKey="valor" stackId="w" radius={[8, 8, 0, 0]} isAnimationActive>
               {dados.map((d) => (
                 <Cell key={d.nome} fill={d.cor} />
               ))}

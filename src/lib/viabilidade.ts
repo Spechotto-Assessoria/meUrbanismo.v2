@@ -1,3 +1,14 @@
+import {
+  irr,
+  mesExposicaoMaxima,
+  npv,
+  paybackDescontado,
+  paybackInterpolado,
+  taxaMensalEquivalente,
+  tirAnualEfetiva,
+  tirConfiavelFaixa,
+} from './viabilidade-math';
+
 export type LoteVgv = { descricao: string; quantidade: number; area_m2: number; valor_m2: number };
 
 export type ViabilidadeInput = {
@@ -14,20 +25,13 @@ export type ViabilidadeInput = {
   reajuste_receita_pct_am?: number;
   /** Projeção do INCC aplicada ao cronograma de obra, % a.m. */
   incc_pct_am?: number;
-  /** Entrada paga no ato da venda, % do valor do lote (padrão 20%). */
   entrada_pct?: number;
-  /** Número de parcelas do saldo após a entrada (padrão 36). */
   parcelas_meses?: number;
 };
 
-/** TMA padrão de mercado para desconto do VPL (% a.a.). */
 export const TMA_PADRAO_AA = 12;
-/** Entrada padrão (% do valor da venda). */
 export const ENTRADA_PADRAO_PCT = 20;
-/** Parcelamento padrão do saldo (meses). */
 export const PARCELAS_PADRAO = 36;
-
-/** Linhas do orçamento que não entram no custo direto da obra. */
 export const LINHA_INDIRETOS = /indiret|administrativ/i;
 
 export type FluxoMes = {
@@ -48,22 +52,25 @@ export type ViabilidadeResult = {
   comissao: number;
   impostos: number;
   custoTotal: number;
+  capitalInvestido: number;
   lucro: number;
   margem: number;
   roi: number;
   tirMensal: number | null;
   tirAnual: number | null;
-  /** false quando a TIR fica fora de faixa plausível (fluxo degenerado). */
+  /** false se a TIR não for única (Norstrom) ou sair da faixa plausível. */
   tirConfiavel: boolean;
   taxaMensalTMA: number;
   vpl: number;
   paybackMeses: number | null;
+  paybackDescontadoMeses: number | null;
   fluxo: FluxoMes[];
   exposicaoMaxima: number;
   exposicaoMes: number;
 };
 
-/** Soma o orçamento excluindo custos indiretos/administrativos e sugere o %. */
+export { npv, irr, taxaMensalEquivalente, paybackInterpolado as mesesAtePayback, mesExposicaoMaxima };
+
 export function custoObraDoOrcamento(
   itens: { descricao?: string | null; valor_total?: number | null }[]
 ) {
@@ -81,7 +88,6 @@ export function custoObraDoOrcamento(
   };
 }
 
-/** VGV a partir da tabela de lotes (quantidade × área × valor por m²). */
 export function vgvDosLotes(lotes: LoteVgv[]): { vgv: number; area: number } {
   let vgv = 0;
   let area = 0;
@@ -93,68 +99,7 @@ export function vgvDosLotes(lotes: LoteVgv[]): { vgv: number; area: number } {
   return { vgv, area };
 }
 
-/** Valor presente líquido de uma série mensal (índice 0 = mês 0). */
-export function npv(rate: number, flows: number[]): number {
-  return flows.reduce((acc, f, i) => acc + f / Math.pow(1 + rate, i), 0);
-}
-
-/** TIR por bisseção sobre o fluxo mensal. Retorna null se não convergir. */
-export function irr(flows: number[]): number | null {
-  const f = (r: number) => npv(r, flows);
-  let lo = -0.9999;
-  let hi = 1;
-  let flo = f(lo);
-  let fhi = f(hi);
-
-  let tentativas = 0;
-  while (isFinite(flo) && isFinite(fhi) && flo * fhi > 0 && tentativas < 40) {
-    hi *= 2;
-    fhi = f(hi);
-    tentativas++;
-  }
-
-  if (!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) {
-    let prevR = -0.99;
-    let prevV = f(prevR);
-    for (let r = -0.98; r <= 10; r += 0.01) {
-      const v = f(r);
-      if (isFinite(prevV) && isFinite(v) && prevV * v <= 0) {
-        lo = prevR;
-        hi = r;
-        flo = prevV;
-        fhi = v;
-        break;
-      }
-      prevR = r;
-      prevV = v;
-    }
-  }
-  if (!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) return null;
-  for (let i = 0; i < 200; i++) {
-    const mid = (lo + hi) / 2;
-    const fm = f(mid);
-    if (!isFinite(fm)) return null;
-    if (Math.abs(fm) < 1e-7) return mid;
-    if (flo * fm <= 0) {
-      hi = mid;
-    } else {
-      lo = mid;
-      flo = fm;
-    }
-  }
-  const r = (lo + hi) / 2;
-  return isFinite(r) ? r : null;
-}
-
-export function mesesAtePayback(fluxo: FluxoMes[]): number | null {
-  return fluxo.find((f) => f.acumulado >= 0 && f.mes > 0)?.mes ?? null;
-}
-
-export function mesExposicaoMaxima(fluxo: FluxoMes[]): FluxoMes {
-  return fluxo.reduce((a, b) => (b.acumulado < a.acumulado ? b : a), fluxo[0]);
-}
-
-/** Curva S (logística) de desembolso da obra: pesos normalizados por mês. */
+/** Curva S (gaussiana) de desembolso da obra: pesos normalizados. */
 function curvaSPesos(n: number): number[] {
   const pesos: number[] = [];
   let soma = 0;
@@ -167,12 +112,15 @@ function curvaSPesos(n: number): number[] {
   return pesos.map((w) => w / soma);
 }
 
+/**
+ * Fluxo nominal: IPCA inflaciona vendas/parcelas; INCC inflaciona obra/indiretos.
+ * A TMA desconta esse fluxo já inflacionado (consistência Fisher — sem deflacionar).
+ */
 export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
   const rReceita = (i.reajuste_receita_pct_am ?? 0) / 100;
   const rIncc = (i.incc_pct_am ?? 0) / 100;
   const entradaPct = Math.min(100, Math.max(0, i.entrada_pct ?? ENTRADA_PADRAO_PCT)) / 100;
   const nParcelas = Math.max(1, Math.round(i.parcelas_meses ?? PARCELAS_PADRAO));
-
   const nObra = Math.max(1, Math.round(i.prazo_meses) || 1);
   const nVendas = Math.max(1, Math.round(i.prazo_vendas_meses) || 1);
   const horizonte = Math.max(nObra, nVendas + nParcelas);
@@ -234,17 +182,16 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
     fluxo.push({ mes: m, receita, despesa, saida: despesa, entrada: receita, liquido, acumulado });
   }
 
-  const custoTotal = i.custo_terreno + custoObraReajustado + custosIndiretos + comissao + impostos;
+  const capitalInvestido = i.custo_terreno + custoObraReajustado + custosIndiretos;
+  const custoTotal = capitalInvestido + comissao + impostos;
   const lucro = vgvReajustado - custoTotal;
   const margem = vgvReajustado > 0 ? (lucro / vgvReajustado) * 100 : 0;
-  const roi = custoTotal > 0 ? (lucro / custoTotal) * 100 : 0;
+  const roi = capitalInvestido > 0 ? (lucro / capitalInvestido) * 100 : 0;
 
-  const taxaMensal = Math.pow(1 + i.taxa_minima_aa / 100, 1 / 12) - 1;
+  const taxaMensal = taxaMensalEquivalente(i.taxa_minima_aa);
   const vpl = npv(taxaMensal, flows);
   const tirMensal = irr(flows);
-  const tirAnual = tirMensal != null ? (Math.pow(1 + tirMensal, 12) - 1) * 100 : null;
-  const tirConfiavel = tirMensal != null && tirMensal > -0.99 && tirMensal < 0.5;
-  const payback = mesesAtePayback(fluxo);
+  const tirAnual = tirMensal != null ? tirAnualEfetiva(tirMensal) : null;
   const pior = mesExposicaoMaxima(fluxo);
 
   return {
@@ -255,28 +202,33 @@ export function calcViabilidade(i: ViabilidadeInput): ViabilidadeResult {
     comissao,
     impostos,
     custoTotal,
+    capitalInvestido,
     lucro,
     margem,
     roi,
     tirMensal: tirMensal != null ? tirMensal * 100 : null,
     tirAnual,
-    tirConfiavel,
+    tirConfiavel: tirConfiavelFaixa(tirMensal, flows),
     taxaMensalTMA: taxaMensal * 100,
     vpl,
-    paybackMeses: payback,
+    paybackMeses: paybackInterpolado(fluxo),
+    paybackDescontadoMeses: paybackDescontado(flows, taxaMensal),
     fluxo,
     exposicaoMaxima: pior.acumulado,
     exposicaoMes: pior.mes,
   };
 }
 
-/** Percentual pt-BR com 2 casas decimais e vírgula: 57,25% */
 export const pctBR = (n: number | null | undefined, casas = 2) =>
   n == null || !isFinite(n)
     ? '—'
     : `${n.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
 
-/** Moeda BRL sempre com centavos: R$ 40.384.512,00 */
+export const mesesBR = (n: number | null | undefined) =>
+  n == null || !isFinite(n)
+    ? '—'
+    : `${n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} meses`;
+
 export const brlCents = (n: number) =>
   (isFinite(n) ? n : 0).toLocaleString('pt-BR', {
     style: 'currency',
@@ -285,7 +237,6 @@ export const brlCents = (n: number) =>
     maximumFractionDigits: 2,
   });
 
-/** Moeda compacta para eixos de gráfico: R$ 15M / R$ 800k */
 export const brlShort = (n: number) => {
   const a = Math.abs(n);
   const s = n < 0 ? '-' : '';
