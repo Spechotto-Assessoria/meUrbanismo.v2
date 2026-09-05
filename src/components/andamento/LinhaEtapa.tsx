@@ -76,7 +76,16 @@ export const LinhaEtapa: React.FC<Props> = ({ etapa, canEdit, saving, onSave, on
         )}
       </div>
 
-      <ProgressoBar valor={etapa.realizado} previsto={etapa.previsto} />
+      <ProgressoBar
+        valor={Number(draft) || 0}
+        previsto={etapa.previsto}
+        editavel={canEdit && !saving}
+        onChange={(pct) => setDraft(String(pct))}
+        onCommit={(pct) => {
+          if (Math.round(pct) === Math.round(etapa.realizado)) return;
+          onSave(etapa.id, clampPct(pct));
+        }}
+      />
     </div>
   );
 };
