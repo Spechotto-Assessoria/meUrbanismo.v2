@@ -365,6 +365,11 @@ class SupabaseDataService {
   }
 
   async deleteOrcamento(id: string): Promise<void> {
+    const { error: cronoErr } = await supabase.from('cronograma_meses').delete().eq('etapa_id', id);
+    if (cronoErr && !isSchemaCacheError(cronoErr)) {
+      logSupabaseError('deleteOrcamento.cronograma', cronoErr);
+      throw new Error('Não foi possível excluir o cronograma da etapa.');
+    }
     const { error } = await supabase.from('orcamentos').delete().eq('id', id);
     if (error) {
       logSupabaseError('deleteOrcamento', error);
@@ -373,6 +378,22 @@ class SupabaseDataService {
   }
 
   async deleteOrcamentosDaObra(obraId: string): Promise<void> {
+    const { data: etapas, error: selErr } = await supabase
+      .from('orcamentos')
+      .select('id')
+      .eq('obra_id', obraId);
+    if (selErr) {
+      logSupabaseError('deleteOrcamentosDaObra.select', selErr);
+      throw new Error('Não foi possível limpar o orçamento da obra.');
+    }
+    const ids = (etapas || []).map((e: { id: string }) => e.id);
+    if (ids.length > 0) {
+      const { error: cronoErr } = await supabase.from('cronograma_meses').delete().in('etapa_id', ids);
+      if (cronoErr && !isSchemaCacheError(cronoErr)) {
+        logSupabaseError('deleteOrcamentosDaObra.cronograma', cronoErr);
+        throw new Error('Não foi possível excluir o cronograma vinculado ao orçamento.');
+      }
+    }
     const { error } = await supabase.from('orcamentos').delete().eq('obra_id', obraId);
     if (error) {
       logSupabaseError('deleteOrcamentosDaObra', error);

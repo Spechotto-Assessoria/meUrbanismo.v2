@@ -5,7 +5,8 @@ import { parseBudgetFile, type ParsedEtapa, type SheetRead } from '../../lib/bud
 import { DropzoneImportacao, ImportOrcamentoModal } from '../orcamento/ImportOrcamentoModal';
 import { SkeletonTable } from '../common/SkeletonLoader';
 import {
-  DollarSign, UploadCloud, Plus, CheckCircle, TrendingUp, Filter, X, Pencil, Trash2, ShieldAlert, FileSpreadsheet
+  DollarSign, UploadCloud, Plus, CheckCircle, TrendingUp, Filter, X, Pencil, Trash2,
+  ShieldAlert, FileSpreadsheet, AlertTriangle, Loader2
 } from 'lucide-react';
 
 const brl = (n: number) =>
@@ -22,6 +23,7 @@ export const OrcamentoTab: React.FC = () => {
   const [sheet, setSheet] = useState<SheetRead | null>(null);
   const [pdfEtapas, setPdfEtapas] = useState<ParsedEtapa[] | null>(null);
   const [lendo, setLendo] = useState(false);
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const itens = orc.itens;
@@ -122,6 +124,15 @@ export const OrcamentoTab: React.FC = () => {
             <button type="button" onClick={() => { setEditando({ descricao: '', valor_total: '' }); setShowAddModal(true); }} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-xs font-semibold text-white shadow-glow">
               <Plus className="w-3.5 h-3.5" /> Adicionar etapa
             </button>
+            {itens.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setConfirmarExclusao(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-500/40 bg-rose-950/40 hover:bg-rose-950 text-xs font-semibold text-rose-300"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Excluir orçamento
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -178,6 +189,43 @@ export const OrcamentoTab: React.FC = () => {
           fecharImport();
         }}
       />
+
+      {confirmarExclusao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-md rounded-2xl bg-navy-900 border border-rose-500/30 p-6 shadow-2xl space-y-4">
+            <button type="button" onClick={() => setConfirmarExclusao(false)} className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400">
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 p-2 rounded-xl bg-rose-950 border border-rose-500/40">
+                <AlertTriangle className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Excluir orçamento atual?</h3>
+                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                  Atenção: todas as etapas do orçamento e o cronograma vinculado (percentuais mensais, Curva S e Gantt) serão removidos. Esta ação não pode ser desfeita. Depois você poderá importar um novo arquivo.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setConfirmarExclusao(false)} className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={orc.salvando}
+                onClick={() => {
+                  void orc.excluirTudo().then(() => setConfirmarExclusao(false)).catch(() => undefined);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+              >
+                {orc.salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                Excluir tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddModal && editando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">

@@ -82,6 +82,22 @@ export function useOrcamento(obraId?: string) {
     }
   };
 
+  const excluirTudo = async () => {
+    if (!obraId) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      await apiService.deleteOrcamentosDaObra(obraId);
+      await carregar();
+      setSucesso('Orçamento e cronograma excluídos.');
+    } catch (e: any) {
+      setErro(e?.message || 'Não foi possível excluir o orçamento.');
+      throw e;
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   return {
     itens,
     loading,
@@ -93,6 +109,7 @@ export function useOrcamento(obraId?: string) {
     carregar,
     importar,
     salvarEtapa,
-    excluir
+    excluir,
+    excluirTudo
   };
 }
