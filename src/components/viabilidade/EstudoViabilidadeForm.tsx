@@ -1,15 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button, Input, Label, Card, CardContent, CardHeader, CardTitle } from '../tabs/ui-components';
 import { CidadeAutocomplete } from './CidadeAutocomplete';
 import { DonutSVG, BarSVG, SCurveSVG } from './ViabilidadeCharts';
 import { formatBRL, formatDecimal, maskDecimal } from './formatters';
 import { PRESETS_AREAS, type TipoEmpreendimento } from '../../lib/viabilidade-inicial';
+import { diagnosticarViabilidadeInicial } from '../../lib/viabilidade-diagnostico-inicial';
+import { InsightsViabilidade } from './InsightsViabilidade';
 import type { useEstudoViabilidadeForm } from '../../hooks/useEstudoViabilidadeForm';
 
 type FormApi = ReturnType<typeof useEstudoViabilidadeForm>;
 
 export const EstudoViabilidadeForm: React.FC<{ form: FormApi }> = ({ form }) => {
   const { input, resultado: r } = form;
+  const diagnostico = useMemo(
+    () => diagnosticarViabilidadeInicial({ input, resultado: r }),
+    [input, r]
+  );
 
   return (
     <div className="space-y-6 bg-white p-6 sm:p-10 rounded-2xl border border-slate-200 shadow-sm print:hidden">
@@ -163,6 +169,8 @@ export const EstudoViabilidadeForm: React.FC<{ form: FormApi }> = ({ form }) => 
               </Card>
             ))}
           </div>
+
+          <InsightsViabilidade diagnostico={diagnostico} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="rounded-2xl shadow-sm overflow-hidden border-slate-200">
