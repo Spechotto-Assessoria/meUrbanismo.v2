@@ -113,7 +113,6 @@ export const DiarioFormModal: React.FC<Props> = ({
         condicao_solo: form.condicao_solo,
         efetivo_proprio: form.efetivo_proprio,
         efetivo_terceirizado: form.efetivo_terceirizado,
-        efetivo_pessoas: form.efetivo_proprio + form.efetivo_terceirizado,
         equipamentos_ativos: equipamentos,
         atividades_realizadas: form.atividades_realizadas,
         ocorrencias: form.ocorrencias,

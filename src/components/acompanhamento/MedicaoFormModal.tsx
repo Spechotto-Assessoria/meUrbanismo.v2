@@ -17,7 +17,7 @@ export const MedicaoFormModal: React.FC<Props> = ({ obraId, registro, onClose, o
   const [empreiteiro, setEmpreiteiro] = useState(registro?.resumo_atividades || '');
   const [servico, setServico] = useState(registro?.servico_executado || '');
   const [dataMedicao, setDataMedicao] = useState(
-    registro?.data_medicao || new Date().toISOString().slice(0, 10)
+    registro?.data_medicao || registro?.periodo_fim || new Date().toISOString().slice(0, 10)
   );
   const [visivel, setVisivel] = useState(registro?.visivel_convidados ?? false);
   const [pdf, setPdf] = useState<File | null>(null);
@@ -51,7 +51,7 @@ export const MedicaoFormModal: React.FC<Props> = ({ obraId, registro, onClose, o
         fornecedor_empreiteiro: empresa.trim(),
         resumo_atividades: empreiteiro.trim(),
         servico_executado: servico.trim(),
-        data_medicao: dataMedicao,
+        periodo_fim: dataMedicao,
         link_relatorio_pdf: link,
         visivel_convidados: visivel,
         status: 'registrada',

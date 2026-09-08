@@ -161,6 +161,18 @@ create table if not exists public.diario_obra (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Backfill idempotente: bancos criados antes da aba Acompanhamento podem não ter
+-- estas tabelas/colunas mesmo com o restante do schema aplicado.
+alter table public.diario_obra add column if not exists clima_manha text default 'Ensolarado';
+alter table public.diario_obra add column if not exists clima_tarde text default 'Ensolarado';
+alter table public.diario_obra add column if not exists condicao_solo text default 'Praticável';
+alter table public.diario_obra add column if not exists efetivo_proprio integer default 0;
+alter table public.diario_obra add column if not exists efetivo_terceirizado integer default 0;
+alter table public.diario_obra add column if not exists equipamentos_ativos text[];
+alter table public.diario_obra add column if not exists equipes_presentes text[];
+alter table public.diario_obra add column if not exists fotos_urls text[];
+alter table public.diario_obra add column if not exists visivel_convidados boolean default false;
+
 create table if not exists public.medicoes (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
@@ -193,6 +205,11 @@ create table if not exists public.fotos_obra (
   autor_nome text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.fotos_obra add column if not exists categoria text default 'Evolução Geral';
+alter table public.fotos_obra add column if not exists data_registro date not null default current_date;
+alter table public.fotos_obra add column if not exists visivel_convidados boolean default false;
+alter table public.fotos_obra add column if not exists autor_nome text;
 
 create table if not exists public.obra_arquivos (
   id uuid primary key default gen_random_uuid(),

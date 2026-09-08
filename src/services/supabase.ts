@@ -588,8 +588,21 @@ class SupabaseDataService {
   }
 
   async saveDiario(diario: Partial<DiarioObra>): Promise<DiarioObra> {
-    const payload = clean({ ...diario });
-    delete (payload as any).id;
+    const payload = clean({
+      obra_id: diario.obra_id,
+      data: diario.data,
+      clima_manha: diario.clima_manha,
+      clima_tarde: diario.clima_tarde,
+      condicao_solo: diario.condicao_solo,
+      efetivo_proprio: diario.efetivo_proprio,
+      efetivo_terceirizado: diario.efetivo_terceirizado,
+      equipamentos_ativos: diario.equipamentos_ativos,
+      equipes_presentes: diario.equipes_presentes,
+      atividades_realizadas: diario.atividades_realizadas,
+      ocorrencias: diario.ocorrencias,
+      responsavel_nome: diario.responsavel_nome,
+      visivel_convidados: diario.visivel_convidados,
+    });
 
     const query = diario.id
       ? supabase.from('diario_obra').update(payload).eq('id', diario.id).select().single()
@@ -598,7 +611,15 @@ class SupabaseDataService {
     const { data, error } = await query;
     if (error) {
       logSupabaseError('saveDiario', error);
-      throw new Error('Não foi possível salvar o diário de obra.');
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'Tabela diario_obra não encontrada ou cache da API desatualizado. Execute src/services/schema.sql no SQL Editor do Supabase (projeto tvokopoxxwhimejwkzlr) e rode NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      if (isRlsError(error)) {
+        throw new Error('Permissão negada. Apenas administradores podem salvar o diário de obra.');
+      }
+      throw new Error(error.message || 'Não foi possível salvar o diário de obra.');
     }
     return data as DiarioObra;
   }
@@ -614,15 +635,30 @@ class SupabaseDataService {
       logSupabaseError('getMedicoes', error);
       return [];
     }
-    return (data || []) as MedicaoItem[];
+    return (data || []).map((m) => ({
+      ...(m as MedicaoItem),
+      data_medicao: (m as MedicaoItem).periodo_fim || (m as MedicaoItem).data_medicao,
+    })) as MedicaoItem[];
   }
 
   async saveMedicao(medicao: Partial<MedicaoItem>): Promise<MedicaoItem> {
-    const payload = clean({ ...medicao });
-    delete (payload as any).id;
+    const payload = clean({
+      obra_id: medicao.obra_id,
+      numero_medicao: medicao.numero_medicao,
+      periodo_inicio: medicao.periodo_inicio,
+      periodo_fim: medicao.periodo_fim || medicao.data_medicao,
+      fornecedor_empreiteiro: medicao.fornecedor_empreiteiro,
+      servico_executado: medicao.servico_executado,
+      resumo_atividades: medicao.resumo_atividades,
+      valor_medicao: medicao.valor_medicao ?? medicao.valor_medido ?? 0,
+      valor_acumulado: medicao.valor_acumulado ?? 0,
+      percentual_medido_periodo: medicao.percentual_periodo ?? medicao.percentual_medido_periodo ?? 0,
+      percentual_medido_acumulado: medicao.percentual_medido_acumulado ?? 0,
+      status: medicao.status ?? 'registrada',
+      link_relatorio_pdf: medicao.link_relatorio_pdf,
+      visivel_convidados: medicao.visivel_convidados,
+    });
 
-    // Medições são gravadas na tabela base (não na view) — apenas quem tem
-    // permissão financeira/admin consegue inserir, conforme RLS.
     const query = medicao.id
       ? supabase.from('medicoes').update(payload).eq('id', medicao.id).select().single()
       : supabase.from('medicoes').insert(payload).select().single();
@@ -630,7 +666,15 @@ class SupabaseDataService {
     const { data, error } = await query;
     if (error) {
       logSupabaseError('saveMedicao', error);
-      throw new Error('Não foi possível salvar a medição.');
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'Tabela medicoes não encontrada ou cache da API desatualizado. Execute src/services/schema.sql no SQL Editor e rode NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      if (isRlsError(error)) {
+        throw new Error('Permissão negada. Apenas administradores podem salvar medições.');
+      }
+      throw new Error(error.message || 'Não foi possível salvar a medição.');
     }
     return data as MedicaoItem;
   }
