@@ -18,7 +18,8 @@ export type TabId =
   | 'admin'
   | 'nova-empresa'
   | 'nova-obra'
-  | 'empresas';
+  | 'empresas'
+  | 'diagnostico-projetos';
 
 // Roles internas do sistema
 export type UserRole =

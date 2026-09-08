@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Pencil,
   Trash2,
-  Archive
+  Archive,
+  Ruler
 } from 'lucide-react';
 import type { Obra } from '../../types';
 
@@ -24,6 +25,7 @@ interface DashboardProps {
   onNavigateToNovaEmpresa?: () => void;
   onNavigateToNovaObra?: () => void;
   onNavigateToViabilidade?: () => void;
+  onNavigateToDiagnostico?: () => void;
   onEditObra?: (obra: Obra) => void;
   onNavigateToEmpresas?: () => void;
 }
@@ -34,6 +36,7 @@ export const DashboardTab: React.FC<DashboardProps> = ({
   onNavigateToNovaEmpresa,
   onNavigateToNovaObra,
   onNavigateToViabilidade,
+  onNavigateToDiagnostico,
   onEditObra,
   onNavigateToEmpresas
 }) => {
@@ -162,7 +165,7 @@ export const DashboardTab: React.FC<DashboardProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <button
               type="button"
               onClick={onNavigateToNovaEmpresa}
@@ -216,6 +219,20 @@ export const DashboardTab: React.FC<DashboardProps> = ({
               <div>
                 <div className="text-xs font-bold text-slate-900">Estudo Viabilidade</div>
                 <div className="text-[10px] text-slate-500">Calculadora VGV</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={onNavigateToDiagnostico}
+              className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-left transition-all cursor-pointer shadow-2xs group flex items-center gap-2"
+            >
+              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Ruler className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900">Medição e Diagnóstico</div>
+                <div className="text-[10px] text-slate-500">PDF, escala e áreas</div>
               </div>
             </button>
           </div>

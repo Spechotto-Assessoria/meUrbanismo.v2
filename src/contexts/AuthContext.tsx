@@ -500,7 +500,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (tabId === 'dashboard' || tabId === 'empresas') {
       return true;
     }
-    if (tabId === 'nova-empresa' || tabId === 'nova-obra' || tabId === 'admin') {
+    if (tabId === 'nova-empresa' || tabId === 'nova-obra' || tabId === 'admin' || tabId === 'diagnostico-projetos') {
       return isMasterAdmin;
     }
 

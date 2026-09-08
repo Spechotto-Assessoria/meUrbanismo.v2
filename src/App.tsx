@@ -22,6 +22,7 @@ import { VendasTab } from './components/tabs/VendasTab';
 import { RelatoriosTab } from './components/tabs/RelatoriosTab';
 import { PortfolioTab } from './components/tabs/PortfolioTab';
 import { EstudoViabilidadeTab } from './components/tabs/EstudoViabilidadeTab';
+import { DiagnosticoProjetosTab } from './components/tabs/DiagnosticoProjetosTab';
 import { TabId, Obra, Empresa } from './types';
 import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 import { subAbaDestinoNotificacao, type SubAbaAcompanhamento } from './hooks/useNotificacoes';
@@ -78,7 +79,11 @@ const AuthenticatedApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const isFormPage = activeTab === 'nova-empresa' || activeTab === 'nova-obra' || activeTab === 'estudo-viabilidade';
+  const isFormPage =
+    activeTab === 'nova-empresa' ||
+    activeTab === 'nova-obra' ||
+    activeTab === 'estudo-viabilidade' ||
+    activeTab === 'diagnostico-projetos';
   const showBottomNav = Boolean(
     activeObra &&
     activeTab !== 'dashboard' &&
@@ -94,6 +99,18 @@ const AuthenticatedApp: React.FC = () => {
     // Calculadora Geral de Viabilidade (Global)
     if (activeTab === 'estudo-viabilidade') {
       return <EstudoViabilidadeTab onBack={() => setActiveTab('dashboard')} />;
+    }
+
+    if (activeTab === 'diagnostico-projetos') {
+      return isMasterAdmin ? (
+        <DiagnosticoProjetosTab onBack={() => setActiveTab('dashboard')} />
+      ) : (
+        <DashboardTab
+          onSelectObra={handleSelectObra}
+          onSelectAdmin={handleSelectAdmin}
+          onNavigateToEmpresas={() => setActiveTab('empresas')}
+        />
+      );
     }
 
     // Formulário de Nova Empresa (somente administrador)
@@ -217,6 +234,7 @@ const AuthenticatedApp: React.FC = () => {
               : undefined
           }
           onNavigateToViabilidade={isMasterAdmin ? () => setActiveTab('estudo-viabilidade') : undefined}
+          onNavigateToDiagnostico={isMasterAdmin ? () => setActiveTab('diagnostico-projetos') : undefined}
           onNavigateToEmpresas={() => setActiveTab('empresas')}
           onEditObra={
             isMasterAdmin

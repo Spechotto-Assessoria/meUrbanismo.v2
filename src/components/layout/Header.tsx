@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({ onLogoClick, onNavigateAdmin, on
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs pt-[env(safe-area-inset-top)]">
       <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 py-1.5 flex items-center gap-2">
 
         {/* LOGO DO APP — altura alinhada ao seletor de obra e ao avatar */}
