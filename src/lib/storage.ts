@@ -102,3 +102,47 @@ export async function deleteObraCapa(fotoUrl: string): Promise<void> {
     logStorageError('deleteObraCapa', error);
   }
 }
+
+/** Upload de uma ou mais fotos de acompanhamento. Caminho: obraId/galeria/YYYY-MM-DD/uuid.ext */
+export async function uploadFotosAcompanhamento(
+  files: File[],
+  obraId: string,
+  dataRegistro: string
+): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const ext = getFileExtension(file);
+    const path = `${obraId}/galeria/${dataRegistro}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from(FOTOS_OBRA_BUCKET)
+      .upload(path, file, { upsert: false, contentType: file.type || undefined });
+    if (error) {
+      logStorageError('uploadFotosAcompanhamento', error);
+      throw new Error('Não foi possível enviar uma ou mais fotos.');
+    }
+    const { data } = supabase.storage.from(FOTOS_OBRA_BUCKET).getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
+
+/** Upload de PDF de medição. Caminho: obraId/medicoes/uuid.pdf */
+export async function uploadMedicaoPdf(file: File, obraId: string): Promise<string> {
+  const path = `${obraId}/medicoes/${crypto.randomUUID()}.pdf`;
+  const { error } = await supabase.storage
+    .from(FOTOS_OBRA_BUCKET)
+    .upload(path, file, { upsert: false, contentType: 'application/pdf' });
+  if (error) {
+    logStorageError('uploadMedicaoPdf', error);
+    throw new Error('Não foi possível enviar o PDF da medição.');
+  }
+  const { data } = supabase.storage.from(FOTOS_OBRA_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function deleteStorageFile(publicUrl: string, bucket = FOTOS_OBRA_BUCKET): Promise<void> {
+  const path = extractStoragePath(publicUrl, bucket);
+  if (!path) return;
+  const { error } = await supabase.storage.from(bucket).remove([path]);
+  if (error) logStorageError('deleteStorageFile', error);
+}

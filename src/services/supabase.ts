@@ -665,6 +665,30 @@ class SupabaseDataService {
     return data as FotoObra;
   }
 
+  async deleteFoto(id: string): Promise<void> {
+    const { error } = await supabase.from('fotos_obra').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteFoto', error);
+      throw new Error('Não foi possível excluir a foto.');
+    }
+  }
+
+  async deleteDiario(id: string): Promise<void> {
+    const { error } = await supabase.from('diario_obra').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteDiario', error);
+      throw new Error('Não foi possível excluir o registro do diário.');
+    }
+  }
+
+  async deleteMedicao(id: string): Promise<void> {
+    const { error } = await supabase.from('medicoes').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteMedicao', error);
+      throw new Error('Não foi possível excluir a medição.');
+    }
+  }
+
   // ============================================================
   // DOCUMENTOS
   // ============================================================
