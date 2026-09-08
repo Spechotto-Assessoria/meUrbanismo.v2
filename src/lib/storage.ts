@@ -11,6 +11,7 @@ import { supabase } from './supabaseClient';
  */
 const LOGOS_EMPRESAS_BUCKET = 'logos_empresas';
 const FOTOS_OBRA_BUCKET = 'fotos_obra';
+const OBRA_ARQUIVOS_BUCKET = 'obra_arquivos';
 
 function logStorageError(context: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -145,4 +146,31 @@ export async function deleteStorageFile(publicUrl: string, bucket = FOTOS_OBRA_B
   if (!path) return;
   const { error } = await supabase.storage.from(bucket).remove([path]);
   if (error) logStorageError('deleteStorageFile', error);
+}
+
+/** Upload de um ou mais documentos de projeto. Caminho: obraId/documentos/pastaSlug/uuid.ext */
+export async function uploadDocumentosObra(
+  files: File[],
+  obraId: string,
+  pastaSlug: string
+): Promise<{ url: string; file: File }[]> {
+  const resultados: { url: string; file: File }[] = [];
+  for (const file of files) {
+    const ext = getFileExtension(file);
+    const path = `${obraId}/documentos/${pastaSlug}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from(OBRA_ARQUIVOS_BUCKET)
+      .upload(path, file, { upsert: false, contentType: file.type || undefined });
+    if (error) {
+      logStorageError('uploadDocumentosObra', error);
+      throw new Error(`Não foi possível enviar: ${file.name}`);
+    }
+    const { data } = supabase.storage.from(OBRA_ARQUIVOS_BUCKET).getPublicUrl(path);
+    resultados.push({ url: data.publicUrl, file });
+  }
+  return resultados;
+}
+
+export async function deleteDocumentoStorage(publicUrl: string): Promise<void> {
+  await deleteStorageFile(publicUrl, OBRA_ARQUIVOS_BUCKET);
 }

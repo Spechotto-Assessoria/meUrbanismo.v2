@@ -310,6 +310,7 @@ export interface DocumentoObra {
   responsavel_tecnico?: string;
   categoria?: string;
   visivel_convidados?: boolean;
+  arquivado?: boolean;
 }
 
 // ============================================================

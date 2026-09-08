@@ -748,31 +748,91 @@ class SupabaseDataService {
   }
 
   async saveDocumento(doc: Partial<DocumentoObra>): Promise<DocumentoObra> {
-    const anyDoc = doc as any;
+    const isUuid = doc.id && /^[0-9a-f-]{36}$/i.test(doc.id);
     const payload = clean({
       obra_id: doc.obra_id,
-      titulo: doc.titulo || anyDoc.nome || 'Documento',
+      titulo: doc.titulo || 'Documento',
       categoria: doc.categoria || null,
       codigo_revisao: doc.codigo_revisao || null,
       data_emissao: doc.data_emissao || null,
       tamanho_bytes: doc.tamanho_bytes ?? null,
       tipo_extensao: doc.tipo_extensao || 'pdf',
-      arquivo_url: doc.arquivo_url || anyDoc.url || '#',
+      arquivo_url: doc.arquivo_url,
       visivel_convidados: doc.visivel_convidados ?? false,
+      arquivado: doc.arquivado ?? false,
       responsavel_tecnico: doc.responsavel_tecnico || null,
-      descricao: doc.descricao || null
+      descricao: doc.descricao || null,
     });
 
-    const query = doc.id
-      ? supabase.from('obra_arquivos').update(payload).eq('id', doc.id).select().single()
+    const query = isUuid
+      ? supabase.from('obra_arquivos').update(payload).eq('id', doc.id!).select().single()
       : supabase.from('obra_arquivos').insert(payload).select().single();
 
     const { data, error } = await query;
     if (error) {
       logSupabaseError('saveDocumento', error);
-      throw new Error('Não foi possível salvar o documento.');
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'Tabela obra_arquivos não encontrada ou cache da API desatualizado. Execute schema.sql e NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      if (isRlsError(error)) {
+        throw new Error('Permissão negada. Apenas administradores podem salvar documentos.');
+      }
+      throw new Error(error.message || 'Não foi possível salvar o documento.');
     }
     return data as DocumentoObra;
+  }
+
+  async deleteDocumento(id: string): Promise<void> {
+    const { error } = await supabase.from('obra_arquivos').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteDocumento', error);
+      throw new Error('Não foi possível excluir o documento.');
+    }
+  }
+
+  async toggleVisibilidadeDocumento(id: string, visivel: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('obra_arquivos')
+      .update({ visivel_convidados: visivel })
+      .eq('id', id);
+    if (error) {
+      logSupabaseError('toggleVisibilidadeDocumento', error);
+      throw new Error('Não foi possível alterar a visibilidade.');
+    }
+  }
+
+  async arquivarDocumento(id: string, arquivado = true): Promise<void> {
+    const { error } = await supabase.from('obra_arquivos').update({ arquivado }).eq('id', id);
+    if (error) {
+      logSupabaseError('arquivarDocumento', error);
+      throw new Error('Não foi possível arquivar o documento.');
+    }
+  }
+
+  async arquivarPasta(obraId: string, categoria: string): Promise<void> {
+    const { error } = await supabase
+      .from('obra_arquivos')
+      .update({ arquivado: true })
+      .eq('obra_id', obraId)
+      .eq('categoria', categoria);
+    if (error) {
+      logSupabaseError('arquivarPasta', error);
+      throw new Error('Não foi possível arquivar a pasta.');
+    }
+  }
+
+  async renomearPasta(obraId: string, categoriaAntiga: string, categoriaNova: string): Promise<void> {
+    const { error } = await supabase
+      .from('obra_arquivos')
+      .update({ categoria: categoriaNova })
+      .eq('obra_id', obraId)
+      .eq('categoria', categoriaAntiga);
+    if (error) {
+      logSupabaseError('renomearPasta', error);
+      throw new Error('Não foi possível renomear a pasta.');
+    }
   }
 
   // ============================================================

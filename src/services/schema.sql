@@ -227,6 +227,8 @@ create table if not exists public.obra_arquivos (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+alter table public.obra_arquivos add column if not exists arquivado boolean not null default false;
+
 create table if not exists public.viabilidade (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade unique,
@@ -550,6 +552,17 @@ drop policy if exists "fotos_obra_public_select" on storage.objects;
 create policy "fotos_obra_public_select" on storage.objects for select
   using (bucket_id = 'fotos_obra');
 
+-- DOCUMENTOS DA OBRA (Storage): bucket público "obra_arquivos" — leitura liberada
+-- para download/visualização; escrita restrita ao administrador.
+drop policy if exists "obra_arquivos_admin_write" on storage.objects;
+create policy "obra_arquivos_admin_write" on storage.objects for all
+  using (bucket_id = 'obra_arquivos' and public.is_admin())
+  with check (bucket_id = 'obra_arquivos' and public.is_admin());
+
+drop policy if exists "obra_arquivos_public_select" on storage.objects;
+create policy "obra_arquivos_public_select" on storage.objects for select
+  using (bucket_id = 'obra_arquivos');
+
 -- OBRAS (tabela base): SOMENTE administradores consultam/alteram diretamente.
 -- Todo mundo mais deve ler através da view "obras_publicas" (mascara campos
 -- financeiros conforme o papel do usuário).
@@ -646,6 +659,7 @@ drop policy if exists "arquivos_select" on public.obra_arquivos;
 create policy "arquivos_select" on public.obra_arquivos for select
   using (
     public.has_obra_access(obra_id)
+    and (not arquivado or public.can_view_financials())
     and (visivel_convidados = true or public.can_view_financials())
   );
 
