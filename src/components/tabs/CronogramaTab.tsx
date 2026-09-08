@@ -1,276 +1,221 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { CronogramaItem } from '../../types';
-import { apiService } from '../../services/supabase';
-import { SkeletonCard } from '../common/SkeletonLoader';
-import { 
-  ResponsiveContainer, 
-  ComposedChart, 
-  Line, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend 
-} from 'recharts';
-import { 
-  Calendar, 
-  TrendingUp, 
-  CheckCircle2, 
-  History, 
+import { useObraAccess } from '../../hooks/useObraAccess';
+import { useCronograma } from '../../hooks/useCronograma';
+import { CronogramaCurvaS } from '../cronograma/CronogramaCurvaS';
+import { CronogramaMatriz } from '../cronograma/CronogramaMatriz';
+import { CronogramaGantt } from '../cronograma/CronogramaGantt';
+import { ImportCronogramaModal } from '../cronograma/ImportCronogramaModal';
+import { SkeletonTable } from '../common/SkeletonLoader';
+import {
+  Calendar,
   Activity,
-  Layers
+  Layers,
+  UploadCloud,
+  Sparkles,
+  ShieldAlert,
+  FileSpreadsheet,
+  Save,
+  Loader2
 } from 'lucide-react';
 
 export const CronogramaTab: React.FC = () => {
-  const { activeObra } = useAuth();
-  const [cronograma, setCronograma] = useState<CronogramaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { activeObra, isAdmin, role } = useAuth();
+  const { isMasterAdmin, canViewFinancials } = useObraAccess();
+  const podeVer = isAdmin || role === 'PROPRIETARIO_INVESTIDOR' || role === 'INVESTIDOR';
+  const ocultarFinanceiro = !canViewFinancials;
+
+  const dataInicio = activeObra?.data_inicio || activeObra?.dataInicio || null;
+  const dataFim = activeObra?.data_previsao || activeObra?.dataEntrega || null;
+
+  const crono = useCronograma(activeObra?.id, dataInicio, dataFim);
   const [viewMode, setViewMode] = useState<'grafico' | 'matriz'>('grafico');
+  const [showImportModal, setShowImportModal] = useState(false);
 
-  const loadData = async () => {
-    if (!activeObra) return;
-    setLoading(true);
-    const data = await apiService.getCronograma(activeObra.id);
-    setCronograma(data);
-    setLoading(false);
-  };
+  const formatBRL = (v: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v);
 
-  useEffect(() => {
-    loadData();
-  }, [activeObra?.id]);
+  if (!podeVer) {
+    return (
+      <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-sm space-y-3 max-w-md mx-auto mt-10">
+        <ShieldAlert className="w-10 h-10 text-rose-500 mx-auto" />
+        <h3 className="text-sm font-bold text-slate-800">Acesso Restrito</h3>
+        <p className="text-xs text-slate-500">O cronograma é visível apenas para administrador e proprietário/investidor.</p>
+      </div>
+    );
+  }
 
-  // Preparação de dados para o gráfico da Curva S
-  const chartData = cronograma.map(item => ({
-    name: item.mes_label,
-    'Previsto Acumulado (%)': item.percentual_previsto_acumulado,
-    'Realizado Acumulado (%)': item.status === 'Futuro' ? null : item.percentual_realizado_acumulado,
-    'Previsto Mensal (R$ mil)': Math.round(item.valor_previsto_mes / 1000),
-    'Realizado Mensal (R$ mil)': item.status === 'Futuro' ? null : Math.round(item.valor_realizado_mes / 1000),
-    status: item.status
-  }));
+  const prazoMeses = crono.months.length;
+  const moneyLabel = ocultarFinanceiro ? '' : ` (${formatBRL(crono.totalObra)})`;
 
   return (
-    <div className="space-y-6 pb-20 max-w-full overflow-x-hidden">
-      
-      {/* SELETOR DE VISUALIZAÇÃO (GRÁFICO CURVA S vs MATRIZ MOBILE) */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('grafico')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              viewMode === 'grafico'
-                ? 'bg-brand-500 text-white shadow-glow-sm'
-                : 'bg-navy-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            Curva S (Recharts)
-          </button>
-          <button
-            onClick={() => setViewMode('matriz')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-              viewMode === 'matriz'
-                ? 'bg-brand-500 text-white shadow-glow-sm'
-                : 'bg-navy-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Matriz Físico-Financeira
-          </button>
+    <div className="space-y-6 pb-20 max-w-7xl mx-auto animate-fadeIn">
+      {crono.sucesso && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between">
+          <span>{crono.sucesso}</span>
+          <button type="button" onClick={() => crono.setSucesso(null)}>×</button>
         </div>
-
-        <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-          {cronograma.length} meses projetados
-        </span>
-      </div>
-
-      {loading ? (
-        <SkeletonCard className="h-80" />
-      ) : viewMode === 'grafico' ? (
-        /* VISUALIZAÇÃO GRÁFICA DA CURVA S */
-        <div className="space-y-4">
-          <div className="p-4 sm:p-6 rounded-3xl bg-navy-900/90 border border-slate-800 shadow-glass space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-brand-400" />
-                  Curva S Físico-Financeira
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Comparativo de Avanço Físico Previsto (%) vs Realizado (%) e Desembolso Mensal
-                </p>
-              </div>
-            </div>
-
-            {/* Container Responsivo do Recharts */}
-            <div className="w-full h-72 sm:h-80 pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis 
-                    dataKey="name" 
-                    tick={{ fill: '#94a3b8', fontSize: 11 }} 
-                    axisLine={{ stroke: '#334155' }}
-                  />
-                  <YAxis 
-                    yAxisId="left"
-                    domain={[0, 100]} 
-                    tick={{ fill: '#94a3b8', fontSize: 11 }} 
-                    axisLine={{ stroke: '#334155' }}
-                    unit="%"
-                  />
-                  <YAxis 
-                    yAxisId="right"
-                    orientation="right"
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    axisLine={{ stroke: '#334155' }}
-                    unit="k"
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#0F2942', 
-                      borderColor: '#1e3a5f', 
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      color: '#fff',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
-                    }} 
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  
-                  {/* Desembolso Mensal (Barras) */}
-                  <Bar yAxisId="right" dataKey="Previsto Mensal (R$ mil)" fill="#1e40af" opacity={0.4} radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="right" dataKey="Realizado Mensal (R$ mil)" fill="#0284c7" opacity={0.8} radius={[4, 4, 0, 0]} />
-
-                  {/* Curva S Acumulada (Linhas) */}
-                  <Line 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="Previsto Acumulado (%)" 
-                    stroke="#94a3b8" 
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    dot={{ fill: '#94a3b8', r: 3 }}
-                  />
-                  <Line 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="Realizado Acumulado (%)" 
-                    stroke="#38bdf8" 
-                    strokeWidth={3.5}
-                    dot={{ fill: '#38bdf8', r: 4, strokeWidth: 2, stroke: '#0F2942' }}
-                    activeDot={{ r: 6 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Legenda Explicativa de Engenharia */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800 text-[11px]">
-              <div className="flex items-center gap-2 text-slate-300">
-                <span className="w-3 h-0.5 bg-slate-400 inline-block"></span>
-                <span>Linha Cinza: Meta Prevista</span>
-              </div>
-              <div className="flex items-center gap-2 text-brand-300 font-semibold">
-                <span className="w-3 h-1 bg-brand-400 rounded-full inline-block"></span>
-                <span>Linha Azul: Realizado</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-400">
-                <span className="w-2.5 h-2.5 bg-blue-900/60 rounded inline-block"></span>
-                <span>Barra: Custo Mensal</span>
-              </div>
-              <div className="flex items-center gap-2 text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Desvio Atual: +0.5% (Adiantado)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* VISUALIZAÇÃO MATRIZ VERTICAL MOBILE-FIRST */
-        <div className="space-y-3">
-          {cronograma.map((mes) => {
-            const isConcluido = mes.status === 'Concluído';
-            const isAndamento = mes.status === 'Em Andamento';
-
-            return (
-              <div
-                key={mes.id}
-                className={`p-4 rounded-2xl border transition-all ${
-                  isAndamento 
-                    ? 'bg-gradient-to-r from-navy-900 to-brand-950/40 border-brand-500/50 shadow-glow-sm'
-                    : isConcluido
-                    ? 'bg-navy-900/80 border-slate-800'
-                    : 'bg-navy-950/60 border-slate-850 opacity-80'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs mb-2">
-                  <div className="flex items-center gap-2">
-                    <Calendar className={`w-4 h-4 ${isAndamento ? 'text-brand-400 animate-pulse' : isConcluido ? 'text-emerald-400' : 'text-slate-500'}`} />
-                    <span className="font-bold text-white text-sm">{mes.mes_label}</span>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    isConcluido 
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                      : isAndamento
-                      ? 'bg-brand-500/20 text-brand-300 border border-brand-500/30'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}>
-                    {mes.status}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs py-1">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Previsto no Mês</span>
-                    <span className="font-semibold text-slate-300">
-                      {mes.percentual_previsto_mes}% (R$ {(mes.valor_previsto_mes / 1000).toFixed(0)}k)
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Realizado no Mês</span>
-                    <span className="font-bold text-brand-300">
-                      {mes.status === 'Futuro' ? '-' : `${mes.percentual_realizado_mes}% (R$ ${(mes.valor_realizado_mes / 1000).toFixed(0)}k)`}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Previsto Acumulado</span>
-                    <span className="font-semibold text-slate-300">
-                      {mes.percentual_previsto_acumulado}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block">Realizado Acumulado</span>
-                    <span className={`font-black ${isConcluido || isAndamento ? 'text-cyan-400' : 'text-slate-500'}`}>
-                      {mes.status === 'Futuro' ? '-' : `${mes.percentual_realizado_acumulado}%`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Mini Barra de Progresso Acumulado */}
-                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
-                  <div 
-                    className={`h-full rounded-full ${isConcluido ? 'bg-emerald-400' : isAndamento ? 'bg-brand-400' : 'bg-slate-700'}`}
-                    style={{ width: `${mes.status === 'Futuro' ? mes.percentual_previsto_acumulado : mes.percentual_realizado_acumulado}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })}
+      )}
+      {crono.erro && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-2xl text-xs font-bold flex justify-between">
+          <span>{crono.erro}</span>
+          <button type="button" onClick={() => crono.setErro(null)}>×</button>
         </div>
       )}
 
-      {/* SNAPSHOTS HISTÓRICOS */}
-      <div className="p-4 rounded-2xl bg-navy-900/60 border border-slate-800 flex items-center justify-between text-xs text-slate-300">
-        <div className="flex items-center gap-2">
-          <History className="w-4 h-4 text-brand-400" />
-          <span>Último snapshot gerado automaticamente após a Medição nº 6.</span>
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-900 border border-blue-200 uppercase tracking-wider">
+              Planejamento Temporal
+            </span>
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-900 border border-purple-200 uppercase tracking-wider">
+              {canViewFinancials ? 'Curva S Físico-Financeira' : 'Curva S Físico'}
+            </span>
+          </div>
+          <h1 className="text-xl font-black text-slate-900 mt-1 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            {canViewFinancials ? 'Cronograma Físico-Financeiro' : 'Cronograma Físico de Obras'}
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {canViewFinancials
+              ? `Distribuição orçamentária ao longo de ${prazoMeses || '—'} meses${moneyLabel}`
+              : `Avanço físico previsto e executado ao longo de ${prazoMeses || '—'} meses`}
+          </p>
         </div>
-        <span className="text-[10px] text-slate-400 font-mono">25/08/2024</span>
+
+        {canViewFinancials && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => crono.gerarBase()}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  crono.modoDistribuicao === 'auto'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 inline mr-1 text-purple-600" /> Auto Curva S
+              </button>
+              <button
+                type="button"
+                onClick={() => crono.setModoDistribuicao('custom')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  crono.modoDistribuicao === 'custom'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Personalizado
+              </button>
+            </div>
+
+            {isMasterAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-blue-600" /> Importar Planilha
+                </button>
+                <button
+                  type="button"
+                  disabled={!crono.dirty || crono.salvando}
+                  onClick={() => void crono.salvar()}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  {crono.salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Salvar
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
+      {crono.loading ? (
+        <SkeletonTable rows={6} />
+      ) : crono.etapas.length === 0 ? (
+        <div className="bg-white p-10 rounded-2xl border border-slate-200 shadow-xs text-center space-y-3">
+          <FileSpreadsheet className="w-12 h-12 text-slate-300 mx-auto" />
+          <p className="text-sm font-bold text-slate-800">Sem etapas para cronogramar</p>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">Importe primeiro o orçamento na aba anterior.</p>
+        </div>
+      ) : prazoMeses === 0 ? (
+        <div className="bg-white p-10 rounded-2xl border border-slate-200 shadow-xs text-center space-y-3">
+          <Calendar className="w-12 h-12 text-slate-300 mx-auto" />
+          <p className="text-sm font-bold text-slate-800">Defina as datas da obra no cadastro para gerar o cronograma mensal.</p>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Preencha data de início e data de entrega prevista no cadastro da obra.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode('grafico')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'grafico'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" /> Gráfico Curva S
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('matriz')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  viewMode === 'matriz'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" /> Matriz Mês a Mês
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'grafico' ? (
+            <div className="space-y-6">
+              <CronogramaCurvaS data={crono.chartData} canViewFinancials={canViewFinancials} />
+              <CronogramaGantt
+                rows={crono.etapas.map((e) => ({ id: e.id, nome: e.nome }))}
+                months={crono.months}
+                grid={crono.grid}
+                onChange={crono.aplicarGrid}
+                disabled={!isAdmin}
+              />
+            </div>
+          ) : (
+            <CronogramaMatriz
+              etapas={crono.etapas}
+              months={crono.months}
+              grid={crono.grid}
+              chartData={crono.chartData}
+              totalObra={crono.totalObra}
+              canEdit={isAdmin}
+              ocultarFinanceiro={ocultarFinanceiro}
+              rowTotal={crono.rowTotal}
+              onCell={crono.setCell}
+            />
+          )}
+        </>
+      )}
+
+      {showImportModal && isMasterAdmin && (
+        <ImportCronogramaModal
+          open={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          etapas={crono.etapas}
+          months={crono.months}
+          onConfirm={crono.aplicarGrid}
+        />
+      )}
     </div>
   );
 };

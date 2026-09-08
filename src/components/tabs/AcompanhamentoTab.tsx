@@ -20,11 +20,13 @@ import {
   Sparkles
 } from 'lucide-react';
 
-export const AcompanhamentoTab: React.FC = () => {
+export const AcompanhamentoTab: React.FC<{
+  focoInicial?: 'fotos' | 'diario' | 'medicoes';
+}> = ({ focoInicial = 'fotos' }) => {
   const { activeObra, role, isAdmin, canViewFinancials } = useAuth();
 
   // Sub-abas dentro de Acompanhamento
-  const [subAba, setSubAba] = useState<'fotos' | 'diario' | 'medicoes'>('fotos');
+  const [subAba, setSubAba] = useState<'fotos' | 'diario' | 'medicoes'>(focoInicial);
 
   const [fotos, setFotos] = useState<FotoObra[]>([]);
   const [diarios, setDiarios] = useState<DiarioObra[]>([]);
@@ -76,6 +78,16 @@ export const AcompanhamentoTab: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [activeObra?.id, role]);
+
+  useEffect(() => {
+    if (focoInicial) setSubAba(focoInicial);
+  }, [focoInicial, activeObra?.id]);
+
+  useEffect(() => {
+    if (!canViewFinancials && subAba !== 'fotos') {
+      setSubAba('fotos');
+    }
+  }, [canViewFinancials, subAba]);
 
   const handleToggleVisibilidadeFoto = async (foto: FotoObra) => {
     if (!isAdmin) return;

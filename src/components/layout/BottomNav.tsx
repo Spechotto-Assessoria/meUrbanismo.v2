@@ -1,46 +1,109 @@
-import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useRef } from 'react';
+import {
+  LayoutDashboard,
+  TrendingUp,
+  DollarSign,
+  CalendarDays,
+  Camera,
+  FolderGit2,
+  PieChart,
+  Map,
+  ShoppingBag,
+  FileText,
+  Building2,
+  Settings
+} from 'lucide-react';
 import { TabId } from '../../types';
-import { LayoutDashboard, HardHat, Map, FileText, CalendarDays } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
-export interface BottomNavProps {
+interface BottomNavProps {
   activeTab: TabId;
-  setActiveTab: (tab: TabId) => void;
-  onSelectTab?: (tab: TabId) => void;
+  onTabChange: (tab: TabId) => void;
 }
 
-export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab, onSelectTab }) => {
-  const { canAccessTab } = useAuth();
-  const handleTabClick = (tab: TabId) => {
-    setActiveTab(tab);
-    if (onSelectTab) onSelectTab(tab);
-  };
+export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
+  const { canAccessTab, isAdmin } = useAuth();
+  const navContainerRef = useRef<HTMLDivElement>(null);
 
-  const navItems: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Início', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { id: 'cronograma', label: 'Avanço', icon: <CalendarDays className="w-5 h-5" /> },
-    { id: 'acompanhamento', label: 'Diário', icon: <HardHat className="w-5 h-5" /> },
-    { id: 'mapa', label: 'Mapa', icon: <Map className="w-5 h-5" /> },
-    { id: 'documentos', label: 'Docs', icon: <FileText className="w-5 h-5" /> },
+  const allTabs: { id: TabId; label: string; icon: React.ReactNode; badge?: string }[] = [
+    { id: 'resumo', label: 'Resumo', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { id: 'orcamento', label: 'Orçamento', icon: <DollarSign className="w-5 h-5" /> },
+    { id: 'cronograma', label: 'Cronograma', icon: <CalendarDays className="w-5 h-5" /> },
+    { id: 'andamento', label: 'Andamento', icon: <TrendingUp className="w-5 h-5" /> },
+    { id: 'viabilidade', label: 'Viabilidade', icon: <PieChart className="w-5 h-5" /> },
+    { id: 'acompanhamento', label: 'Acompanhamento', icon: <Camera className="w-5 h-5" /> },
+    { id: 'documentos', label: 'Documentos', icon: <FolderGit2 className="w-5 h-5" /> },
+    { id: 'mapa', label: 'Mapa Lotes', icon: <Map className="w-5 h-5" /> },
+    { id: 'vendas', label: 'Vendas', icon: <ShoppingBag className="w-5 h-5" />, badge: '120x' },
+    { id: 'relatorios', label: 'Relatórios', icon: <FileText className="w-5 h-5" /> },
+    { id: 'portfolio', label: 'Portfólio', icon: <Building2 className="w-5 h-5" /> },
+    ...(isAdmin ? [{ id: 'admin' as TabId, label: 'Admin', icon: <Settings className="w-5 h-5" />, badge: 'VIP' }] : [])
   ];
 
+  // Filtra abas conforme permissão do RBAC
+  const visibleTabs = allTabs.filter(tab => canAccessTab(tab.id));
+
+  const handleSelectTab = (tabId: TabId) => {
+    onTabChange(tabId);
+
+    requestAnimationFrame(() => {
+      const container = document.getElementById('tab-content-container');
+      if (container) {
+        container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-2 py-2 md:hidden z-40 flex items-center justify-around">
-      {navItems.map((item) => {
-        if (!canAccessTab(item.id)) return null;
-        const isActive = activeTab === item.id;
-        return (
-          <button
-            key={item.id}
-            onClick={() => handleTabClick(item.id)}
-            className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl text-[10px] font-bold transition-all ${isActive ? 'text-brand-400' : 'text-slate-400 hover:text-slate-200'
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-2 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      <div
+        ref={navContainerRef}
+        className="max-w-7xl mx-auto flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-0.5 px-1"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {visibleTabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleSelectTab(tab.id)}
+              className={`flex-shrink-0 snap-center min-w-[76px] sm:min-w-[88px] py-1.5 px-1.5 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all duration-200 relative group cursor-pointer ${
+                isActive
+                  ? 'bg-blue-50 text-blue-900 font-bold border border-blue-200 shadow-xs scale-[1.02]'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
               }`}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </button>
-        );
-      })}
-    </div>
+            >
+              {/* Indicador de Barra Ativa Superior */}
+              {isActive && (
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-gradient-to-r from-blue-900 to-cyan-500 rounded-full shadow-xs"></div>
+              )}
+
+              {/* Badge Opcional */}
+              {tab.badge && (
+                <span className={`absolute -top-1.5 right-1 text-[8px] font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-tighter border shadow-xs ${
+                  tab.badge === 'VIP'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-blue-50 text-blue-800 border-blue-200'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
+
+              {/* Ícone */}
+              <div className={`transition-transform duration-200 ${isActive ? 'scale-110 text-blue-900' : 'group-hover:scale-105 text-slate-500 group-hover:text-slate-800'}`}>
+                {tab.icon}
+              </div>
+
+              {/* Nome da aba */}
+              <span className={`text-[10px] sm:text-[11px] font-semibold tracking-tight whitespace-nowrap leading-tight text-center ${
+                isActive ? 'text-blue-950 font-bold' : 'text-slate-500'
+              }`}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 };

@@ -1,132 +1,229 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building2, Save, ArrowLeft } from 'lucide-react';
+import { uploadEmpresaLogo } from '../../lib/storage';
+import { Building2, Save, Upload, ArrowLeft, Loader2 } from 'lucide-react';
+import type { Empresa } from '../../types';
 
 interface NovaEmpresaTabProps {
-    onSuccess?: (empresaId?: string) => void;
+    onBack?: () => void;
+    onSuccess?: (empresaId: string) => void;
+    empresaToEdit?: Empresa | null;
 }
 
-export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onSuccess }) => {
-    const { addEmpresa } = useAuth();
-    const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        nome: '',
-        cnpj: '',
-        email: '',
-        telefone: '',
-        responsavel_tecnico: '',
-        crea_cau: ''
-    });
+export const NovaEmpresaTab: React.FC<NovaEmpresaTabProps> = ({ onBack, onSuccess, empresaToEdit }) => {
+    const { addEmpresa, updateEmpresa, updateEmpresaLogo, isMasterAdmin } = useAuth();
+    const isEditing = Boolean(empresaToEdit?.id);
+
+    const [nome, setNome] = useState(empresaToEdit?.nome ?? '');
+    const [cnpj, setCnpj] = useState(empresaToEdit?.cnpj ?? '');
+    const [contato, setContato] = useState(empresaToEdit?.contato ?? '');
+    const [email, setEmail] = useState(empresaToEdit?.email ?? '');
+    const [telefone, setTelefone] = useState(empresaToEdit?.telefone ?? '');
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(empresaToEdit?.logo_url || null);
+    const [salvando, setSalvando] = useState(false);
+    const [erro, setErro] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleEscolherImagem = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        setLogoFile(file);
+        setLogoPreviewUrl(prev => {
+            if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return file ? URL.createObjectURL(file) : empresaToEdit?.logo_url || null;
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.nome) return;
+        setErro(null);
 
-        setLoading(true);
+        if (!isMasterAdmin) {
+            setErro('Apenas o administrador pode cadastrar ou editar empresas.');
+            return;
+        }
+
+        if (!nome.trim()) {
+            setErro('Por favor, preencha o Nome / Razão Social da empresa.');
+            return;
+        }
+
+        setSalvando(true);
         try {
-            const criada = await addEmpresa(formData);
-            if (onSuccess) {
-                onSuccess(criada.id);
+            const dados = {
+                nome: nome.trim(),
+                cnpj: cnpj.trim(),
+                contato: contato.trim(),
+                email: email.trim(),
+                telefone: telefone.trim(),
+                logo_url: empresaToEdit?.logo_url
+            };
+
+            const salva = isEditing && empresaToEdit
+                ? await updateEmpresa({ ...empresaToEdit, ...dados, id: empresaToEdit.id })
+                : await addEmpresa(dados);
+
+            if (logoFile) {
+                try {
+                    const url = await uploadEmpresaLogo(logoFile, salva.id);
+                    await updateEmpresaLogo(salva.id, url);
+                } catch (logoErr: any) {
+                    setErro(logoErr?.message || 'Empresa salva, mas o logo não pôde ser enviado. Tente novamente na edição.');
+                }
             }
-        } catch (error) {
-            console.error('Erro ao cadastrar empresa:', error);
+
+            if (onSuccess) {
+                onSuccess(salva.id);
+            } else if (onBack) {
+                onBack();
+            }
+        } catch (err: any) {
+            setErro(err?.message || 'Não foi possível salvar a empresa. Tente novamente.');
         } finally {
-            setLoading(false);
+            setSalvando(false);
         }
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6 pb-12">
-            <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Building2 className="w-6 h-6 text-brand-400" />
-                    Cadastrar Nova Empresa Urbanizadora
-                </h2>
-                <p className="text-slate-400 text-sm mt-1">
-                    Registre a razão social ou SPE responsável pelos novos loteamentos.
-                </p>
+        <div className="max-w-2xl mx-auto space-y-6 pb-12">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    {onBack && (
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                    )}
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <Building2 className="w-6 h-6 text-blue-600" /> {isEditing ? 'Editar Empresa' : 'Nova Empresa'}
+                        </h1>
+                        <p className="text-xs text-slate-500">Dados da empresa e logo para exibir nas obras.</p>
+                    </div>
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 space-y-4">
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                {erro && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                        {erro}
+                    </div>
+                )}
                 <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Nome da Empresa / SPE *</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Nome / Razão social *</label>
                     <input
                         type="text"
                         required
-                        value={formData.nome}
-                        onChange={e => setFormData({ ...formData, nome: e.target.value })}
-                        placeholder="Ex: Conecta Urbanismo SPE Ltda"
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
+                        value={nome}
+                        onChange={e => setNome(e.target.value)}
+                        placeholder="Ex: Conecta Urbanismo Ltda"
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                     />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-300 mb-1">CNPJ</label>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">CNPJ</label>
                         <input
                             type="text"
-                            value={formData.cnpj}
-                            onChange={e => setFormData({ ...formData, cnpj: e.target.value })}
+                            value={cnpj}
+                            onChange={e => setCnpj(e.target.value)}
                             placeholder="00.000.000/0001-00"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-slate-300 mb-1">E-mail Comercial</label>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Contato Responsável</label>
+                        <input
+                            type="text"
+                            value={contato}
+                            onChange={e => setContato(e.target.value)}
+                            placeholder="Nome do contato principal"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">E-mail</label>
                         <input
                             type="email"
-                            value={formData.email}
-                            onChange={e => setFormData({ ...formData, email: e.target.value })}
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
                             placeholder="contato@empresa.com.br"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
-                        />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 mb-1">Telefone / WhatsApp</label>
-                        <input
-                            type="text"
-                            value={formData.telefone}
-                            onChange={e => setFormData({ ...formData, telefone: e.target.value })}
-                            placeholder="(17) 99999-9999"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-slate-300 mb-1">Responsável Técnico</label>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Telefone</label>
                         <input
                             type="text"
-                            value={formData.responsavel_tecnico}
-                            onChange={e => setFormData({ ...formData, responsavel_tecnico: e.target.value })}
-                            placeholder="Eng. Responsável"
-                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
+                            value={telefone}
+                            onChange={e => setTelefone(e.target.value)}
+                            placeholder="(17) 99999-8888"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">CREA / CAU</label>
-                    <input
-                        type="text"
-                        value={formData.crea_cau}
-                        onChange={e => setFormData({ ...formData, crea_cau: e.target.value })}
-                        placeholder="CREA-SP 5069248190"
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-hidden focus:border-brand-500"
-                    />
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Logo da Empresa</label>
+                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center bg-slate-50">
+                        {logoPreviewUrl ? (
+                            <img
+                                src={logoPreviewUrl}
+                                alt="Pré-visualização do logo"
+                                className="w-16 h-16 object-contain mx-auto mb-2 rounded-xl bg-white border border-slate-200 p-1"
+                            />
+                        ) : (
+                            <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                        )}
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                        <button
+                            type="button"
+                            onClick={handleEscolherImagem}
+                            className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs cursor-pointer hover:bg-slate-50"
+                        >
+                            {logoFile ? 'Trocar imagem' : 'Escolher imagem'}
+                        </button>
+                        <p className="text-[10px] text-slate-400 mt-2">
+                            {logoFile ? logoFile.name : 'PNG, JPG ou SVG. Recomendado: quadrada, fundo transparente.'}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <div className="pt-4 flex gap-3">
+                    {onBack && (
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            disabled={salvando}
+                            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs cursor-pointer disabled:opacity-50"
+                        >
+                            Cancelar
+                        </button>
+                    )}
                     <button
                         type="submit"
-                        disabled={loading}
-                        className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition-colors text-sm shadow-lg shadow-brand-500/10"
+                        disabled={salvando}
+                        className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-60"
                     >
-                        <Save className="w-4 h-4" />
-                        {loading ? 'Salvando...' : 'Salvar Empresa'}
+                        {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {salvando ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Cadastrar Empresa'}
                     </button>
                 </div>
             </form>
