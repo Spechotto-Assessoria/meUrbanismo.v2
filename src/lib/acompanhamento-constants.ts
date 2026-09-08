@@ -1,4 +1,4 @@
-import type { FotoObra } from '../types';
+import type { DiarioObra, FotoObra } from '../types';
 
 export type SubAbaAcompanhamento = 'fotos' | 'diario' | 'medicoes';
 
@@ -79,6 +79,29 @@ export function agruparFotosPorMesDia(fotos: FotoObra[]): PastaMes[] {
           rotulo: rotuloDia(dia),
           fotos: lista,
         })),
+    }));
+}
+
+export type PastaMesDiario = {
+  chave: string;
+  rotulo: string;
+  registros: DiarioObra[];
+};
+
+export function agruparDiariosPorMes(diarios: DiarioObra[]): PastaMesDiario[] {
+  const mapa = new Map<string, DiarioObra[]>();
+  for (const d of diarios) {
+    const data = d.data || new Date().toISOString().slice(0, 10);
+    const mes = data.slice(0, 7);
+    if (!mapa.has(mes)) mapa.set(mes, []);
+    mapa.get(mes)!.push(d);
+  }
+  return [...mapa.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([mes, lista]) => ({
+      chave: mes,
+      rotulo: rotuloMes(mes),
+      registros: lista.sort((a, b) => (b.data || '').localeCompare(a.data || '')),
     }));
 }
 
