@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { dataService } from '../../services/supabase';
+import { ConviteVincularObraModal, getConviteStatusBadge, contarObrasPorEmail } from './ConviteVincularObraModal';
 import {
     Send,
     Mail,
@@ -19,6 +20,7 @@ import {
     X,
     Save,
     MapPin,
+    Link2,
     Loader2
 } from 'lucide-react';
 import { UserRole, Convite } from '../../types';
@@ -46,6 +48,7 @@ export const ConvitesTab: React.FC = () => {
     // Estado de Edição
     const [editingConvite, setEditingConvite] = useState<Convite | null>(null);
     const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+    const [vinculandoConvite, setVinculandoConvite] = useState<Convite | null>(null);
 
     const [convites, setConvites] = useState<Convite[]>([]);
     const [carregando, setCarregando] = useState(true);
@@ -385,16 +388,24 @@ export const ConvitesTab: React.FC = () => {
                     ) : convitesFiltrados.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-6">Nenhum convite encontrado com os filtros selecionados.</p>
                     ) : (
-                        convitesFiltrados.map(c => (
+                        convitesFiltrados.map(c => {
+                            const statusBadge = getConviteStatusBadge(c);
+                            const qtdObras = contarObrasPorEmail(convites, c.email || '');
+                            return (
                             <div key={c.id} className={`p-4 rounded-xl border transition-all ${c.ativo ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-200 opacity-75'}`}>
 
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
                                     <div>
                                         <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
                                             {c.email}
-                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${c.statusCadastro === 'COMPLETO' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                                                {c.statusCadastro === 'COMPLETO' ? 'Cadastro Completo' : 'Cadastro Pendente'}
+                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${statusBadge.className}`}>
+                                                {statusBadge.label}
                                             </span>
+                                            {qtdObras > 1 && (
+                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                                                    {qtdObras} obras
+                                                </span>
+                                            )}
                                             {!c.ativo && (
                                                 <span className="text-[9px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-md flex items-center gap-0.5">
                                                     <Lock className="w-3 h-3" /> Bloqueado
@@ -403,9 +414,9 @@ export const ConvitesTab: React.FC = () => {
                                         </div>
                                         <div className="text-xs text-slate-500 mt-0.5">
                                             {c.nome ? `${c.nome} • ` : ''} Empreendimento: <strong className="text-slate-700">{nomeObraDoConvite(c)}</strong>
-                                            {c.role === 'CLIENTE_COMPRADOR' && (c as any).quadraLote && (
+                                            {c.role === 'CLIENTE_COMPRADOR' && c.quadraLote && (
                                                 <span className="ml-2 font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                                                    {(c as any).quadraLote}
+                                                    {c.quadraLote}
                                                 </span>
                                             )}
                                         </div>
@@ -481,6 +492,14 @@ export const ConvitesTab: React.FC = () => {
 
                                         <button
                                             type="button"
+                                            onClick={() => setVinculandoConvite(c)}
+                                            className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 transition-colors cursor-pointer"
+                                        >
+                                            <Link2 className="w-3.5 h-3.5 text-indigo-600" /> Vincular outra obra
+                                        </button>
+
+                                        <button
+                                            type="button"
                                             onClick={() => setEditingConvite(c)}
                                             className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs flex items-center gap-1.5 border border-amber-200 transition-colors cursor-pointer"
                                         >
@@ -499,7 +518,8 @@ export const ConvitesTab: React.FC = () => {
                                 </div>
 
                             </div>
-                        ))
+                        );
+                        })
                     )}
                 </div>
 
@@ -558,8 +578,8 @@ export const ConvitesTab: React.FC = () => {
                                     <label className="block text-xs font-semibold text-slate-600 mb-1">Quadra / Lote (Ex: Quadra C - Lote 05)</label>
                                     <input
                                         type="text"
-                                        value={(editingConvite as any).quadra_lote || ''}
-                                        onChange={e => setEditingConvite({ ...editingConvite, quadra_lote: e.target.value } as any)}
+                                        value={editingConvite.quadraLote || ''}
+                                        onChange={e => setEditingConvite({ ...editingConvite, quadraLote: e.target.value })}
                                         placeholder="Quadra e Lote do cliente"
                                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
                                     />
@@ -599,6 +619,19 @@ export const ConvitesTab: React.FC = () => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {vinculandoConvite && (
+                <ConviteVincularObraModal
+                    convite={vinculandoConvite}
+                    obras={obras || []}
+                    convitesExistentes={convites}
+                    onClose={() => setVinculandoConvite(null)}
+                    onSuccess={(novo) => {
+                        const obraNome = obras?.find(o => o.id === novo.obra_id)?.nome;
+                        setConvites(prev => [{ ...novo, obraNome }, ...prev]);
+                    }}
+                />
             )}
 
         </div>

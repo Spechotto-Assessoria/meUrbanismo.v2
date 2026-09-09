@@ -438,6 +438,8 @@ export interface Convite {
   dataCriacao?: string;
   linkAcceso?: string;
   perfil?: string;
+  user_id?: string;
+  redeemed_at?: string;
   quadraLote?: string;
 }
 

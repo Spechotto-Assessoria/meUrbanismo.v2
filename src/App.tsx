@@ -28,7 +28,7 @@ import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 import { subAbaDestinoNotificacao, type SubAbaAcompanhamento } from './hooks/useNotificacoes';
 
 const AuthenticatedApp: React.FC = () => {
-  const { canAccessTab, canAccessObra, role, activeObra, setActiveObra, isMasterAdmin, obras } = useAuth();
+  const { canAccessTab, canAccessObra, effectiveRole, activeObra, setActiveObra, isMasterAdmin, obras } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId | 'estudo-viabilidade'>('dashboard');
   const [lastEmpresaCreatedId, setLastEmpresaCreatedId] = useState<string | undefined>(undefined);
   const [obraToEdit, setObraToEdit] = useState<Obra | null>(null);
@@ -44,7 +44,7 @@ const AuthenticatedApp: React.FC = () => {
     ) {
       setActiveTab(activeObra ? 'resumo' : 'dashboard');
     }
-  }, [role, activeTab, canAccessTab, activeObra]);
+  }, [effectiveRole, activeTab, canAccessTab, activeObra]);
 
   const handleResetToDashboard = () => {
     setActiveObra(null as any);

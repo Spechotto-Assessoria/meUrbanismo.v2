@@ -1,15 +1,17 @@
+import { useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types';
+import { canViewFinancialsForRole, isCorretorRole } from '../hooks/useRolePorObra';
 
 export interface ObraAccessRules {
   canAccessObra: boolean;
-  canViewFinancials: boolean;        // Orçamento, Custos, VGV, TIR, VPL, Viabilidade
-  canViewGlobalBudget: boolean;      // Orçamento Global da Construtora
-  canViewCommercialOnly: boolean;    // Apenas preços dos lotes e simulador de vendas
-  canAccessManagement: boolean;      // Criar Obra, Criar Empresa, Enviar Convites (Master Admin)
-  canUploadPhotos: boolean;          // Upload e gestão de fotos
-  canViewPrivateDocs: boolean;       // Pastas e documentos confidenciais
-  canEditProgress: boolean;          // Atualizar percentuais de andamento
+  canViewFinancials: boolean;
+  canViewGlobalBudget: boolean;
+  canViewCommercialOnly: boolean;
+  canAccessManagement: boolean;
+  canUploadPhotos: boolean;
+  canViewPrivateDocs: boolean;
+  canEditProgress: boolean;
   role: UserRole;
   isMasterAdmin: boolean;
   isInvestidor: boolean;
@@ -19,93 +21,91 @@ export interface ObraAccessRules {
 
 export const useObraAccess = (obraId?: string): ObraAccessRules => {
   const {
-    user,
-    role,
     isMasterAdmin,
     canAccessObra: checkCanAccessObra,
-    activeObra
+    activeObra,
+    getRoleForObra
   } = useAuth();
 
   const targetObraId = obraId || activeObra?.id || '';
   const canAccess = checkCanAccessObra(targetObraId);
+  const obraRole = getRoleForObra(targetObraId);
 
-  // Classificação estrita dos 4 papéis do sistema
-  const isMaster = Boolean(isMasterAdmin);
-  const isInvestidor = !isMaster && (role === 'PROPRIETARIO_INVESTIDOR' || role === 'INVESTIDOR');
-  const isCliente = !isMaster && role === 'CLIENTE_COMPRADOR';
-  const isCorretor = !isMaster && role === 'CORRETOR';
+  return useMemo(() => {
+    const isMaster = Boolean(isMasterAdmin);
+    const isInvestidor = !isMaster && (obraRole === 'PROPRIETARIO_INVESTIDOR' || obraRole === 'INVESTIDOR');
+    const isCliente = !isMaster && obraRole === 'CLIENTE_COMPRADOR';
+    const isCorretor = isCorretorRole(obraRole, isMaster);
+    const canViewFinancials = canViewFinancialsForRole(obraRole, isMaster);
 
-  // 1. ADMINISTRADOR: Acesso irrestrito a todo o app, gestão e criação
-  if (isMaster) {
-    return {
-      canAccessObra: true,
-      canViewFinancials: true,
-      canViewGlobalBudget: true,
-      canViewCommercialOnly: false,
-      canAccessManagement: true,
-      canUploadPhotos: true,
-      canViewPrivateDocs: true,
-      canEditProgress: true,
-      role: 'ADMINISTRADOR',
-      isMasterAdmin: true,
-      isInvestidor: false,
-      isCliente: false,
-      isCorretor: false
-    };
-  }
+    if (isMaster) {
+      return {
+        canAccessObra: true,
+        canViewFinancials: true,
+        canViewGlobalBudget: true,
+        canViewCommercialOnly: false,
+        canAccessManagement: true,
+        canUploadPhotos: true,
+        canViewPrivateDocs: true,
+        canEditProgress: true,
+        role: 'ADMINISTRADOR',
+        isMasterAdmin: true,
+        isInvestidor: false,
+        isCliente: false,
+        isCorretor: false
+      };
+    }
 
-  // 2. PROPRIETÁRIO / INVESTIDOR: Acesso a todas as abas e dados financeiros da obra vinculada. Sem ferramentas de gestão global.
-  if (isInvestidor) {
-    return {
-      canAccessObra: canAccess,
-      canViewFinancials: true,
-      canViewGlobalBudget: true,
-      canViewCommercialOnly: false,
-      canAccessManagement: false,
-      canUploadPhotos: false,
-      canViewPrivateDocs: true,
-      canEditProgress: false,
-      role: 'PROPRIETARIO_INVESTIDOR',
-      isMasterAdmin: false,
-      isInvestidor: true,
-      isCliente: false,
-      isCorretor: false
-    };
-  }
+    if (isInvestidor) {
+      return {
+        canAccessObra: canAccess,
+        canViewFinancials: true,
+        canViewGlobalBudget: true,
+        canViewCommercialOnly: false,
+        canAccessManagement: false,
+        canUploadPhotos: false,
+        canViewPrivateDocs: true,
+        canEditProgress: false,
+        role: 'PROPRIETARIO_INVESTIDOR',
+        isMasterAdmin: false,
+        isInvestidor: true,
+        isCliente: false,
+        isCorretor: false
+      };
+    }
 
-  // 3. CORRETOR DE IMÓVEIS: Acesso ao cronograma físico, fotos públicas, documentos públicos, Mapa e Vendas. Sem custos/orçamento.
-  if (isCorretor) {
+    if (isCorretor) {
+      return {
+        canAccessObra: canAccess,
+        canViewFinancials: false,
+        canViewGlobalBudget: false,
+        canViewCommercialOnly: true,
+        canAccessManagement: false,
+        canUploadPhotos: false,
+        canViewPrivateDocs: false,
+        canEditProgress: false,
+        role: 'CORRETOR',
+        isMasterAdmin: false,
+        isInvestidor: false,
+        isCliente: false,
+        isCorretor: true
+      };
+    }
+
     return {
       canAccessObra: canAccess,
       canViewFinancials: false,
       canViewGlobalBudget: false,
-      canViewCommercialOnly: true,
+      canViewCommercialOnly: false,
       canAccessManagement: false,
       canUploadPhotos: false,
       canViewPrivateDocs: false,
       canEditProgress: false,
-      role: 'CORRETOR',
+      role: 'CLIENTE_COMPRADOR',
       isMasterAdmin: false,
       isInvestidor: false,
-      isCliente: false,
-      isCorretor: true
+      isCliente: true,
+      isCorretor: false
     };
-  }
-
-  // 4. CLIENTE / COMPRADOR: Acesso restrito apenas ao físico, fotos autorizadas e portfólio. Bloqueio financeiro absoluto.
-  return {
-    canAccessObra: canAccess,
-    canViewFinancials: false,
-    canViewGlobalBudget: false,
-    canViewCommercialOnly: false,
-    canAccessManagement: false,
-    canUploadPhotos: false,
-    canViewPrivateDocs: false,
-    canEditProgress: false,
-    role: 'CLIENTE_COMPRADOR',
-    isMasterAdmin: false,
-    isInvestidor: false,
-    isCliente: true,
-    isCorretor: false
-  };
+  }, [isMasterAdmin, obraRole, canAccess]);
 };

@@ -310,6 +310,7 @@ create table if not exists public.lotes (
 create table if not exists public.convites (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
+  user_id uuid references auth.users on delete set null,
   nome text,
   email text not null,
   telefone text,
@@ -318,8 +319,20 @@ create table if not exists public.convites (
   ativo boolean default true,
   status_cadastro text not null default 'PENDENTE',
   link_acesso text,
+  redeemed_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Migração incremental para bancos já existentes
+alter table public.convites add column if not exists user_id uuid references auth.users on delete set null;
+alter table public.convites add column if not exists redeemed_at timestamp with time zone;
+
+create unique index if not exists convites_email_obra_unique
+  on public.convites (lower(email), obra_id);
+
+-- RLS: convites_self_select permite SELECT onde lower(email) = lower(auth.jwt() ->> 'email')
+-- ou user_id = auth.uid(). Se o resgate falhar, confirme que o JWT contém o claim 'email'
+-- após login. Em projetos com confirmação de e-mail, a sessão só existe após confirmar.
 
 -- Garante que os valores de "role" aceitos incluam todos os papéis usados no app.
 do $$
@@ -375,6 +388,7 @@ as $$
 $$;
 
 -- Papéis que têm permissão de ver valores monetários (orçamento, custos, VGV, TIR/VPL).
+-- Legado global: usa perfis.role. Preferir can_view_financials_for_obra(obra_id).
 create or replace function public.can_view_financials()
 returns boolean
 language sql
@@ -385,6 +399,48 @@ as $$
   select
     public.is_admin()
     or public.current_role_name() in ('PROPRIETARIO_INVESTIDOR', 'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'INVESTIDOR');
+$$;
+
+-- Papel efetivo do usuário em uma obra específica (fonte: convites.role por obra).
+create or replace function public.role_for_obra(target_obra_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when public.is_admin() then 'ADMINISTRADOR'
+    else coalesce(
+      (
+        select c.role from public.convites c
+        where c.obra_id = target_obra_id
+          and coalesce(c.ativo, true) = true
+          and (
+            c.user_id = auth.uid()
+            or lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+          )
+        limit 1
+      ),
+      public.current_role_name(),
+      'CLIENTE_COMPRADOR'
+    )
+  end;
+$$;
+
+-- Mascaramento financeiro por obra (RBAC real no servidor).
+create or replace function public.can_view_financials_for_obra(target_obra_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin()
+    or public.role_for_obra(target_obra_id) in (
+      'PROPRIETARIO_INVESTIDOR', 'GESTOR', 'ENGENHEIRO', 'CONSULTOR', 'INVESTIDOR'
+    );
 $$;
 
 -- Verifica se o usuário autenticado tem convite ativo vinculado à obra informada.
@@ -400,10 +456,43 @@ as $$
     or exists (
       select 1 from public.convites c
       where c.obra_id = target_obra_id
-        and lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
         and coalesce(c.ativo, true) = true
+        and (
+          c.user_id = auth.uid()
+          or lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+        )
     );
 $$;
+
+-- Resgate automático: vincula auth.uid() aos convites pendentes do e-mail autenticado.
+create or replace function public.redeem_user_convites()
+returns setof public.convites
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text := lower(trim(coalesce(auth.jwt() ->> 'email', '')));
+begin
+  if v_uid is null or v_email = '' then
+    return;
+  end if;
+
+  return query
+  update public.convites c
+  set
+    user_id = v_uid,
+    status_cadastro = 'COMPLETO',
+    redeemed_at = timezone('utc', now())
+  where coalesce(c.ativo, true) = true
+    and lower(trim(c.email)) = v_email
+    and (c.user_id is null or c.user_id = v_uid)
+  returning c.*;
+end;
+$$;
+
+grant execute on function public.redeem_user_convites() to authenticated;
 
 -- ==============================================================================
 -- 4. AUTO-PROVISIONAMENTO DE PERFIL NO CADASTRO (auth.users → public.perfis)
@@ -578,7 +667,10 @@ create policy "convites_admin_all" on public.convites for all
 
 drop policy if exists "convites_self_select" on public.convites;
 create policy "convites_self_select" on public.convites for select
-  using (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+  using (
+    lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    or user_id = auth.uid()
+  );
 
 -- ORÇAMENTOS: 100% financeiro. Só admin e papéis com canViewFinancials, e só
 -- para obras às quais o usuário tem acesso.
@@ -588,7 +680,7 @@ create policy "orcamentos_admin_all" on public.orcamentos for all
 
 drop policy if exists "orcamentos_financeiro_select" on public.orcamentos;
 create policy "orcamentos_financeiro_select" on public.orcamentos for select
-  using (public.can_view_financials() and public.has_obra_access(obra_id));
+  using (public.can_view_financials_for_obra(obra_id) and public.has_obra_access(obra_id));
 
 -- CRONOGRAMA (tabela base): leitura completa (com valores em R$) restrita a
 -- quem pode ver financeiro. Corretor/Cliente devem usar a view "cronograma_publico".
@@ -598,7 +690,7 @@ create policy "cronograma_admin_all" on public.cronograma for all
 
 drop policy if exists "cronograma_financeiro_select" on public.cronograma;
 create policy "cronograma_financeiro_select" on public.cronograma for select
-  using (public.can_view_financials() and public.has_obra_access(obra_id));
+  using (public.can_view_financials_for_obra(obra_id) and public.has_obra_access(obra_id));
 
 -- CRONOGRAMA_MESES: % por etapa/mês. Admin grava; quem vê financeiro lê na obra.
 drop policy if exists "cronograma_meses_admin_all" on public.cronograma_meses;
@@ -608,10 +700,11 @@ create policy "cronograma_meses_admin_all" on public.cronograma_meses for all
 drop policy if exists "cronograma_meses_financeiro_select" on public.cronograma_meses;
 create policy "cronograma_meses_financeiro_select" on public.cronograma_meses for select
   using (
-    public.can_view_financials()
-    and exists (
+    exists (
       select 1 from public.orcamentos o
-      where o.id = etapa_id and public.has_obra_access(o.obra_id)
+      where o.id = etapa_id
+        and public.has_obra_access(o.obra_id)
+        and public.can_view_financials_for_obra(o.obra_id)
     )
   );
 
@@ -625,7 +718,7 @@ drop policy if exists "diario_select" on public.diario_obra;
 create policy "diario_select" on public.diario_obra for select
   using (
     public.has_obra_access(obra_id)
-    and (visivel_convidados = true or public.can_view_financials())
+    and (visivel_convidados = true or public.can_view_financials_for_obra(obra_id))
   );
 
 -- MEDIÇÕES (tabela base, com valores em R$): staff financeiro vê tudo.
@@ -636,7 +729,7 @@ create policy "medicoes_admin_all" on public.medicoes for all
 
 drop policy if exists "medicoes_financeiro_select" on public.medicoes;
 create policy "medicoes_financeiro_select" on public.medicoes for select
-  using (public.can_view_financials() and public.has_obra_access(obra_id));
+  using (public.can_view_financials_for_obra(obra_id) and public.has_obra_access(obra_id));
 
 -- FOTOS DA OBRA
 drop policy if exists "fotos_admin_all" on public.fotos_obra;
@@ -647,7 +740,7 @@ drop policy if exists "fotos_select" on public.fotos_obra;
 create policy "fotos_select" on public.fotos_obra for select
   using (
     public.has_obra_access(obra_id)
-    and (visivel_convidados = true or public.can_view_financials())
+    and (visivel_convidados = true or public.can_view_financials_for_obra(obra_id))
   );
 
 -- DOCUMENTOS / ARQUIVOS DA OBRA
@@ -659,8 +752,8 @@ drop policy if exists "arquivos_select" on public.obra_arquivos;
 create policy "arquivos_select" on public.obra_arquivos for select
   using (
     public.has_obra_access(obra_id)
-    and (not arquivado or public.can_view_financials())
-    and (visivel_convidados = true or public.can_view_financials())
+    and (not arquivado or public.can_view_financials_for_obra(obra_id))
+    and (visivel_convidados = true or public.can_view_financials_for_obra(obra_id))
   );
 
 -- VIABILIDADE: 100% financeiro/estratégico. Apenas admin e financeiro.
@@ -670,7 +763,7 @@ create policy "viabilidade_admin_all" on public.viabilidade for all
 
 drop policy if exists "viabilidade_financeiro_select" on public.viabilidade;
 create policy "viabilidade_financeiro_select" on public.viabilidade for select
-  using (public.can_view_financials() and public.has_obra_access(obra_id));
+  using (public.can_view_financials_for_obra(obra_id) and public.has_obra_access(obra_id));
 
 -- ESTUDOS DE VIABILIDADE INICIAL: 100% financeiro, pré-obra, só admin.
 drop policy if exists "estudos_viabilidade_admin_all" on public.estudos_viabilidade;
@@ -690,8 +783,8 @@ create policy "lotes_select" on public.lotes for select
 
 drop policy if exists "lotes_corretor_update" on public.lotes;
 create policy "lotes_corretor_update" on public.lotes for update
-  using (public.current_role_name() = 'CORRETOR' and public.has_obra_access(obra_id))
-  with check (public.current_role_name() = 'CORRETOR' and public.has_obra_access(obra_id));
+  using (public.role_for_obra(obra_id) = 'CORRETOR' and public.has_obra_access(obra_id))
+  with check (public.role_for_obra(obra_id) = 'CORRETOR' and public.has_obra_access(obra_id));
 
 -- ==============================================================================
 -- 7. VIEWS DE MASCARAMENTO FINANCEIRO
@@ -733,9 +826,9 @@ select
   o.lotes_vendidos,
   o.foto_capa,
   o.created_at,
-  case when public.can_view_financials() then o.valor_vgv end as valor_vgv,
-  case when public.can_view_financials() then o.custo_orcado end as custo_orcado,
-  case when public.can_view_financials() then o.custo_realizado end as custo_realizado,
+  case when public.can_view_financials_for_obra(o.id) then o.valor_vgv end as valor_vgv,
+  case when public.can_view_financials_for_obra(o.id) then o.custo_orcado end as custo_orcado,
+  case when public.can_view_financials_for_obra(o.id) then o.custo_realizado end as custo_realizado,
   coalesce(o.arquivada, false) as arquivada
 from public.obras o
 left join public.empresas e on e.id = o.empresa_id
@@ -755,10 +848,10 @@ select
   c.percentual_realizado_acumulado,
   c.status,
   c.created_at,
-  case when public.can_view_financials() then c.valor_previsto_mes end as valor_previsto_mes,
-  case when public.can_view_financials() then c.valor_realizado_mes end as valor_realizado_mes,
-  case when public.can_view_financials() then c.valor_previsto_acumulado end as valor_previsto_acumulado,
-  case when public.can_view_financials() then c.valor_realizado_acumulado end as valor_realizado_acumulado
+  case when public.can_view_financials_for_obra(c.obra_id) then c.valor_previsto_mes end as valor_previsto_mes,
+  case when public.can_view_financials_for_obra(c.obra_id) then c.valor_realizado_mes end as valor_realizado_mes,
+  case when public.can_view_financials_for_obra(c.obra_id) then c.valor_previsto_acumulado end as valor_previsto_acumulado,
+  case when public.can_view_financials_for_obra(c.obra_id) then c.valor_realizado_acumulado end as valor_realizado_acumulado
 from public.cronograma c
 where public.has_obra_access(c.obra_id);
 
@@ -800,7 +893,7 @@ select
   b.visivel_convidados,
   b.previsto,
   b.realizado,
-  case when public.can_view_financials() then b.valor_total end as valor_total,
+  case when public.can_view_financials_for_obra(b.obra_id) then b.valor_total end as valor_total,
   case
     when sum(b.valor_total) over (partition by b.obra_id) > 0
     then b.valor_total / sum(b.valor_total) over (partition by b.obra_id)
@@ -826,11 +919,11 @@ select
   m.link_relatorio_pdf,
   m.visivel_convidados,
   m.created_at,
-  case when public.can_view_financials() then m.valor_medicao end as valor_medicao,
-  case when public.can_view_financials() then m.valor_acumulado end as valor_acumulado
+  case when public.can_view_financials_for_obra(m.obra_id) then m.valor_medicao end as valor_medicao,
+  case when public.can_view_financials_for_obra(m.obra_id) then m.valor_acumulado end as valor_acumulado
 from public.medicoes m
 where public.has_obra_access(m.obra_id)
-  and (m.visivel_convidados = true or public.can_view_financials());
+  and (m.visivel_convidados = true or public.can_view_financials_for_obra(m.obra_id));
 
 grant select on public.medicoes_publicas to authenticated;
 

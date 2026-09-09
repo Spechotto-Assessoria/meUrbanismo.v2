@@ -21,6 +21,7 @@ import {
   UserProfile,
   Notificacao
 } from '../types';
+import { mapConviteRow } from './conviteResgate';
 
 /**
  * Camada de acesso a dados REAL do Supabase (Postgres + RLS).
@@ -975,14 +976,7 @@ class SupabaseDataService {
       return [];
     }
     // Aliases camelCase para compatibilidade com telas que usam o formato legado.
-    return (data || []).map((row: any) => ({
-      ...row,
-      obraId: row.obra_id,
-      quadraLote: row.quadra_lote,
-      statusCadastro: row.status_cadastro,
-      dataCriacao: row.created_at,
-      linkAcceso: row.link_acesso
-    })) as Convite[];
+    return (data || []).map((row: Record<string, unknown>) => mapConviteRow(row)) as Convite[];
   }
 
   async saveConvite(convite: Partial<Convite> & { obra_id: string; email: string }): Promise<Convite> {
@@ -1008,7 +1002,7 @@ class SupabaseDataService {
       logSupabaseError('saveConvite', error);
       throw new Error('Não foi possível salvar o convite. Apenas administradores podem gerenciar convites.');
     }
-    return data as Convite;
+    return mapConviteRow(data as Record<string, unknown>);
   }
 
   async deleteConvite(id: string): Promise<void> {

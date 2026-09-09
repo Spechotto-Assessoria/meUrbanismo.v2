@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthAlert } from './AuthAlert';
+import { setPendingObraId } from '../../services/conviteResgate';
 import {
   Lock,
   Mail,
   KeyRound,
   ShieldCheck,
-  User as UserIcon
+  User as UserIcon,
+  Send
 } from 'lucide-react';
 
 /**
@@ -31,16 +33,33 @@ function isValidNome(value: string): boolean {
   return trimmed.length >= 2 && trimmed.length <= 120;
 }
 
+function parseConviteFromUrl(): { email: string; obraId: string; isConvite: boolean } {
+  const params = new URLSearchParams(window.location.search);
+  const email = (params.get('email') || '').trim().toLowerCase();
+  const obraId = (params.get('obra') || '').trim();
+  const isConvite = window.location.hash.includes('/convite') || Boolean(email && obraId);
+  if (obraId) setPendingObraId(obraId);
+  return { email, obraId, isConvite };
+}
+
 export const LoginScreen: React.FC = () => {
   const { loginWithEmail, signUpWithEmail, loginWithGoogle, resetPassword } = useAuth();
 
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
+  const conviteParams = parseConviteFromUrl();
+  const [isSignUp, setIsSignUp] = useState(conviteParams.isConvite);
+  const [email, setEmail] = useState(conviteParams.email);
   const [password, setPassword] = useState('');
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [emailTravado] = useState(Boolean(conviteParams.email));
+
+  useEffect(() => {
+    if (conviteParams.isConvite && conviteParams.email) {
+      setIsSignUp(true);
+    }
+  }, [conviteParams.isConvite, conviteParams.email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +75,10 @@ export const LoginScreen: React.FC = () => {
     }
     if (!isValidEmail(email)) {
       setError('E-mail inválido. Verifique o endereço informado.');
+      return;
+    }
+    if (emailTravado && email.trim().toLowerCase() !== conviteParams.email) {
+      setError('Use o mesmo e-mail do convite para criar sua conta.');
       return;
     }
     if (!isValidPassword(password)) {
@@ -151,6 +174,16 @@ export const LoginScreen: React.FC = () => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-5">
+          {conviteParams.isConvite && (
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-semibold flex items-start gap-2">
+              <Send className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
+              <span>
+                Você foi convidado para acessar um empreendimento.
+                {conviteParams.email ? ` Cadastre-se ou entre com o e-mail ${conviteParams.email}.` : ' Crie sua conta com o e-mail do convite.'}
+              </span>
+            </div>
+          )}
+
           {error && <AuthAlert type="error" message={error} />}
           {success && <AuthAlert type="success" message={success} />}
 
@@ -186,12 +219,13 @@ export const LoginScreen: React.FC = () => {
                 <input
                   type="email"
                   required
-                  disabled={loading}
+                  disabled={loading || emailTravado}
+                  readOnly={emailTravado}
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ex: seu.email@exemplo.com"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 read-only:opacity-80"
                 />
               </div>
             </div>
