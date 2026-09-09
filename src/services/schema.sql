@@ -91,6 +91,8 @@ create table if not exists public.obras (
 -- Backfill: bancos já existentes não recebem a coluna pelo CREATE TABLE IF NOT EXISTS.
 alter table public.obras add column if not exists arquivada boolean not null default false;
 alter table public.obras add column if not exists area_vendavel_m2 numeric(12,2) default 0;
+alter table public.obras add column if not exists mapa_masterplan_url text;
+alter table public.obras add column if not exists mapa_viewbox text default '0 0 1200 800';
 alter table public.obras alter column tipo set default 'Condomínio Horizontal Fechado';
 
 create table if not exists public.orcamentos (
@@ -306,6 +308,10 @@ create table if not exists public.lotes (
   corretor_nome text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+alter table public.lotes add column if not exists svg_path text;
+alter table public.lotes add column if not exists label_x numeric(8,2);
+alter table public.lotes add column if not exists label_y numeric(8,2);
 
 create table if not exists public.convites (
   id uuid primary key default gen_random_uuid(),
@@ -825,6 +831,8 @@ select
   o.lotes_reservados,
   o.lotes_vendidos,
   o.foto_capa,
+  o.mapa_masterplan_url,
+  o.mapa_viewbox,
   o.created_at,
   case when public.can_view_financials_for_obra(o.id) then o.valor_vgv end as valor_vgv,
   case when public.can_view_financials_for_obra(o.id) then o.custo_orcado end as custo_orcado,
@@ -1350,6 +1358,57 @@ begin
 exception
   when duplicate_object then null;
   when undefined_object then null;
+end $$;
+
+-- Seed demo: lotes com svg_path para a primeira obra sem mapeamento (grid 4x3).
+do $$
+declare
+  v_obra_id uuid;
+begin
+  select o.id into v_obra_id
+  from public.obras o
+  where not exists (
+    select 1 from public.lotes l where l.obra_id = o.id and l.svg_path is not null
+  )
+  order by o.created_at asc
+  limit 1;
+
+  if v_obra_id is null then
+    return;
+  end if;
+
+  update public.obras
+  set mapa_viewbox = coalesce(mapa_viewbox, '0 0 1200 800')
+  where id = v_obra_id;
+
+  insert into public.lotes (
+    obra_id, quadra, numero, area_m2, valor_m2, valor_total, status,
+    svg_path, label_x, label_y
+  ) values
+    (v_obra_id, 'Quadra A', '01', 300, 600, 180000, 'disponivel',
+      'M 50 50 L 310 50 L 310 270 L 50 270 Z', 180, 160),
+    (v_obra_id, 'Quadra A', '02', 320, 600, 192000, 'disponivel',
+      'M 330 50 L 590 50 L 590 270 L 330 270 Z', 460, 160),
+    (v_obra_id, 'Quadra A', '03', 310, 600, 186000, 'reservado',
+      'M 610 50 L 870 50 L 870 270 L 610 270 Z', 740, 160),
+    (v_obra_id, 'Quadra A', '04', 305, 600, 183000, 'vendido',
+      'M 890 50 L 1150 50 L 1150 270 L 890 270 Z', 1020, 160),
+    (v_obra_id, 'Quadra B', '05', 298, 620, 184760, 'disponivel',
+      'M 50 290 L 310 290 L 310 510 L 50 510 Z', 180, 400),
+    (v_obra_id, 'Quadra B', '06', 315, 620, 195300, 'reservado',
+      'M 330 290 L 590 290 L 590 510 L 330 510 Z', 460, 400),
+    (v_obra_id, 'Quadra B', '07', 300, 620, 186000, 'disponivel',
+      'M 610 290 L 870 290 L 870 510 L 610 510 Z', 740, 400),
+    (v_obra_id, 'Quadra B', '08', 308, 620, 190960, 'vendido',
+      'M 890 290 L 1150 290 L 1150 510 L 890 510 Z', 1020, 400),
+    (v_obra_id, 'Quadra C', '09', 302, 640, 193280, 'disponivel',
+      'M 50 530 L 310 530 L 310 750 L 50 750 Z', 180, 640),
+    (v_obra_id, 'Quadra C', '10', 318, 640, 203520, 'disponivel',
+      'M 330 530 L 590 530 L 590 750 L 330 750 Z', 460, 640),
+    (v_obra_id, 'Quadra C', '11', 295, 640, 188800, 'reservado',
+      'M 610 530 L 870 530 L 870 750 L 610 750 Z', 740, 640),
+    (v_obra_id, 'Quadra C', '12', 312, 640, 199680, 'vendido',
+      'M 890 530 L 1150 530 L 1150 750 L 890 750 Z', 1020, 640);
 end $$;
 
 -- Recarrega o cache da Data API (PostgREST) para enxergar colunas/views novas.

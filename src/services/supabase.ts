@@ -964,6 +964,55 @@ class SupabaseDataService {
     }
   }
 
+  async updateLote(
+    loteId: string,
+    dados: Pick<Lote, 'status' | 'area_m2' | 'valor_total' | 'valor_m2'>
+  ): Promise<Lote> {
+    const payload: Record<string, unknown> = {};
+    if (dados.status !== undefined) {
+      payload.status = String(dados.status).toLowerCase();
+    }
+    if (dados.area_m2 !== undefined) payload.area_m2 = dados.area_m2;
+    if (dados.valor_total !== undefined) payload.valor_total = dados.valor_total;
+    if (dados.valor_m2 !== undefined) payload.valor_m2 = dados.valor_m2;
+
+    const { data, error } = await supabase
+      .from('lotes')
+      .update(payload)
+      .eq('id', loteId)
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('updateLote', error);
+      throw new Error('Não foi possível atualizar o lote.');
+    }
+    return data as Lote;
+  }
+
+  async updateObraMapa(
+    obraId: string,
+    dados: { mapa_masterplan_url?: string | null; mapa_viewbox?: string | null }
+  ): Promise<Obra> {
+    const payload = clean({
+      mapa_masterplan_url: dados.mapa_masterplan_url ?? undefined,
+      mapa_viewbox: dados.mapa_viewbox ?? undefined,
+    });
+
+    const { data, error } = await supabase
+      .from('obras')
+      .update(payload)
+      .eq('id', obraId)
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('updateObraMapa', error);
+      throw new Error('Não foi possível atualizar o mapa da obra.');
+    }
+    return data as Obra;
+  }
+
   // ============================================================
   // CONVITES (fonte real de RBAC por obra — ver has_obra_access() no schema.sql)
   // ============================================================

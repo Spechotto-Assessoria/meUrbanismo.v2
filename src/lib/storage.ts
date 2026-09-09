@@ -94,6 +94,30 @@ export async function uploadObraCapa(file: File, obraId: string): Promise<string
   return data.publicUrl;
 }
 
+/**
+ * Envia a planta do masterplan (imagem ou PDF) para o Storage.
+ * Caminho: "<obraId>/masterplan.<ext>" no bucket "fotos_obra".
+ */
+export async function uploadMapaMasterplan(file: File, obraId: string): Promise<string> {
+  const validacao = validarArquivos([file], 'masterplan');
+  if (!validacao.ok) throw new Error(validacao.erro);
+
+  const ext = getFileExtension(file);
+  const path = `${obraId}/masterplan.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(FOTOS_OBRA_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type || undefined });
+
+  if (error) {
+    logStorageError('uploadMapaMasterplan', error);
+    throw new Error('Não foi possível enviar a planta do masterplan. Tente novamente.');
+  }
+
+  const { data } = supabase.storage.from(FOTOS_OBRA_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
 /** Remove uma capa de obra já enviada, a partir da URL pública. */
 export async function deleteObraCapa(fotoUrl: string): Promise<void> {
   const path = extractStoragePath(fotoUrl, FOTOS_OBRA_BUCKET);

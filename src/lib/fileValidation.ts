@@ -1,6 +1,7 @@
 export const LIMITES = {
   foto: { maxBytes: 10 * 1024 * 1024, maxArquivos: 20 },
   documento: { maxBytes: 50 * 1024 * 1024, maxArquivos: 30 },
+  masterplan: { maxBytes: 30 * 1024 * 1024, maxArquivos: 1 },
 } as const;
 
 const EXECUTAVEIS = new Set([
@@ -9,6 +10,15 @@ const EXECUTAVEIS = new Set([
 ]);
 
 const MIME_FOTOS = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+const MIME_MASTERPLAN = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
+const EXT_MASTERPLAN = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf']);
 
 const EXT_DOCS = new Set(['pdf', 'dwg', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'webp']);
 
@@ -39,7 +49,7 @@ export type ValidacaoArquivosResult =
 /** Valida tamanho, extensão e MIME antes de upload. */
 export function validarArquivos(
   files: File[],
-  tipo: 'foto' | 'documento'
+  tipo: 'foto' | 'documento' | 'masterplan'
 ): ValidacaoArquivosResult {
   const limite = LIMITES[tipo];
 
@@ -64,6 +74,16 @@ export function validarArquivos(
     if (tipo === 'foto') {
       if (!MIME_FOTOS.has(file.type)) {
         return { ok: false, erro: `${file.name}: apenas JPEG, PNG, WebP ou GIF.` };
+      }
+      continue;
+    }
+
+    if (tipo === 'masterplan') {
+      if (!EXT_MASTERPLAN.has(ext)) {
+        return { ok: false, erro: `${file.name}: use JPEG, PNG, WebP ou PDF.` };
+      }
+      if (file.type && !MIME_MASTERPLAN.has(file.type)) {
+        return { ok: false, erro: `${file.name}: tipo de arquivo não permitido.` };
       }
       continue;
     }

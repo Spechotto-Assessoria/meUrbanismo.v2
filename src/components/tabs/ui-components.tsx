@@ -36,3 +36,59 @@ export const CardTitle = ({ className = '', children, ...props }: any) => (
 export const CardContent = ({ className = '', children, ...props }: any) => (
     <div className={`p-5 pt-0 ${className}`} {...props}>{children}</div>
 );
+
+export const Badge = ({ children, className = '', ...props }: any) => (
+    <span
+        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}
+        {...props}
+    >
+        {children}
+    </span>
+);
+
+export const Select = ({ className = '', children, ...props }: any) => (
+    <select
+        className={`flex h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        {...props}
+    >
+        {children}
+    </select>
+);
+
+type DialogProps = {
+    open: boolean;
+    onClose: () => void;
+    children: React.ReactNode;
+    className?: string;
+};
+
+export const Dialog = ({ open, onClose, children, className = '' }: DialogProps) => {
+    if (!open) return null;
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+            onClick={onClose}
+        >
+            <div
+                className={`bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md relative ${className}`}
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+            >
+                {children}
+            </div>
+        </div>
+    );
+};
+
+export const DialogHeader = ({ className = '', children, ...props }: any) => (
+    <div className={`px-6 pt-6 pb-2 ${className}`} {...props}>{children}</div>
+);
+
+export const DialogTitle = ({ className = '', children, ...props }: any) => (
+    <h3 className={`text-lg font-bold text-slate-900 ${className}`} {...props}>{children}</h3>
+);
+
+export const DialogContent = ({ className = '', children, ...props }: any) => (
+    <div className={`px-6 pb-6 space-y-4 ${className}`} {...props}>{children}</div>
+);

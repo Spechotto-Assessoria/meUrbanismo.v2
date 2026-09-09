@@ -96,6 +96,8 @@ export interface Obra {
   descricao?: string;
   endereco?: string;
   foto_capa?: string;
+  mapa_masterplan_url?: string;
+  mapa_viewbox?: string;
   // Datas
   data_inicio?: string;
   dataInicio?: string;
@@ -401,6 +403,9 @@ export interface Lote {
   valor_total?: number;
   topografia?: string;
   status?: 'disponivel' | 'reservado' | 'vendido' | 'bloqueado' | 'Disponível' | 'Reservado' | 'Vendido' | 'Bloqueado';
+  svg_path?: string;
+  label_x?: number;
+  label_y?: number;
   cliente_nome?: string;
   corretor_nome?: string;
   data_venda?: string;
