@@ -4,6 +4,7 @@ import {
   coresLotePorStatus,
   isPdfUrl,
   lotesComSvg,
+  parseViewBox,
   VIEWBOX_PADRAO,
 } from '../../lib/loteMapa';
 import type { Lote } from '../../types';
@@ -37,6 +38,8 @@ export const EspelhoVendasSvg: React.FC<Props> = ({
     return VIEWBOX_PADRAO;
   }, [viewBox, masterplanUrl, pdf.largura, pdf.altura]);
 
+  const { cssAspectRatio } = useMemo(() => parseViewBox(viewBoxEfetivo), [viewBoxEfetivo]);
+
   useEffect(() => {
     if (isPdfUrl(masterplanUrl) && pdf.largura > 0 && pdf.altura > 0 && !viewBox?.trim()) {
       onViewboxDetected?.(`0 0 ${pdf.largura} ${pdf.altura}`);
@@ -52,7 +55,10 @@ export const EspelhoVendasSvg: React.FC<Props> = ({
   };
 
   return (
-    <div className="relative w-full rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden shadow-sm aspect-[3/2]">
+    <div
+      className="relative w-full rounded-2xl border border-slate-200 bg-slate-100 overflow-hidden shadow-sm"
+      style={{ aspectRatio: cssAspectRatio }}
+    >
       {masterplanUrl && !isPdfUrl(masterplanUrl) && (
         <img
           src={masterplanUrl}
@@ -78,7 +84,7 @@ export const EspelhoVendasSvg: React.FC<Props> = ({
       )}
 
       <svg
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full pointer-events-auto"
         viewBox={viewBoxEfetivo}
         preserveAspectRatio="xMidYMid meet"
       >

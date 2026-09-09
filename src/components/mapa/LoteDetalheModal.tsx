@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Pencil, X } from 'lucide-react';
-import { coresLotePorStatus, formatBRL, normalizeStatus } from '../../lib/loteMapa';
+import { Loader2, Pencil, Trash2, X } from 'lucide-react';
+import { useLoteFormState } from '../../hooks/useLoteFormState';
+import { coresLotePorStatus, formatBRL } from '../../lib/loteMapa';
 import type { Lote } from '../../types';
+import type { LoteFormData } from '../../lib/loteMapa';
 import {
   Badge,
   Button,
@@ -9,18 +11,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
-  Select,
 } from '../tabs/ui-components';
+import { LoteFormFields } from './LoteFormFields';
 
 type Props = {
   lote: Lote | null;
   open: boolean;
   onClose: () => void;
   podeEditar: boolean;
-  onSalvar: (dados: Pick<Lote, 'status' | 'area_m2' | 'valor_total' | 'valor_m2'>) => Promise<void>;
+  onSalvar: (dados: LoteFormData) => Promise<void>;
+  onExcluir: () => Promise<void>;
   salvando?: boolean;
+  excluindo?: boolean;
 };
 
 export const LoteDetalheModal: React.FC<Props> = ({
@@ -29,58 +31,53 @@ export const LoteDetalheModal: React.FC<Props> = ({
   onClose,
   podeEditar,
   onSalvar,
+  onExcluir,
   salvando,
+  excluindo,
 }) => {
   const [editando, setEditando] = useState(false);
-  const [status, setStatus] = useState<ReturnType<typeof normalizeStatus>>('disponivel');
-  const [area, setArea] = useState('');
-  const [valor, setValor] = useState('');
-  const [erro, setErro] = useState<string | null>(null);
+  const form = useLoteFormState(lote);
 
   useEffect(() => {
-    if (!lote) return;
-    setEditando(false);
-    setStatus(normalizeStatus(lote.status));
-    setArea(String(lote.area_m2 ?? ''));
-    setValor(String(lote.valor_total ?? ''));
-    setErro(null);
-  }, [lote]);
+    if (!open) setEditando(false);
+  }, [open, lote?.id]);
 
-  if (!lote) return null;
+  if (!lote || !open) return null;
 
   const badge = coresLotePorStatus(lote.status);
+  const busy = salvando || excluindo;
 
   const handleSalvar = async () => {
-    const areaNum = Number(area.replace(',', '.'));
-    const valorNum = Number(valor.replace(/\./g, '').replace(',', '.'));
-    if (!areaNum || areaNum <= 0) {
-      setErro('Informe uma metragem válida.');
-      return;
-    }
-    if (!valorNum || valorNum <= 0) {
-      setErro('Informe um valor válido.');
-      return;
-    }
-    setErro(null);
+    const { dados, erro } = form.validarESerializar();
+    if (erro) return;
     try {
-      const valorM2 = Math.round((valorNum / areaNum) * 100) / 100;
-      await onSalvar({
-        status,
-        area_m2: areaNum,
-        valor_total: valorNum,
-        valor_m2: valorM2,
-      });
+      await onSalvar(dados);
       setEditando(false);
     } catch (e: unknown) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível salvar.');
+      form.setErro(e instanceof Error ? e.message : 'Não foi possível salvar.');
     }
   };
 
+  const handleExcluir = async () => {
+    if (!confirm(`Excluir definitivamente o Lote ${lote.numero} (${lote.quadra})?`)) return;
+    try {
+      await onExcluir();
+      onClose();
+    } catch (e: unknown) {
+      form.setErro(e instanceof Error ? e.message : 'Não foi possível excluir o lote.');
+    }
+  };
+
+  const handleClose = () => {
+    setEditando(false);
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={handleClose}>
       <button
         type="button"
-        onClick={onClose}
+        onClick={handleClose}
         className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
         aria-label="Fechar"
       >
@@ -114,61 +111,51 @@ export const LoteDetalheModal: React.FC<Props> = ({
             </div>
 
             {podeEditar && (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => setEditando(true)}
-              >
-                <Pencil className="w-3.5 h-3.5" /> Editar lote
-              </Button>
+              <div className="flex flex-col gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => setEditando(true)}
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Editar lote
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2 text-red-700 border-red-200 hover:bg-red-50"
+                  onClick={handleExcluir}
+                  disabled={busy}
+                >
+                  {excluindo ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                  Excluir lote
+                </Button>
+              </div>
             )}
           </>
         ) : (
-          <div className="space-y-3">
-            <div>
-              <Label>Status</Label>
-              <Select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
-                <option value="disponivel">Disponível</option>
-                <option value="reservado">Reservado</option>
-                <option value="vendido">Vendido</option>
-              </Select>
-            </div>
-            <div>
-              <Label>Metragem (m²)</Label>
-              <Input
-                type="number"
-                min={1}
-                value={area}
-                onChange={(e) => setArea(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Valor (R$)</Label>
-              <Input
-                type="number"
-                min={1}
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-              />
-            </div>
-            {erro && <p className="text-xs text-red-600">{erro}</p>}
+          <>
+            <LoteFormFields {...form} />
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
                 className="flex-1"
                 onClick={() => setEditando(false)}
-                disabled={salvando}
+                disabled={busy}
               >
                 Cancelar
               </Button>
-              <Button type="button" className="flex-1 gap-2" onClick={handleSalvar} disabled={salvando}>
+              <Button type="button" className="flex-1 gap-2" onClick={handleSalvar} disabled={busy}>
                 {salvando && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Salvar
               </Button>
             </div>
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

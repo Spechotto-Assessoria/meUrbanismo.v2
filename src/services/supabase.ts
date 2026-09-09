@@ -964,17 +964,63 @@ class SupabaseDataService {
     }
   }
 
+  async createLote(obraId: string, dados: {
+    quadra: string;
+    numero: string;
+    area_m2: number;
+    valor_total: number;
+    valor_m2: number;
+    status: string;
+    svg_path: string;
+    label_x?: number;
+    label_y?: number;
+  }): Promise<Lote> {
+    const quadra = dados.quadra.trim();
+    const numero = dados.numero.trim();
+    const svg_path = dados.svg_path.trim();
+
+    if (!obraId) throw new Error('Obra não informada.');
+    if (!quadra) throw new Error('Quadra é obrigatória.');
+    if (!numero) throw new Error('Número do lote é obrigatório.');
+    if (!svg_path) throw new Error('SVG Path é obrigatório.');
+
+    const payload = {
+      obra_id: obraId,
+      quadra,
+      numero,
+      area_m2: dados.area_m2,
+      valor_total: dados.valor_total,
+      valor_m2: dados.valor_m2,
+      status: String(dados.status || 'disponivel').toLowerCase(),
+      svg_path,
+      label_x: dados.label_x ?? null,
+      label_y: dados.label_y ?? null,
+    };
+
+    const { data, error } = await supabase.from('lotes').insert(payload).select().single();
+    if (error) {
+      logSupabaseError('createLote', error);
+      throw new Error('Não foi possível criar o lote.');
+    }
+    return data as Lote;
+  }
+
   async updateLote(
     loteId: string,
-    dados: Pick<Lote, 'status' | 'area_m2' | 'valor_total' | 'valor_m2'>
+    dados: Partial<Pick<Lote,
+      'quadra' | 'numero' | 'status' | 'area_m2' | 'valor_total' | 'valor_m2' | 'svg_path' | 'label_x' | 'label_y'
+    >>
   ): Promise<Lote> {
     const payload: Record<string, unknown> = {};
-    if (dados.status !== undefined) {
-      payload.status = String(dados.status).toLowerCase();
-    }
+    if (dados.quadra !== undefined) payload.quadra = dados.quadra.trim();
+    if (dados.numero !== undefined) payload.numero = dados.numero.trim();
+    if (dados.status !== undefined) payload.status = String(dados.status).toLowerCase();
     if (dados.area_m2 !== undefined) payload.area_m2 = dados.area_m2;
     if (dados.valor_total !== undefined) payload.valor_total = dados.valor_total;
     if (dados.valor_m2 !== undefined) payload.valor_m2 = dados.valor_m2;
+    if (dados.svg_path !== undefined) payload.svg_path = dados.svg_path.trim();
+    if (dados.label_x !== undefined) payload.label_x = dados.label_x;
+    if (dados.label_y !== undefined) payload.label_y = dados.label_y;
 
     const { data, error } = await supabase
       .from('lotes')
@@ -990,14 +1036,21 @@ class SupabaseDataService {
     return data as Lote;
   }
 
+  async deleteLote(loteId: string): Promise<void> {
+    const { error } = await supabase.from('lotes').delete().eq('id', loteId);
+    if (error) {
+      logSupabaseError('deleteLote', error);
+      throw new Error('Não foi possível excluir o lote.');
+    }
+  }
+
   async updateObraMapa(
     obraId: string,
     dados: { mapa_masterplan_url?: string | null; mapa_viewbox?: string | null }
   ): Promise<Obra> {
-    const payload = clean({
-      mapa_masterplan_url: dados.mapa_masterplan_url ?? undefined,
-      mapa_viewbox: dados.mapa_viewbox ?? undefined,
-    });
+    const payload: Record<string, unknown> = {};
+    if ('mapa_masterplan_url' in dados) payload.mapa_masterplan_url = dados.mapa_masterplan_url;
+    if ('mapa_viewbox' in dados) payload.mapa_viewbox = dados.mapa_viewbox;
 
     const { data, error } = await supabase
       .from('obras')

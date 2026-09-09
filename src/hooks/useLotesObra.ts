@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/supabase';
+import { deleteMapaMasterplan, uploadMapaMasterplan } from '../lib/storage';
 import type { Lote, Obra } from '../types';
+import type { LoteFormData } from '../lib/loteMapa';
+
+function invalidateLotes(queryClient: ReturnType<typeof useQueryClient>, obraId: string) {
+  void queryClient.invalidateQueries({ queryKey: ['lotes', obraId] });
+  void queryClient.invalidateQueries({ queryKey: ['obras'] });
+}
 
 export function useLotesObra() {
   const { activeObra, setActiveObra } = useAuth();
@@ -14,17 +21,37 @@ export function useLotesObra() {
     enabled: Boolean(obraId),
   });
 
-  const updateLoteMutation = useMutation({
-    mutationFn: ({
-      loteId,
-      dados,
-    }: {
-      loteId: string;
-      dados: Pick<Lote, 'status' | 'area_m2' | 'valor_total' | 'valor_m2'>;
-    }) => apiService.updateLote(loteId, dados),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['lotes', obraId] });
-      void queryClient.invalidateQueries({ queryKey: ['obras'] });
+  const syncObra = (obraAtualizada: Obra) => {
+    if (activeObra) {
+      setActiveObra({ ...activeObra, ...obraAtualizada } as Obra);
+    }
+  };
+
+  const uploadMasterplanMutation = useMutation({
+    mutationFn: async ({ file, viewBox }: { file: File; viewBox: string }) => {
+      const url = await uploadMapaMasterplan(file, obraId);
+      return apiService.updateObraMapa(obraId, {
+        mapa_masterplan_url: url,
+        mapa_viewbox: viewBox,
+      });
+    },
+    onSuccess: (obraAtualizada) => {
+      syncObra(obraAtualizada);
+      invalidateLotes(queryClient, obraId);
+    },
+  });
+
+  const deleteMasterplanMutation = useMutation({
+    mutationFn: async (url: string) => {
+      if (url) await deleteMapaMasterplan(url);
+      return apiService.updateObraMapa(obraId, {
+        mapa_masterplan_url: null,
+        mapa_viewbox: null,
+      });
+    },
+    onSuccess: (obraAtualizada) => {
+      syncObra(obraAtualizada);
+      invalidateLotes(queryClient, obraId);
     },
   });
 
@@ -32,11 +59,25 @@ export function useLotesObra() {
     mutationFn: (dados: { mapa_masterplan_url?: string | null; mapa_viewbox?: string | null }) =>
       apiService.updateObraMapa(obraId, dados),
     onSuccess: (obraAtualizada) => {
-      if (activeObra) {
-        setActiveObra({ ...activeObra, ...obraAtualizada } as Obra);
-      }
-      void queryClient.invalidateQueries({ queryKey: ['obras'] });
+      syncObra(obraAtualizada);
+      invalidateLotes(queryClient, obraId);
     },
+  });
+
+  const createLoteMutation = useMutation({
+    mutationFn: (dados: LoteFormData) => apiService.createLote(obraId, dados),
+    onSuccess: () => invalidateLotes(queryClient, obraId),
+  });
+
+  const updateLoteMutation = useMutation({
+    mutationFn: ({ loteId, dados }: { loteId: string; dados: LoteFormData }) =>
+      apiService.updateLote(loteId, dados),
+    onSuccess: () => invalidateLotes(queryClient, obraId),
+  });
+
+  const deleteLoteMutation = useMutation({
+    mutationFn: (loteId: string) => apiService.deleteLote(loteId),
+    onSuccess: () => invalidateLotes(queryClient, obraId),
   });
 
   return {
@@ -47,9 +88,17 @@ export function useLotesObra() {
     isError: lotesQuery.isError,
     error: lotesQuery.error,
     refetch: lotesQuery.refetch,
-    updateLote: updateLoteMutation.mutateAsync,
-    isUpdatingLote: updateLoteMutation.isPending,
+    uploadMasterplan: uploadMasterplanMutation.mutateAsync,
+    isUploadingMasterplan: uploadMasterplanMutation.isPending,
+    deleteMasterplan: deleteMasterplanMutation.mutateAsync,
+    isDeletingMasterplan: deleteMasterplanMutation.isPending,
     updateMapa: updateMapaMutation.mutateAsync,
     isUpdatingMapa: updateMapaMutation.isPending,
+    createLote: createLoteMutation.mutateAsync,
+    isCreatingLote: createLoteMutation.isPending,
+    updateLote: updateLoteMutation.mutateAsync,
+    isUpdatingLote: updateLoteMutation.isPending,
+    deleteLote: deleteLoteMutation.mutateAsync,
+    isDeletingLote: deleteLoteMutation.isPending,
   };
 }

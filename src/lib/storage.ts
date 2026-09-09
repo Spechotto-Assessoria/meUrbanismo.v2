@@ -118,6 +118,18 @@ export async function uploadMapaMasterplan(file: File, obraId: string): Promise<
   return data.publicUrl;
 }
 
+/** Remove a planta do masterplan do Storage a partir da URL pública. */
+export async function deleteMapaMasterplan(masterplanUrl: string): Promise<void> {
+  const path = extractStoragePath(masterplanUrl, FOTOS_OBRA_BUCKET);
+  if (!path) return;
+
+  const { error } = await supabase.storage.from(FOTOS_OBRA_BUCKET).remove([path]);
+  if (error) {
+    logStorageError('deleteMapaMasterplan', error);
+    throw new Error('Não foi possível excluir a planta do masterplan.');
+  }
+}
+
 /** Remove uma capa de obra já enviada, a partir da URL pública. */
 export async function deleteObraCapa(fotoUrl: string): Promise<void> {
   const path = extractStoragePath(fotoUrl, FOTOS_OBRA_BUCKET);
