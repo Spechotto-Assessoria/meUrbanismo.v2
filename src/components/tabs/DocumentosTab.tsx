@@ -1,16 +1,26 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import { SkeletonCard } from '../common/SkeletonLoader';
+import { useAuth } from '../../contexts/AuthContext';
 import { useDocumentosObra } from '../../hooks/useDocumentosObra';
 import { DocumentosPastasPanel } from '../documentos/DocumentosPastasPanel';
 
 export const DocumentosTab: React.FC = () => {
+  const { canAccessObra } = useAuth();
   const ctx = useDocumentosObra();
 
   if (!ctx.activeObra) {
     return (
       <div className="p-8 text-center text-sm text-slate-500">
         Selecione uma obra para ver os documentos.
+      </div>
+    );
+  }
+
+  if (!canAccessObra(ctx.activeObra.id)) {
+    return (
+      <div className="p-8 text-center text-sm text-rose-600">
+        Você não tem acesso a este empreendimento.
       </div>
     );
   }

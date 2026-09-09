@@ -3,6 +3,7 @@ import { Loader2, X } from 'lucide-react';
 import type { FotoObra } from '../../types';
 import { apiService } from '../../services/supabase';
 import { uploadFotosAcompanhamento } from '../../lib/storage';
+import { validarArquivos } from '../../lib/fileValidation';
 
 export const ModalShell: React.FC<{
   titulo: string;
@@ -52,9 +53,22 @@ export const UploadFotoModal: React.FC<UploadProps> = ({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const handleArquivosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const lista = Array.from(e.target.files || []);
+    const result = validarArquivos(lista, 'foto');
+    if (!result.ok) {
+      setErro(result.erro);
+      e.target.value = '';
+      return;
+    }
+    setErro(null);
+    setArquivos(result.files);
+  };
+
   const enviar = async () => {
-    if (!arquivos.length) {
-      setErro('Selecione ao menos uma foto.');
+    const validacao = validarArquivos(arquivos, 'foto');
+    if (!validacao.ok) {
+      setErro(validacao.erro);
       return;
     }
     setEnviando(true);
@@ -88,9 +102,9 @@ export const UploadFotoModal: React.FC<UploadProps> = ({
       <div className="space-y-3">
         <input
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,.webp,.gif"
           multiple
-          onChange={(e) => setArquivos(Array.from(e.target.files || []))}
+          onChange={handleArquivosChange}
           className="w-full text-xs"
         />
         {arquivos.length > 0 && (

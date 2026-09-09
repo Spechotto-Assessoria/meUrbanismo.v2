@@ -9,6 +9,7 @@ import {
   tituloDeArquivo,
 } from '../../lib/documentos-constants';
 import { uploadDocumentosObra } from '../../lib/storage';
+import { validarArquivos } from '../../lib/fileValidation';
 import type { DocumentoObra } from '../../types';
 
 type Props = {
@@ -41,9 +42,22 @@ export const DocumentoUploadModal: React.FC<Props> = ({
 
   const pastaDestino = usarNovaPasta ? novaPasta.trim() : pasta;
 
+  const handleArquivosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const lista = Array.from(e.target.files || []);
+    const result = validarArquivos(lista, 'documento');
+    if (!result.ok) {
+      setErro(result.erro);
+      e.target.value = '';
+      return;
+    }
+    setErro(null);
+    setArquivos(result.files);
+  };
+
   const enviar = async () => {
-    if (!arquivos.length) {
-      setErro('Selecione ao menos um arquivo.');
+    const validacao = validarArquivos(arquivos, 'documento');
+    if (!validacao.ok) {
+      setErro(validacao.erro);
       return;
     }
     if (!pastaDestino) {
@@ -94,8 +108,8 @@ export const DocumentoUploadModal: React.FC<Props> = ({
             <input
               type="file"
               multiple
-              accept=".pdf,.dwg,.zip,.doc,.docx,.xls,.xlsx,image/*"
-              onChange={(e) => setArquivos(Array.from(e.target.files || []))}
+              accept=".pdf,.dwg,.zip,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp"
+              onChange={handleArquivosChange}
               className="w-full text-xs"
             />
             {arquivos.length > 0 && (

@@ -7,7 +7,6 @@ import { useRolePorObra } from '../hooks/useRolePorObra';
 import {
   AUTH_STORAGE_KEY,
   buildUserSession,
-  isMasterEmail,
   resolveActiveObraAfterLogin
 } from '../services/authSession';
 import {
@@ -64,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [obras, setObras] = useState<Obra[]>([]);
   const [activeObra, setActiveObraState] = useState<Obra | null>(null);
 
-  const isMasterAdmin = isMasterEmail(user?.email) || user?.role === 'ADMINISTRADOR';
+  const isMasterAdmin = user?.role === 'ADMINISTRADOR';
   const { getRoleForObra, effectiveRole, canViewFinancials, isCorretor } = useRolePorObra({
     convites: convitesUsuario,
     activeObraId: activeObra?.id,
@@ -90,11 +89,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { obras: obrasData, empresas: empresasData } = await fetchObrasEmpresas();
       setObras(obrasData);
       setEmpresas(empresasData);
-      setActiveObraState(prev => resolveActiveObraAfterLogin(obrasData, prev));
+      setActiveObraState(prev => resolveActiveObraAfterLogin(obrasData, prev, convitesUsuario, isMasterAdmin));
     } catch (e) {
       console.error('Erro ao carregar obras/empresas do Supabase:', e);
     }
-  }, [user, fetchObrasEmpresas]);
+  }, [user, fetchObrasEmpresas, convitesUsuario, isMasterAdmin]);
 
   const syncUserFromSupabase = useCallback(async (sbUser: { id: string; email?: string; user_metadata?: Record<string, string> } | null): Promise<void> => {
     if (!sbUser) {
@@ -105,16 +104,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const { appUser, userRole, convites } = await buildUserSession(sbUser);
+    const admin = userRole === 'ADMINISTRADOR';
     setUser(appUser);
     setRole(userRole);
     setConvitesUsuario(convites);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(appUser));
 
     try {
       const { obras: obrasData, empresas: empresasData } = await fetchObrasEmpresas();
       setObras(obrasData);
       setEmpresas(empresasData);
-      setActiveObraState(prev => resolveActiveObraAfterLogin(obrasData, prev));
+      setActiveObraState(prev => resolveActiveObraAfterLogin(obrasData, prev, convites, admin));
     } catch (e) {
       console.error('Erro ao carregar obras após resgate de convites:', e);
     }
@@ -168,7 +167,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isMasterAdmin) throw new Error(ERRO_SO_ADMIN);
   };
 
-  const setActiveObra = (obra: Obra | null) => setActiveObraState(obra);
+  const setActiveObra = useCallback((obra: Obra | null) => {
+    if (obra && !isMasterAdmin) {
+      const temAcesso =
+        obras.some(o => o.id === obra.id) &&
+        convitesUsuario.some(c => c.obra_id === obra.id && c.ativo !== false);
+      if (!temAcesso) {
+        console.warn('[Auth] Obra sem convite ativo:', obra.id);
+        return;
+      }
+    }
+    setActiveObraState(obra);
+  }, [isMasterAdmin, obras, convitesUsuario]);
 
   const addEmpresa = async (novaData: Omit<Empresa, 'id'>): Promise<Empresa> => {
     exigirAdministrador();
@@ -272,10 +282,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const canAccessObra = (obraId: string): boolean => {
+  const canAccessObra = useCallback((obraId: string): boolean => {
     if (isMasterAdmin) return true;
-    return obras.some(o => o.id === obraId);
-  };
+    if (!obras.some(o => o.id === obraId)) return false;
+    return convitesUsuario.some(c => c.obra_id === obraId && c.ativo !== false);
+  }, [isMasterAdmin, obras, convitesUsuario]);
 
   const getUserObras = (): Obra[] =>
     obras.filter(o => !o.arquivada && o.status !== 'Arquivada');
@@ -326,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isCorretor
   }), [
     user, role, effectiveRole, isAuthenticated, loading, obras, empresas, convitesUsuario,
-    activeObra, canAccessTab, getRoleForObra, isAdmin, isMasterAdmin, canViewFinancials, isCorretor
+    activeObra, canAccessTab, canAccessObra, setActiveObra, getRoleForObra, isAdmin, isMasterAdmin, canViewFinancials, isCorretor
   ]);
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

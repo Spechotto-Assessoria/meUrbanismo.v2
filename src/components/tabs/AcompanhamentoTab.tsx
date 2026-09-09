@@ -1,6 +1,7 @@
 import React from 'react';
 import { HardHat } from 'lucide-react';
 import { SkeletonCard } from '../common/SkeletonLoader';
+import { useAuth } from '../../contexts/AuthContext';
 import { useAcompanhamentoObra } from '../../hooks/useAcompanhamentoObra';
 import { AcompanhamentoSubNav } from '../acompanhamento/AcompanhamentoSubNav';
 import { GaleriaFotosPanel } from '../acompanhamento/GaleriaFotosPanel';
@@ -10,12 +11,21 @@ import { MedicoesPanel } from '../acompanhamento/MedicoesPanel';
 export const AcompanhamentoTab: React.FC<{
   focoInicial?: 'fotos' | 'diario' | 'medicoes';
 }> = ({ focoInicial = 'fotos' }) => {
+  const { canAccessObra } = useAuth();
   const ctx = useAcompanhamentoObra(focoInicial);
 
   if (!ctx.activeObra) {
     return (
       <div className="p-8 text-center text-sm text-slate-500">
         Selecione uma obra para ver o acompanhamento.
+      </div>
+    );
+  }
+
+  if (!canAccessObra(ctx.activeObra.id)) {
+    return (
+      <div className="p-8 text-center text-sm text-rose-600">
+        Você não tem acesso a este empreendimento.
       </div>
     );
   }

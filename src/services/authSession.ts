@@ -8,8 +8,6 @@ import {
 } from '../services/conviteResgate';
 import { Convite, Obra } from '../types';
 
-const MASTER_ADMIN_EMAIL = 'rennan.spechotto@gmail.com';
-const MASTER_ADMIN_EMAIL_ALT = 'rennan_seidl@hotmail.com';
 export const AUTH_STORAGE_KEY = 'meurbanismo_auth_session_v2';
 
 const VALID_ROLES: UserRole[] = [
@@ -26,12 +24,7 @@ const VALID_ROLES: UserRole[] = [
 export const isValidRole = (value: unknown): value is UserRole =>
   typeof value === 'string' && VALID_ROLES.includes(value as UserRole);
 
-export const isMasterEmail = (email?: string | null): boolean => {
-  const clean = (email || '').toLowerCase().trim();
-  return clean === MASTER_ADMIN_EMAIL || clean === MASTER_ADMIN_EMAIL_ALT;
-};
-
-export async function fetchRoleFromPerfis(userId: string, email: string): Promise<UserRole> {
+export async function fetchRoleFromPerfis(userId: string): Promise<UserRole> {
   try {
     const { data, error } = await supabase.from('perfis').select('role').eq('id', userId).maybeSingle();
     if (!error && data && isValidRole(data.role)) {
@@ -40,7 +33,7 @@ export async function fetchRoleFromPerfis(userId: string, email: string): Promis
   } catch (e) {
     console.error('Erro ao buscar perfil do usuário:', e);
   }
-  return isMasterEmail(email) ? 'ADMINISTRADOR' : 'CLIENTE_COMPRADOR';
+  return 'CLIENTE_COMPRADOR';
 }
 
 export interface SyncSessionResult {
@@ -52,7 +45,7 @@ export interface SyncSessionResult {
 /** Sincroniza usuário, resgata convites pendentes e carrega convites ativos. */
 export async function buildUserSession(sbUser: { id: string; email?: string; user_metadata?: Record<string, string> }): Promise<SyncSessionResult> {
   const email = sbUser.email || '';
-  const userRole = await fetchRoleFromPerfis(sbUser.id, email);
+  const userRole = await fetchRoleFromPerfis(sbUser.id);
   const nome = sbUser.user_metadata?.nome || sbUser.user_metadata?.full_name || email.split('@')[0];
 
   const appUser: User = {
@@ -69,10 +62,16 @@ export async function buildUserSession(sbUser: { id: string; email?: string; use
   return { appUser, userRole, convites };
 }
 
+function temConviteAtivoParaObra(convites: Convite[], obraId: string): boolean {
+  return convites.some(c => c.obra_id === obraId && c.ativo !== false);
+}
+
 /** Seleciona obra ativa: prioriza pendingObraId do link de convite. */
 export function resolveActiveObraAfterLogin(
   obras: Obra[],
-  currentActive: Obra | null
+  currentActive: Obra | null,
+  convites: Convite[] = [],
+  isAdmin = false
 ): Obra | null {
   const pendingId = getPendingObraId();
   if (pendingId) {
@@ -84,7 +83,9 @@ export function resolveActiveObraAfterLogin(
     clearPendingObraId();
   }
   if (currentActive && obras.some(o => o.id === currentActive.id)) {
-    return currentActive;
+    if (isAdmin || temConviteAtivoParaObra(convites, currentActive.id)) {
+      return currentActive;
+    }
   }
   return obras.length > 0 ? obras[0] : null;
 }

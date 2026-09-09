@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { UserRole, Convite } from '../../types';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export const ConvitesTab: React.FC = () => {
     const { obras } = useAuth();
 
@@ -104,6 +106,17 @@ export const ConvitesTab: React.FC = () => {
             return;
         }
 
+        if (!UUID_REGEX.test(obraId)) {
+            setErro('ID de obra inválido.');
+            return;
+        }
+
+        const obraSelecionada = (obras || []).find(o => o.id === obraId);
+        if (!obraSelecionada) {
+            setErro('Obra não encontrada ou sem permissão.');
+            return;
+        }
+
         const jaExiste = convites.some(c => (c.email || '').toLowerCase() === cleanEmail && c.obra_id === obraId);
         if (jaExiste) {
             alert(`O e-mail "${cleanEmail}" já possui um convite gerado para esta obra! Você pode editá-lo ou reenviá-lo na lista abaixo.`);
@@ -111,7 +124,6 @@ export const ConvitesTab: React.FC = () => {
         }
 
         const baseUrl = window.location.origin;
-        const obraSelecionada = (obras || []).find(o => o.id === obraId);
         const linkSeguro = `${baseUrl}/?email=${encodeURIComponent(cleanEmail)}&obra=${obraId}#/convite`;
 
         setEnviando(true);
@@ -547,9 +559,8 @@ export const ConvitesTab: React.FC = () => {
                                 <input
                                     type="email"
                                     value={editingConvite.email}
-                                    onChange={e => setEditingConvite({ ...editingConvite, email: e.target.value })}
-                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
-                                    required
+                                    readOnly
+                                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
                                 />
                             </div>
 

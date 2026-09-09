@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { validarArquivos } from './fileValidation';
 
 /**
  * Helpers de upload/exclusão para o Supabase Storage.
@@ -110,8 +111,11 @@ export async function uploadFotosAcompanhamento(
   obraId: string,
   dataRegistro: string
 ): Promise<string[]> {
+  const validacao = validarArquivos(files, 'foto');
+  if (!validacao.ok) throw new Error(validacao.erro);
+
   const urls: string[] = [];
-  for (const file of files) {
+  for (const file of validacao.files) {
     const ext = getFileExtension(file);
     const path = `${obraId}/galeria/${dataRegistro}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage
@@ -154,8 +158,11 @@ export async function uploadDocumentosObra(
   obraId: string,
   pastaSlug: string
 ): Promise<{ url: string; file: File }[]> {
+  const validacao = validarArquivos(files, 'documento');
+  if (!validacao.ok) throw new Error(validacao.erro);
+
   const resultados: { url: string; file: File }[] = [];
-  for (const file of files) {
+  for (const file of validacao.files) {
     const ext = getFileExtension(file);
     const path = `${obraId}/documentos/${pastaSlug}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage
