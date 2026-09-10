@@ -955,6 +955,16 @@ class SupabaseDataService {
     return (data || []) as Lote[];
   }
 
+  async getLoteById(loteId: string): Promise<Lote | null> {
+    if (!loteId) return null;
+    const { data, error } = await supabase.from('lotes').select('*').eq('id', loteId).maybeSingle();
+    if (error) {
+      logSupabaseError('getLoteById', error);
+      return null;
+    }
+    return (data as Lote) || null;
+  }
+
   async updateLoteStatus(loteId: string, status: Lote['status']): Promise<void> {
     const normalizado = String(status || '').toLowerCase();
     const { error } = await supabase.from('lotes').update({ status: normalizado }).eq('id', loteId);

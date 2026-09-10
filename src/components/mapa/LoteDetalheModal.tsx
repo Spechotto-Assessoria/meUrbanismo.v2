@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Pencil, Trash2, X } from 'lucide-react';
+import { Calculator, Loader2, Pencil, Trash2, X } from 'lucide-react';
 import { useLoteFormState } from '../../hooks/useLoteFormState';
-import { coresLotePorStatus, formatBRL } from '../../lib/loteMapa';
+import { coresLotePorStatus, formatBRL, normalizeStatus } from '../../lib/loteMapa';
 import type { Lote } from '../../types';
 import type { LoteFormData } from '../../lib/loteMapa';
 import {
@@ -19,6 +19,8 @@ type Props = {
   open: boolean;
   onClose: () => void;
   podeEditar: boolean;
+  podeSimularVenda?: boolean;
+  onSimularVenda?: () => void;
   onSalvar: (dados: LoteFormData) => Promise<void>;
   onExcluir: () => Promise<void>;
   salvando?: boolean;
@@ -30,6 +32,8 @@ export const LoteDetalheModal: React.FC<Props> = ({
   open,
   onClose,
   podeEditar,
+  podeSimularVenda,
+  onSimularVenda,
   onSalvar,
   onExcluir,
   salvando,
@@ -110,30 +114,45 @@ export const LoteDetalheModal: React.FC<Props> = ({
               <Badge className={badge.badgeClass}>{badge.label}</Badge>
             </div>
 
-            {podeEditar && (
+            {(podeEditar || (podeSimularVenda && normalizeStatus(lote.status) === 'disponivel')) && (
               <div className="flex flex-col gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => setEditando(true)}
-                >
-                  <Pencil className="w-3.5 h-3.5" /> Editar lote
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full gap-2 text-red-700 border-red-200 hover:bg-red-50"
-                  onClick={handleExcluir}
-                  disabled={busy}
-                >
-                  {excluindo ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
+                <div className="flex gap-2">
+                  {podeEditar && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => setEditando(true)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Editar lote
+                    </Button>
                   )}
-                  Excluir lote
-                </Button>
+                  {podeSimularVenda && normalizeStatus(lote.status) === 'disponivel' && onSimularVenda && (
+                    <Button
+                      type="button"
+                      className="flex-1 gap-2"
+                      onClick={onSimularVenda}
+                    >
+                      <Calculator className="w-3.5 h-3.5" /> Simular Venda
+                    </Button>
+                  )}
+                </div>
+                {podeEditar && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full gap-2 text-red-700 border-red-200 hover:bg-red-50"
+                    onClick={handleExcluir}
+                    disabled={busy}
+                  >
+                    {excluindo ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    Excluir lote
+                  </Button>
+                )}
               </div>
             )}
           </>

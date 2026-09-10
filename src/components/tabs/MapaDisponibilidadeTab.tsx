@@ -13,8 +13,13 @@ import type { Lote } from '../../types';
 import type { LoteFormData } from '../../lib/loteMapa';
 import { Button } from './ui-components';
 
-export const MapaDisponibilidadeTab: React.FC = () => {
-  const { isMasterAdmin } = useObraAccess();
+type Props = {
+  onNavegarVendas?: (loteId: string) => void;
+};
+
+export const MapaDisponibilidadeTab: React.FC<Props> = ({ onNavegarVendas }) => {
+  const { isMasterAdmin, isCorretor, isInvestidor, isCliente } = useObraAccess();
+  const podeSimularVenda = !isCliente && (isMasterAdmin || isCorretor || isInvestidor);
   const {
     obraId,
     activeObra,
@@ -153,9 +158,9 @@ export const MapaDisponibilidadeTab: React.FC = () => {
               <MasterplanControles
                 masterplanUrl={activeObra.mapa_masterplan_url}
                 viewBox={activeObra.mapa_viewbox}
-                onUpload={(file, vb) => uploadMasterplan({ file, viewBox: vb })}
-                onDelete={() => deleteMasterplan(activeObra.mapa_masterplan_url || '')}
-                onSaveViewBox={(vb) => updateMapa({ mapa_viewbox: vb })}
+                onUpload={async (file, vb) => { await uploadMasterplan({ file, viewBox: vb }); }}
+                onDelete={async () => { await deleteMasterplan(activeObra.mapa_masterplan_url || ''); }}
+                onSaveViewBox={async (vb) => { await updateMapa({ mapa_viewbox: vb }); }}
                 isUploading={isUploadingMasterplan}
                 isDeleting={isDeletingMasterplan}
                 isSavingViewBox={isUpdatingMapa}
@@ -235,6 +240,15 @@ export const MapaDisponibilidadeTab: React.FC = () => {
         open={Boolean(selectedLote)}
         onClose={() => setSelectedLote(null)}
         podeEditar={isMasterAdmin}
+        podeSimularVenda={podeSimularVenda}
+        onSimularVenda={
+          selectedLote && onNavegarVendas
+            ? () => {
+                onNavegarVendas(selectedLote.id);
+                setSelectedLote(null);
+              }
+            : undefined
+        }
         onSalvar={handleSalvarLote}
         onExcluir={handleExcluirLote}
         salvando={isUpdatingLote}
@@ -244,7 +258,7 @@ export const MapaDisponibilidadeTab: React.FC = () => {
       <LoteFormModal
         open={modalCriarAberto}
         onClose={() => setModalCriarAberto(false)}
-        onSalvar={createLote}
+        onSalvar={async (dados) => { await createLote(dados); }}
         salvando={isCreatingLote}
       />
     </div>

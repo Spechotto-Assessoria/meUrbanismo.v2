@@ -793,6 +793,17 @@ create policy "lotes_corretor_update" on public.lotes for update
   using (public.role_for_obra(obra_id) = 'CORRETOR' and public.has_obra_access(obra_id))
   with check (public.role_for_obra(obra_id) = 'CORRETOR' and public.has_obra_access(obra_id));
 
+drop policy if exists "lotes_investidor_update" on public.lotes;
+create policy "lotes_investidor_update" on public.lotes for update
+  using (
+    public.role_for_obra(obra_id) in ('PROPRIETARIO_INVESTIDOR', 'INVESTIDOR')
+    and public.has_obra_access(obra_id)
+  )
+  with check (
+    public.role_for_obra(obra_id) in ('PROPRIETARIO_INVESTIDOR', 'INVESTIDOR')
+    and public.has_obra_access(obra_id)
+  );
+
 -- ==============================================================================
 -- 7. VIEWS DE MASCARAMENTO FINANCEIRO
 --

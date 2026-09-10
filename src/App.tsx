@@ -26,6 +26,7 @@ import { DiagnosticoProjetosTab } from './components/tabs/DiagnosticoProjetosTab
 import { TabId, Obra, Empresa } from './types';
 import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react';
 import { subAbaDestinoNotificacao, type SubAbaAcompanhamento } from './hooks/useNotificacoes';
+import { useNavegacaoVendas } from './hooks/useNavegacaoVendas';
 
 const AuthenticatedApp: React.FC = () => {
   const { canAccessTab, canAccessObra, effectiveRole, activeObra, setActiveObra, isMasterAdmin, obras } = useAuth();
@@ -35,6 +36,9 @@ const AuthenticatedApp: React.FC = () => {
   const [empresaToEdit, setEmpresaToEdit] = useState<Empresa | null>(null);
   const [empresaFormOrigem, setEmpresaFormOrigem] = useState<'dashboard' | 'empresas'>('dashboard');
   const [focoAcompanhamento, setFocoAcompanhamento] = useState<SubAbaAcompanhamento>('fotos');
+
+  const setObraTab = (tab: TabId) => setActiveTab(tab);
+  const { navegarParaVendas } = useNavegacaoVendas(setObraTab);
 
   useEffect(() => {
     if (
@@ -291,7 +295,7 @@ const AuthenticatedApp: React.FC = () => {
       case 'documentos':
         return <DocumentosTab />;
       case 'mapa':
-        return <MapaDisponibilidadeTab />;
+        return <MapaDisponibilidadeTab onNavegarVendas={navegarParaVendas} />;
       case 'vendas':
         return <VendasTab />;
       case 'relatorios':
