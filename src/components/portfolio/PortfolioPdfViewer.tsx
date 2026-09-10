@@ -1,86 +1,53 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
-import { usePdfRenderer } from '../../hooks/usePdfRenderer';
+import { Loader2 } from 'lucide-react';
+import { usePortfolioPdfPages } from '../../hooks/usePortfolioPdfPages';
 
 const PDF_URL = '/portfolio.pdf';
 
-type Props = {
-  className?: string;
-};
+export const PortfolioPdfViewer: React.FC = () => {
+  const { totalPaginas, carregandoDoc, renderizadas, erro, registrarPagina } =
+    usePortfolioPdfPages(PDF_URL);
 
-export const PortfolioPdfViewer: React.FC<Props> = ({ className = '' }) => {
-  const pdf = usePdfRenderer(PDF_URL);
+  if (erro) {
+    return (
+      <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 m-4 max-w-lg mx-auto">
+        {erro}
+      </p>
+    );
+  }
 
   return (
-    <div className={`flex flex-col min-h-0 ${className}`}>
-      <div className="flex-1 overflow-auto bg-slate-100/80 flex justify-center items-start p-3 sm:p-6 min-h-0">
-        {pdf.erro ? (
-          <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 m-4">
-            {pdf.erro}
-          </p>
-        ) : (
-          <div className="relative">
-            <canvas
-              ref={pdf.canvasRef}
-              className="block max-w-full h-auto rounded-lg shadow-md bg-white"
-            />
-            {pdf.loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-lg">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
-              </div>
+    <div className="w-full">
+      {carregandoDoc && (
+        <div className="flex items-center justify-center gap-2 py-16 text-slate-500">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span className="text-sm font-medium">Carregando portfólio…</span>
+        </div>
+      )}
+
+      {!carregandoDoc && totalPaginas > 0 && renderizadas < totalPaginas && (
+        <p className="text-center text-[11px] text-slate-500 py-3">
+          Preparando páginas… {renderizadas} de {totalPaginas}
+        </p>
+      )}
+
+      <div className="flex flex-col items-center gap-6 sm:gap-8 py-4 sm:py-6 px-2 sm:px-4">
+        {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((num) => (
+          <div
+            key={num}
+            ref={(el) => registrarPagina(num, el)}
+            className="w-full max-w-5xl"
+          >
+            <div className="bg-white shadow-md ring-1 ring-slate-200/70 overflow-hidden">
+              <canvas className="block w-full h-auto min-h-[280px] sm:min-h-[420px] bg-white" />
+            </div>
+            {totalPaginas > 1 && (
+              <p className="text-[10px] text-slate-400 text-center mt-2 font-semibold tracking-wide uppercase">
+                Página {num} de {totalPaginas}
+              </p>
             )}
           </div>
-        )}
-      </div>
-
-      <div className="shrink-0 border-t border-slate-200 bg-white px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => pdf.irPara(-1)}
-            disabled={pdf.pagina <= 1 || pdf.loading}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Página anterior"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-semibold text-slate-600 tabular-nums min-w-[90px] text-center">
-            {pdf.totalPaginas > 0 ? `${pdf.pagina} / ${pdf.totalPaginas}` : '—'}
-          </span>
-          <button
-            type="button"
-            onClick={() => pdf.irPara(1)}
-            disabled={pdf.pagina >= pdf.totalPaginas || pdf.loading}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Próxima página"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => pdf.setScale((s) => Math.max(0.5, s - 0.2))}
-            disabled={pdf.loading}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 disabled:opacity-40"
-            title="Diminuir zoom"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span className="text-[11px] font-medium text-slate-500 tabular-nums w-10 text-center">
-            {Math.round(pdf.scale * 100)}%
-          </span>
-          <button
-            type="button"
-            onClick={() => pdf.setScale((s) => Math.min(2.5, s + 0.2))}
-            disabled={pdf.loading}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 disabled:opacity-40"
-            title="Aumentar zoom"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-        </div>
+        ))}
       </div>
     </div>
   );
