@@ -19,7 +19,8 @@ import {
   Lote,
   Convite,
   UserProfile,
-  Notificacao
+  Notificacao,
+  RelatorioObra
 } from '../types';
 import { mapConviteRow } from './conviteResgate';
 
@@ -1219,6 +1220,43 @@ class SupabaseDataService {
     );
     if (error) {
       logSupabaseError('registrarDispositivoPush', error);
+    }
+  }
+
+  // ============================================================
+  // RELATÓRIOS EXECUTIVOS (PDF)
+  // ============================================================
+  async getRelatoriosObra(obraId: string): Promise<RelatorioObra[]> {
+    const { data, error } = await supabase
+      .from('relatorios_obra')
+      .select('*')
+      .eq('obra_id', obraId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      logSupabaseError('getRelatoriosObra', error);
+      return [];
+    }
+    return (data || []) as RelatorioObra[];
+  }
+
+  async createRelatorioObra(payload: Omit<RelatorioObra, 'id' | 'created_at'>): Promise<RelatorioObra> {
+    const { data, error } = await supabase
+      .from('relatorios_obra')
+      .insert(clean(payload))
+      .select()
+      .single();
+    if (error) {
+      logSupabaseError('createRelatorioObra', error);
+      throw new Error('Não foi possível salvar o relatório.');
+    }
+    return data as RelatorioObra;
+  }
+
+  async deleteRelatorioObra(id: string): Promise<void> {
+    const { error } = await supabase.from('relatorios_obra').delete().eq('id', id);
+    if (error) {
+      logSupabaseError('deleteRelatorioObra', error);
+      throw new Error('Não foi possível excluir o relatório.');
     }
   }
 }

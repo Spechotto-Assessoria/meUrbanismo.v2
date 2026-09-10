@@ -15,10 +15,12 @@ export const ABAS_DA_OBRA: TabId[] = [
   'portfolio'
 ];
 
-const ABAS_INVESTIDOR: TabId[] = [...ABAS_DA_OBRA];
+const ABAS_PROPRIETARIO: TabId[] = [...ABAS_DA_OBRA];
 
-/** Gestor/engenheiro/consultor: mesmas abas do investidor, sem viabilidade. */
-const ABAS_STAFF: TabId[] = ABAS_DA_OBRA.filter((a) => a !== 'viabilidade');
+const ABAS_INVESTIDOR: TabId[] = ABAS_DA_OBRA.filter((a) => a !== 'relatorios');
+
+/** Gestor/engenheiro/consultor: mesmas abas do investidor, sem viabilidade e sem relatórios. */
+const ABAS_STAFF: TabId[] = ABAS_DA_OBRA.filter((a) => a !== 'viabilidade' && a !== 'relatorios');
 
 const ABAS_CLIENTE: TabId[] = [
   'resumo',
@@ -41,6 +43,7 @@ export function abasDoPerfil(role: UserRole, isAdmin = false): TabId[] {
   if (isAdmin) return [...ABAS_DA_OBRA];
   switch (role) {
     case 'PROPRIETARIO_INVESTIDOR':
+      return ABAS_PROPRIETARIO;
     case 'INVESTIDOR':
       return ABAS_INVESTIDOR;
     case 'GESTOR':

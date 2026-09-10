@@ -23,7 +23,8 @@ values
   ('medicoes', 'medicoes', false),
   ('orcamentos', 'orcamentos', false),
   ('cronograma', 'cronograma', false),
-  ('logos_empresas', 'logos_empresas', true)
+  ('logos_empresas', 'logos_empresas', true),
+  ('relatorios', 'relatorios', true)
 on conflict (id) do nothing;
 
 -- ==============================================================================
@@ -232,6 +233,21 @@ create table if not exists public.obra_arquivos (
 
 alter table public.obra_arquivos add column if not exists arquivado boolean not null default false;
 
+create table if not exists public.relatorios_obra (
+  id uuid primary key default gen_random_uuid(),
+  obra_id uuid not null references public.obras(id) on delete cascade,
+  tipo text not null check (tipo in ('orcamento', 'cronograma', 'andamento', 'acompanhamento', 'global')),
+  titulo text not null,
+  periodo_inicio date,
+  periodo_fim date,
+  inclui_financeiro boolean not null default false,
+  arquivo_url text not null,
+  tamanho_bytes bigint default 0,
+  gerado_por uuid references auth.users(id),
+  gerado_por_nome text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 create table if not exists public.viabilidade (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade unique,
@@ -381,6 +397,31 @@ as $$
     or coalesce(auth.jwt() ->> 'email', '') ilike 'rennan_seidl@hotmail.com'
     or exists (
       select 1 from public.perfis where id = auth.uid() and role = 'ADMINISTRADOR'
+    );
+$$;
+
+create or replace function public.is_master_email()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(auth.jwt() ->> 'email', '') ilike 'rennan.spechotto@gmail.com';
+$$;
+
+create or replace function public.can_access_relatorios_for_obra(target_obra_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.has_obra_access(target_obra_id)
+    and (
+      public.is_admin()
+      or public.role_for_obra(target_obra_id) = 'PROPRIETARIO_INVESTIDOR'
     );
 $$;
 
@@ -565,6 +606,7 @@ grant select, insert, update, delete on
   public.medicoes,
   public.fotos_obra,
   public.obra_arquivos,
+  public.relatorios_obra,
   public.viabilidade,
   public.estudos_viabilidade,
   public.lotes,
@@ -585,6 +627,7 @@ alter table public.diario_obra enable row level security;
 alter table public.medicoes enable row level security;
 alter table public.fotos_obra enable row level security;
 alter table public.obra_arquivos enable row level security;
+alter table public.relatorios_obra enable row level security;
 alter table public.viabilidade enable row level security;
 alter table public.estudos_viabilidade enable row level security;
 alter table public.lotes enable row level security;
@@ -658,6 +701,32 @@ create policy "obra_arquivos_admin_write" on storage.objects for all
 drop policy if exists "obra_arquivos_public_select" on storage.objects;
 create policy "obra_arquivos_public_select" on storage.objects for select
   using (bucket_id = 'obra_arquivos');
+
+-- RELATÓRIOS EXECUTIVOS (Storage): bucket público "relatorios"
+drop policy if exists "relatorios_admin_write" on storage.objects;
+create policy "relatorios_admin_write" on storage.objects for all
+  using (bucket_id = 'relatorios' and public.is_admin())
+  with check (bucket_id = 'relatorios' and public.is_admin());
+
+drop policy if exists "relatorios_proprietario_insert" on storage.objects;
+create policy "relatorios_proprietario_insert" on storage.objects for insert
+  with check (
+    bucket_id = 'relatorios'
+    and exists (
+      select 1 from public.obras o
+      where o.id::text = split_part(name, '/', 1)
+        and public.role_for_obra(o.id) = 'PROPRIETARIO_INVESTIDOR'
+        and public.has_obra_access(o.id)
+    )
+  );
+
+drop policy if exists "relatorios_master_delete" on storage.objects;
+create policy "relatorios_master_delete" on storage.objects for delete
+  using (bucket_id = 'relatorios' and public.is_master_email());
+
+drop policy if exists "relatorios_public_select" on storage.objects;
+create policy "relatorios_public_select" on storage.objects for select
+  using (bucket_id = 'relatorios');
 
 -- OBRAS (tabela base): SOMENTE administradores consultam/alteram diretamente.
 -- Todo mundo mais deve ler através da view "obras_publicas" (mascara campos
@@ -762,6 +831,26 @@ create policy "arquivos_select" on public.obra_arquivos for select
     and (not arquivado or public.can_view_financials_for_obra(obra_id))
     and (visivel_convidados = true or public.can_view_financials_for_obra(obra_id))
   );
+
+-- RELATÓRIOS EXECUTIVOS (PDF arquivado por obra)
+drop policy if exists "relatorios_admin_all" on public.relatorios_obra;
+create policy "relatorios_admin_all" on public.relatorios_obra for all
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "relatorios_select" on public.relatorios_obra;
+create policy "relatorios_select" on public.relatorios_obra for select
+  using (public.can_access_relatorios_for_obra(obra_id));
+
+drop policy if exists "relatorios_proprietario_insert" on public.relatorios_obra;
+create policy "relatorios_proprietario_insert" on public.relatorios_obra for insert
+  with check (
+    public.role_for_obra(obra_id) = 'PROPRIETARIO_INVESTIDOR'
+    and public.has_obra_access(obra_id)
+  );
+
+drop policy if exists "relatorios_master_delete" on public.relatorios_obra;
+create policy "relatorios_master_delete" on public.relatorios_obra for delete
+  using (public.is_master_email());
 
 -- VIABILIDADE: 100% financeiro/estratégico. Apenas admin e financeiro.
 drop policy if exists "viabilidade_admin_all" on public.viabilidade;

@@ -460,6 +460,32 @@ export interface Convite {
 }
 
 // ============================================================
+// RELATÓRIOS EXECUTIVOS (PDF)
+// ============================================================
+
+export type RelatorioTipo =
+  | 'orcamento'
+  | 'cronograma'
+  | 'andamento'
+  | 'acompanhamento'
+  | 'global';
+
+export interface RelatorioObra {
+  id: string;
+  obra_id: string;
+  tipo: RelatorioTipo;
+  titulo: string;
+  periodo_inicio?: string | null;
+  periodo_fim?: string | null;
+  inclui_financeiro: boolean;
+  arquivo_url: string;
+  tamanho_bytes?: number | null;
+  gerado_por?: string | null;
+  gerado_por_nome?: string | null;
+  created_at: string;
+}
+
+// ============================================================
 // NOTIFICAÇÕES (sino + push)
 // ============================================================
 

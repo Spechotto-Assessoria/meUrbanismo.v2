@@ -13,6 +13,7 @@ import { validarArquivos } from './fileValidation';
 const LOGOS_EMPRESAS_BUCKET = 'logos_empresas';
 const FOTOS_OBRA_BUCKET = 'fotos_obra';
 const OBRA_ARQUIVOS_BUCKET = 'obra_arquivos';
+const RELATORIOS_BUCKET = 'relatorios';
 
 function logStorageError(context: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -216,4 +217,22 @@ export async function uploadDocumentosObra(
 
 export async function deleteDocumentoStorage(publicUrl: string): Promise<void> {
   await deleteStorageFile(publicUrl, OBRA_ARQUIVOS_BUCKET);
+}
+
+/** Upload de PDF de relatório executivo. Caminho: obraId/uuid.pdf */
+export async function uploadRelatorioPdf(blob: Blob, obraId: string): Promise<string> {
+  const path = `${obraId}/${crypto.randomUUID()}.pdf`;
+  const { error } = await supabase.storage
+    .from(RELATORIOS_BUCKET)
+    .upload(path, blob, { upsert: false, contentType: 'application/pdf' });
+  if (error) {
+    logStorageError('uploadRelatorioPdf', error);
+    throw new Error('Não foi possível enviar o PDF do relatório.');
+  }
+  const { data } = supabase.storage.from(RELATORIOS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function deleteRelatorioPdf(publicUrl: string): Promise<void> {
+  await deleteStorageFile(publicUrl, RELATORIOS_BUCKET);
 }
