@@ -1,6 +1,6 @@
 import React from 'react';
 import { Printer, Send, X } from 'lucide-react';
-import { formatBRL } from '../../lib/loteMapa';
+import { formatMoeda } from './InputMoeda';
 import { labelLote } from '../../lib/simuladorVendas';
 import type { Lote, Obra, User } from '../../types';
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '../tabs/ui-components';
@@ -32,11 +32,11 @@ function montarTextoWhatsApp(props: Props): string {
     `*${loteLabel}*`,
     props.lote?.area_m2 ? `Área: ${props.lote.area_m2} m²` : '',
     '',
-    `Valor do Lote: ${formatBRL(props.valorLote)}`,
-    `Entrada (${props.percEntrada}%): ${formatBRL(props.valorEntrada)}`,
-    `Parcela: ${props.prazo}x de ${formatBRL(props.parcelaMensal)}`,
+    `Valor do Lote: ${formatMoeda(props.valorLote)}`,
+    `Entrada (${props.percEntrada}%): ${formatMoeda(props.valorEntrada)}`,
+    `Parcela: ${props.prazo}x de ${formatMoeda(props.parcelaMensal)}`,
     props.qtdBaloes > 0
-      ? `Balões: ${props.qtdBaloes}x de ${formatBRL(props.valorBalao)}`
+      ? `Balões: ${props.qtdBaloes}x de ${formatMoeda(props.valorBalao)}`
       : '',
     `Correção: ${props.correcao}`,
     '',
@@ -101,11 +101,11 @@ export const PropostaComercialDialog: React.FC<Props> = (props) => {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3 bg-slate-50 rounded-xl border">
               <span className="text-slate-500 block">Valor do Lote</span>
-              <span className="text-base font-extrabold text-slate-900">{formatBRL(props.valorLote)}</span>
+              <span className="text-base font-extrabold text-slate-900 tabular-nums">{formatMoeda(props.valorLote)}</span>
             </div>
             <div className="p-3 bg-slate-50 rounded-xl border">
               <span className="text-slate-500 block">Entrada ({props.percEntrada}%)</span>
-              <span className="text-base font-extrabold text-emerald-700">{formatBRL(props.valorEntrada)}</span>
+              <span className="text-base font-extrabold text-emerald-700 tabular-nums">{formatMoeda(props.valorEntrada)}</span>
             </div>
           </div>
 
@@ -113,14 +113,14 @@ export const PropostaComercialDialog: React.FC<Props> = (props) => {
             <span className="text-[11px] text-slate-300 font-semibold block uppercase">
               Parcela Mensal ({props.prazo}x)
             </span>
-            <div className="text-2xl sm:text-3xl font-black mt-1">{formatBRL(props.parcelaMensal)}</div>
+            <div className="text-2xl sm:text-3xl font-black mt-1 tabular-nums">{formatMoeda(props.parcelaMensal)}</div>
             <span className="text-[10px] text-slate-400 mt-1 block">Correção: {props.correcao}</span>
           </div>
 
           {props.qtdBaloes > 0 && (
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
               <span className="text-amber-800 font-bold">
-                Balões: {props.qtdBaloes}x de {formatBRL(props.valorBalao)}
+                Balões: {props.qtdBaloes}x de {formatMoeda(props.valorBalao)}
               </span>
             </div>
           )}

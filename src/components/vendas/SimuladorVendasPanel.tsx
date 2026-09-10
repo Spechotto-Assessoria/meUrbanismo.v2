@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { Calculator, FileText, Loader2 } from 'lucide-react';
-import { formatBRL } from '../../lib/loteMapa';
 import { labelLote, OPCOES_BALOES, OPCOES_CORRECAO, OPCOES_ENTRADA, PRAZO_MAXIMO } from '../../lib/simuladorVendas';
 import type { Lote } from '../../types';
 import { Badge, Button, Input, Label, Select } from '../tabs/ui-components';
+import { formatMoeda, InputMoeda } from './InputMoeda';
 
 type SimuladorState = {
   percEntrada: number;
@@ -63,14 +63,16 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
   }, [loteSelecionado, loteTravado, setValorLote]);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-100">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Calculator className="w-5 h-5 text-blue-600" />
+            <span className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+              <Calculator className="w-4 h-4 text-blue-700" />
+            </span>
             Simulador Financeiro de Loteamento
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1 pl-10">
             Financiamento direto em até {PRAZO_MAXIMO} parcelas mensais
           </p>
         </div>
@@ -82,20 +84,19 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-7 p-5 rounded-2xl bg-slate-900/50 border border-slate-700/60 space-y-4 backdrop-blur-sm">
+        <div className="lg:col-span-7 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4">
           {!loteTravado && (
             <div>
-              <Label className="text-slate-300 mb-1.5 block">Selecionar Lote Disponível</Label>
+              <Label className="mb-1.5 block">Selecionar Lote Disponível</Label>
               <Select
                 value={loteSelecionado?.id || ''}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onSelecionarLote(e.target.value)}
-                className="bg-slate-950 border-slate-700 text-white"
                 disabled={isLoadingLote}
               >
                 <option value="">Escolha um lote...</option>
                 {lotesDisponiveis.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {labelLote(l.quadra, l.numero)} — {formatBRL(l.valor_total)}
+                    {labelLote(l.quadra, l.numero)} — {formatMoeda(l.valor_total ?? 0)}
                   </option>
                 ))}
               </Select>
@@ -103,25 +104,22 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
           )}
 
           <div>
-            <Label className="text-slate-300 mb-1.5 block">Valor do Lote (R$)</Label>
-            <Input
-              type="number"
+            <Label className="mb-1.5 block">Valor do Lote</Label>
+            <InputMoeda
               value={valorLote}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValorLote(Number(e.target.value))}
+              onChange={setValorLote}
               disabled={loteTravado}
-              className="bg-slate-950 border-slate-700 text-white font-bold"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-slate-300 mb-1.5 block">
-                Entrada ({percEntrada}% = {formatBRL(valorEntrada)})
+              <Label className="mb-1.5 block">
+                Entrada ({percEntrada}% = {formatMoeda(valorEntrada)})
               </Label>
               <Select
                 value={percEntrada}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setPercEntrada(Number(e.target.value))}
-                className="bg-slate-950 border-slate-700 text-white"
               >
                 {OPCOES_ENTRADA.map((p) => (
                   <option key={p} value={p}>{p}% de Entrada</option>
@@ -129,26 +127,25 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
               </Select>
             </div>
             <div>
-              <Label className="text-slate-300 mb-1.5 block">Prazo (máx. {PRAZO_MAXIMO}x)</Label>
+              <Label className="mb-1.5 block">Prazo (máx. {PRAZO_MAXIMO}x)</Label>
               <Input
                 type="number"
                 min={1}
                 max={PRAZO_MAXIMO}
                 value={prazo}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrazo(Number(e.target.value))}
-                className="bg-slate-950 border-slate-700 text-white"
+                className="text-right font-mono tabular-nums"
               />
             </div>
           </div>
 
           <div>
-            <Label className="text-slate-300 mb-1.5 block">Índice de Correção</Label>
+            <Label className="mb-1.5 block">Índice de Correção</Label>
             <Select
               value={correcao}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setCorrecao(e.target.value as typeof OPCOES_CORRECAO[number])
               }
-              className="bg-slate-950 border-slate-700 text-white"
             >
               {OPCOES_CORRECAO.map((op) => (
                 <option key={op} value={op}>{op}</option>
@@ -156,13 +153,12 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-700/60">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200">
             <div>
-              <Label className="text-slate-400 mb-1 block">Balões Intermediários</Label>
+              <Label className="mb-1 block">Balões Intermediários</Label>
               <Select
                 value={qtdBaloes}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setQtdBaloes(Number(e.target.value))}
-                className="bg-slate-950 border-slate-700 text-white"
               >
                 {OPCOES_BALOES.map((q) => (
                   <option key={q} value={q}>
@@ -173,56 +169,55 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
             </div>
             {qtdBaloes > 0 && (
               <div>
-                <Label className="text-slate-400 mb-1 block">Valor de Cada Balão (R$)</Label>
-                <Input
-                  type="number"
-                  value={valorBalao}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValorBalao(Number(e.target.value))}
-                  className="bg-slate-950 border-slate-700 text-white"
-                />
+                <Label className="mb-1 block">Valor de Cada Balão</Label>
+                <InputMoeda value={valorBalao} onChange={setValorBalao} />
               </div>
             )}
           </div>
         </div>
 
-        <div className="lg:col-span-5 p-5 rounded-2xl bg-slate-900/50 border border-slate-600/50 space-y-4 backdrop-blur-sm flex flex-col justify-between">
+        <div className="lg:col-span-5 p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-4">
           <div>
-            <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Resumo</span>
-              <span className="text-[10px] font-bold text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
-                {prazo}x
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resumo</span>
+              <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                {prazo.toLocaleString('pt-BR')}x
               </span>
             </div>
 
-            <div className="my-4 p-4 rounded-xl bg-slate-950 border border-slate-700 text-center">
-              <span className="text-[11px] text-slate-400 font-semibold block uppercase">Parcela Mensal</span>
-              <div className="text-2xl sm:text-3xl font-black text-white mt-1">{formatBRL(parcelaMensal)}</div>
-              <span className="text-[10px] text-slate-500 mt-1 block">{correcao}</span>
+            <div className="my-4 p-4 rounded-2xl bg-white border-2 border-emerald-200 shadow-sm text-center">
+              <span className="text-[11px] text-slate-500 font-semibold block uppercase tracking-wide">
+                Parcela Mensal
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-700 mt-1 tabular-nums">
+                {formatMoeda(parcelaMensal)}
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">{correcao}</span>
             </div>
 
-            <div className="space-y-2 text-xs text-slate-300">
-              <div className="flex justify-between">
-                <span>Entrada ({percEntrada}%)</span>
-                <span className="font-bold text-white">{formatBRL(valorEntrada)}</span>
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between items-center py-1.5 px-2 rounded-lg bg-white border border-slate-100">
+                <span className="text-slate-500">Entrada ({percEntrada}%)</span>
+                <span className="font-bold text-slate-900 tabular-nums">{formatMoeda(valorEntrada)}</span>
               </div>
               {qtdBaloes > 0 && (
-                <div className="flex justify-between">
-                  <span>Balões ({qtdBaloes}x)</span>
-                  <span className="font-bold text-amber-300">{formatBRL(totalBaloes)}</span>
+                <div className="flex justify-between items-center py-1.5 px-2 rounded-lg bg-white border border-slate-100">
+                  <span className="text-slate-500">Balões ({qtdBaloes}x)</span>
+                  <span className="font-bold text-amber-700 tabular-nums">{formatMoeda(totalBaloes)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>Saldo Financiado</span>
-                <span className="font-bold text-slate-200">{formatBRL(saldoFinanciar)}</span>
+              <div className="flex justify-between items-center py-1.5 px-2 rounded-lg bg-white border border-slate-100">
+                <span className="text-slate-500">Saldo Financiado</span>
+                <span className="font-bold text-slate-800 tabular-nums">{formatMoeda(saldoFinanciar)}</span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2 pt-1">
             {podeReservar ? (
               <Button
                 type="button"
-                className="w-full gap-2"
+                className="w-full gap-2 bg-emerald-700 hover:bg-emerald-800"
                 onClick={onGerarProposta}
                 disabled={!loteSelecionado || !loteDisponivel || isReservando}
               >
@@ -245,7 +240,7 @@ export const SimuladorVendasPanel: React.FC<Props> = ({
               </Button>
             )}
             {!loteDisponivel && loteSelecionado && (
-              <p className="text-[10px] text-amber-600 text-center">
+              <p className="text-[10px] text-amber-700 text-center bg-amber-50 border border-amber-200 rounded-lg py-1.5">
                 Este lote não está mais disponível para reserva.
               </p>
             )}
