@@ -98,6 +98,7 @@ export interface Obra {
   foto_capa?: string;
   mapa_masterplan_url?: string;
   mapa_viewbox?: string;
+  mapa_img_transform?: MapaImgTransform;
   // Datas
   data_inicio?: string;
   dataInicio?: string;
@@ -385,6 +386,16 @@ export interface EstudoViabilidade {
   prazo_vendas_meses: number;
   created_at?: string;
   updated_at: string;
+}
+
+// ============================================================
+// MAPA / ESPelho DE VENDAS
+// ============================================================
+
+export interface MapaImgTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
 }
 
 // ============================================================

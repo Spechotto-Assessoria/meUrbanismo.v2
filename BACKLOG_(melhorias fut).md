@@ -40,3 +40,42 @@ Este documento guarda ideias, dívidas técnicas e melhorias de segurança que f
 
 ## Abertura de Chamados (Ticketing):
 - [ ] Um canal oficial dentro do app para o cliente solicitar "Aprovação de Projeto para Construção" ou "Dúvida no Contrato", caindo em um painel kanban (tipo Trello) para a sua equipe de engenharia e administrativo resolverem.
+
+Implementar criptografia em nível de coluna (Supabase Vault / pgcrypto) exclusivamente para dados financeiros e CPFs em fases futuras do projeto, mantendo dados de contato normais sob a proteção padrão de criptografia em repouso e RLS.
+
+# 🛡️ Gerador de Política de Privacidade LGPD (meUrbanismo)
+
+**Contexto e Instruções para a IA:**
+Aja como um Advogado Sênior Especialista em Proteção de Dados (LGPD) e Direito Digital para Startups SaaS. Sua missão é redigir a Política de Privacidade completa e juridicamente vinculante para o software "meUrbanismo", de propriedade da empresa "Spechotto Assessoria e Construção". 
+
+A política deve ser escrita em linguagem clara (Visual Law/Legal Design), sem "juridiquês" excessivo, mas blindada legalmente.
+
+**É OBRIGATÓRIO incluir e detalhar as seguintes cláusulas estruturais:**
+
+1. **Quadro Resumo de Coleta e Bases Legais (Art. 7º da LGPD):**
+   Não use justificativas genéricas. Crie uma tabela ou lista clara especificando o Dado, a Finalidade e a Base Legal exata.
+   - *Nome e E-mail:* Para criação de convites, autenticação e controle de acesso via RLS (Execução de Contrato).
+   - *WhatsApp/Telefone:* Para envio de notificações do sistema e contato comercial (Legítimo Interesse / Consentimento).
+   - *Dados do Lote/Obra:* Vínculo do usuário ao empreendimento para exibir metragens, valores e contratos (Execução de Contrato).
+   - *Logs de Acesso e IP:* Para auditoria de segurança e prevenção a fraudes (Obrigação Legal - Marco Civil da Internet).
+
+2. **Compartilhamento de Dados e Operadores (Art. 39 da LGPD):**
+   A Spechotto Assessoria é a "Controladora". Deixe explícito que não vendemos dados, mas utilizamos "Operadores" de infraestrutura estritamente necessários para o SaaS funcionar:
+   - *Vercel:* Para hospedagem do front-end e tráfego de rede.
+   - *Supabase:* Provedor principal de banco de dados (PostgreSQL), autenticação (Auth) e armazenamento de arquivos (Storage).
+   - *Meta (WhatsApp API):* Para roteamento de mensagens transacionais.
+
+3. **Política Estrita de Retenção e Descarte (Art. 15 e 16 da LGPD):**
+   Diferencie o cancelamento do acesso da exclusão de dados. Especifique que:
+   - Se o usuário revogar o consentimento, seu acesso ao app será bloqueado.
+   - **Exceção de Retenção:** Dados atrelados a histórico de obras, medições, pagamentos, Diários de Obra e vendas de lotes **não serão excluídos** imediatamente, sendo retidos pelo prazo legal (ex: 5 anos para fins tributários/fiscais e até 10 anos para defesa em processos judiciais de construção civil).
+
+4. **Direitos do Titular (Art. 18 da LGPD):**
+   Liste de forma didática como o usuário pode exercer seus direitos (confirmação da existência de tratamento, acesso aos dados, correção de dados incompletos/inexatos, anonimização, revogação do consentimento).
+   - Inclua um canal de contato fictício para o DPO/Encarregado de Dados (ex: dpo@spechotto.com.br) que será substituído posteriormente.
+
+5. **Segurança da Informação:**
+   Mencione que utilizamos criptografia em trânsito (HTTPS), controle de acesso rigoroso baseado em perfis (Row Level Security - RLS) e segregação de dados por locatário/obra para garantir que nenhum cliente acesse projetos ou informações financeiras de terceiros.
+
+**Formato de Saída:**
+Gere o documento em formato Markdown (`.md`), estruturado com títulos (`##`), listas, e blocos de destaque para facilitar a leitura do usuário final.

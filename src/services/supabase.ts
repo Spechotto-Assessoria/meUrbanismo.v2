@@ -1044,13 +1044,56 @@ class SupabaseDataService {
     }
   }
 
+  async createLotesBatch(
+    obraId: string,
+    lotes: Array<{
+      quadra: string;
+      numero: string;
+      area_m2: number;
+      valor_total: number;
+      valor_m2: number;
+      status: string;
+      svg_path: string;
+      label_x?: number;
+      label_y?: number;
+    }>
+  ): Promise<Lote[]> {
+    if (!obraId) throw new Error('Obra não informada.');
+    if (!lotes.length) throw new Error('Nenhum lote para importar.');
+
+    const payloads = lotes.map((l) => ({
+      obra_id: obraId,
+      quadra: l.quadra.trim(),
+      numero: l.numero.trim(),
+      area_m2: l.area_m2,
+      valor_total: l.valor_total,
+      valor_m2: l.valor_m2,
+      status: String(l.status || 'disponivel').toLowerCase(),
+      svg_path: l.svg_path.trim(),
+      label_x: l.label_x ?? null,
+      label_y: l.label_y ?? null,
+    }));
+
+    const { data, error } = await supabase.from('lotes').insert(payloads).select();
+    if (error) {
+      logSupabaseError('createLotesBatch', error);
+      throw new Error('Não foi possível importar os lotes em lote.');
+    }
+    return (data || []) as Lote[];
+  }
+
   async updateObraMapa(
     obraId: string,
-    dados: { mapa_masterplan_url?: string | null; mapa_viewbox?: string | null }
+    dados: {
+      mapa_masterplan_url?: string | null;
+      mapa_viewbox?: string | null;
+      mapa_img_transform?: Record<string, number> | null;
+    }
   ): Promise<Obra> {
     const payload: Record<string, unknown> = {};
     if ('mapa_masterplan_url' in dados) payload.mapa_masterplan_url = dados.mapa_masterplan_url;
     if ('mapa_viewbox' in dados) payload.mapa_viewbox = dados.mapa_viewbox;
+    if ('mapa_img_transform' in dados) payload.mapa_img_transform = dados.mapa_img_transform;
 
     const { data, error } = await supabase
       .from('obras')

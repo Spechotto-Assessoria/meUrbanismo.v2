@@ -1,6 +1,17 @@
-import type { Lote } from '../types';
+import type { Lote, MapaImgTransform } from '../types';
 
 export const VIEWBOX_PADRAO = '0 0 1920 1080';
+
+export const TRANSFORM_PADRAO: MapaImgTransform = { scale: 100, offsetX: 0, offsetY: 0 };
+
+export function parseImgTransform(raw?: MapaImgTransform | null): MapaImgTransform {
+  if (!raw) return TRANSFORM_PADRAO;
+  return {
+    scale: Number(raw.scale) || 100,
+    offsetX: Number(raw.offsetX) || 0,
+    offsetY: Number(raw.offsetY) || 0,
+  };
+}
 
 export type StatusLote = 'disponivel' | 'reservado' | 'vendido';
 
