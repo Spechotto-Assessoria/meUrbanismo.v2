@@ -9,10 +9,14 @@ import {
   Input,
   Label
 } from '../tabs/ui-components';
-import { RELATORIO_CARDS } from '../../lib/relatorios/tipos';
+import {
+  RELATORIO_CARDS,
+  tipoPermiteTodoHistorico,
+  tipoPrecisaPeriodo
+} from '../../lib/relatorios/tipos';
 import { financeiroPadraoMarcado } from '../../lib/relatorios/acesso';
 import type { RelatorioTipo } from '../../types';
-import type { GerarRelatorioParams } from '../../lib/relatorios/tipos';
+import type { GerarRelatorioParams, ModoVendasRelatorio } from '../../lib/relatorios/tipos';
 
 type Props = {
   open: boolean;
@@ -45,12 +49,20 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
   const [periodoInicio, setPeriodoInicio] = useState(mesAtual());
   const [periodoFim, setPeriodoFim] = useState(mesAtual());
   const [incluiFinanceiro, setIncluiFinanceiro] = useState(false);
+  const [todosPeriodos, setTodosPeriodos] = useState(false);
+  const [modoVendas, setModoVendas] = useState<ModoVendasRelatorio>('acumulado');
+
+  const exibirPeriodo = tipo ? tipoPrecisaPeriodo(tipo) : false;
+  const exibirTodoHistorico = tipo ? tipoPermiteTodoHistorico(tipo) : false;
+  const exibirModoVendas = tipo === 'mapa_lotes' || tipo === 'global';
 
   useEffect(() => {
     if (!open || !card) return;
     setTitulo(card.tituloPadrao);
     setPeriodoInicio(mesAtual());
     setPeriodoFim(mesAtual());
+    setTodosPeriodos(false);
+    setModoVendas('acumulado');
     setIncluiFinanceiro(financeiroPadraoMarcado(userEmail, isMasterAdmin) && canViewFinancials);
   }, [open, card, userEmail, isMasterAdmin, canViewFinancials]);
 
@@ -60,13 +72,15 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (periodoInicio > periodoFim) return;
+    if (exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim) return;
     await onGerar({
       tipo,
       titulo: titulo.trim() || card.tituloPadrao,
       periodoInicio,
       periodoFim,
-      incluiFinanceiro: financeiroDesabilitado ? false : incluiFinanceiro
+      incluiFinanceiro: financeiroDesabilitado ? false : incluiFinanceiro,
+      todosPeriodos: exibirTodoHistorico ? todosPeriodos : false,
+      modoVendas: exibirModoVendas ? modoVendas : 'acumulado'
     });
   };
 
@@ -88,26 +102,64 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="mes-inicio">Mês Início</Label>
-              <Input
-                id="mes-inicio"
-                type="month"
-                value={periodoInicio}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPeriodoInicio(e.target.value)}
-              />
+          {exibirPeriodo && !todosPeriodos && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="mes-inicio">Mês Início</Label>
+                <Input
+                  id="mes-inicio"
+                  type="month"
+                  value={periodoInicio}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPeriodoInicio(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mes-fim">Mês Fim</Label>
+                <Input
+                  id="mes-fim"
+                  type="month"
+                  value={periodoFim}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPeriodoFim(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="mes-fim">Mês Fim</Label>
-              <Input
-                id="mes-fim"
-                type="month"
-                value={periodoFim}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPeriodoFim(e.target.value)}
+          )}
+
+          {exibirTodoHistorico && (
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={todosPeriodos}
+                onChange={(e) => setTodosPeriodos(e.target.checked)}
               />
+              <span className="text-slate-700">Todo o histórico (sem filtro de período)</span>
+            </label>
+          )}
+
+          {exibirModoVendas && (
+            <div className="space-y-2 text-xs">
+              <Label>Escopo de vendas</Label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="modo-vendas"
+                  checked={modoVendas === 'periodo'}
+                  onChange={() => setModoVendas('periodo')}
+                  disabled={todosPeriodos}
+                />
+                <span className="text-slate-700">Vendas do período selecionado</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="modo-vendas"
+                  checked={modoVendas === 'acumulado'}
+                  onChange={() => setModoVendas('acumulado')}
+                />
+                <span className="text-slate-700">Vendas acumuladas (todo o empreendimento)</span>
+              </label>
             </div>
-          </div>
+          )}
 
           <label className={`flex items-center gap-2 text-xs ${financeiroDesabilitado ? 'opacity-50' : ''}`}>
             <input
@@ -119,7 +171,7 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
             <span className="text-slate-700">Incluir dados financeiros</span>
           </label>
 
-          {periodoInicio > periodoFim && (
+          {exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim && (
             <p className="text-xs text-red-600">O mês início deve ser anterior ou igual ao mês fim.</p>
           )}
 
@@ -130,7 +182,7 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
             <Button
               type="submit"
               className="flex-1 bg-brand-500 hover:bg-brand-600"
-              disabled={gerando || periodoInicio > periodoFim}
+              disabled={gerando || (exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim)}
             >
               {gerando ? (
                 <>

@@ -4,7 +4,9 @@ import {
   TrendingUp,
   CheckCircle2,
   Camera,
-  FileText
+  FileText,
+  PieChart,
+  Map
 } from 'lucide-react';
 import { RELATORIO_CARDS } from '../../lib/relatorios/tipos';
 import type { RelatorioTipo } from '../../types';
@@ -13,7 +15,9 @@ const ICONES: Record<RelatorioTipo, React.ReactNode> = {
   orcamento: <FileBarChart className="w-6 h-6 text-brand-400" />,
   cronograma: <TrendingUp className="w-6 h-6 text-brand-400" />,
   andamento: <CheckCircle2 className="w-6 h-6 text-brand-400" />,
+  viabilidade: <PieChart className="w-6 h-6 text-brand-400" />,
   acompanhamento: <Camera className="w-6 h-6 text-brand-400" />,
+  mapa_lotes: <Map className="w-6 h-6 text-brand-400" />,
   global: <FileText className="w-6 h-6 text-brand-400" />
 };
 

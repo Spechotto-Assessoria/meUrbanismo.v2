@@ -239,7 +239,7 @@ alter table public.obra_arquivos add column if not exists arquivado boolean not 
 create table if not exists public.relatorios_obra (
   id uuid primary key default gen_random_uuid(),
   obra_id uuid not null references public.obras(id) on delete cascade,
-  tipo text not null check (tipo in ('orcamento', 'cronograma', 'andamento', 'acompanhamento', 'global')),
+  tipo text not null check (tipo in ('orcamento', 'cronograma', 'andamento', 'viabilidade', 'acompanhamento', 'mapa_lotes', 'global')),
   titulo text not null,
   periodo_inicio date,
   periodo_fim date,

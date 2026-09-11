@@ -470,7 +470,9 @@ export type RelatorioTipo =
   | 'orcamento'
   | 'cronograma'
   | 'andamento'
+  | 'viabilidade'
   | 'acompanhamento'
+  | 'mapa_lotes'
   | 'global';
 
 export interface RelatorioObra {

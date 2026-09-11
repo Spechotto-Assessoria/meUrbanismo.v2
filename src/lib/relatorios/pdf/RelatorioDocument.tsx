@@ -1,92 +1,83 @@
 import React from 'react';
-import { Document, Page, Text, StyleSheet } from '@react-pdf/renderer';
-import type { DadosRelatorio, RelatorioTipo } from '../tipos';
-import { periodoLabel } from '../formatadores';
-import { PdfHeader, PdfFooter } from './PdfLayout';
-import { SumarioExecutivo } from './SumarioExecutivo';
-import { TabelaOrcamento } from './TabelaOrcamento';
-import { TabelaAndamento } from './TabelaAndamento';
-import { TabelaCronograma } from './TabelaCronograma';
-import { AcompanhamentoSection } from './AcompanhamentoSection';
-
-const styles = StyleSheet.create({
-  page: { paddingTop: 72, paddingBottom: 56, paddingHorizontal: 32, fontSize: 9, fontFamily: 'Helvetica' },
-  sectionTitle: { fontSize: 12, fontWeight: 'bold', marginBottom: 8, color: '#1e293b' }
-});
+import { Document } from '@react-pdf/renderer';
+import type { DadosRelatorio } from '../tipos';
+import { mostrarSecao } from '../tipos';
+import { PaginaRelatorio, type LayoutProps } from './PdfLayout';
+import { ResumoObraSection } from './sections/ResumoObraSection';
+import { OrcamentoSection } from './sections/OrcamentoSection';
+import { CronogramaSection } from './sections/CronogramaSection';
+import { AndamentoSection } from './sections/AndamentoSection';
+import { ViabilidadeSection } from './sections/ViabilidadeSection';
+import { AcompanhamentoSection } from './sections/AcompanhamentoSection';
+import { MapaLotesSection } from './sections/MapaLotesSection';
 
 type Props = DadosRelatorio & {
   logoMeUrbanismoDataUri?: string;
-  logoEmpresaDataUri?: string;
+  logoSpechottoDataUri?: string;
   fotosDataUri?: string[];
+  mapaDataUri?: string;
 };
 
-function PaginaComLayout({ dados, children }: { dados: Props; children: React.ReactNode }) {
-  return (
-    <Page size="A4" style={styles.page}>
-      <PdfHeader
-        obraNome={dados.obra.nome}
-        empresaNome={dados.empresaNome}
-        logoMeUrbanismo={dados.logoMeUrbanismoDataUri}
-        logoEmpresa={dados.logoEmpresaDataUri}
-        dataEmissao={dados.dataEmissao}
-      />
-      {children}
-      <PdfFooter dataEmissao={dados.dataEmissao} />
-    </Page>
-  );
+function layoutProps(dados: Props): LayoutProps {
+  return {
+    titulo: dados.titulo,
+    obraNome: dados.obra.nome,
+    empresaNome: dados.empresaNome,
+    logoMeUrbanismo: dados.logoMeUrbanismoDataUri,
+    logoSpechotto: dados.logoSpechottoDataUri,
+    dataEmissao: dados.dataEmissao
+  };
 }
 
-function mostrarSecao(tipo: RelatorioTipo, secao: RelatorioTipo): boolean {
-  return tipo === 'global' || tipo === secao;
+function Pagina({ dados, children }: { dados: Props; children: React.ReactNode }) {
+  return <PaginaRelatorio {...layoutProps(dados)}>{children}</PaginaRelatorio>;
 }
 
 export function RelatorioDocument(props: Props) {
   const { tipo } = props;
-  const exibirSumario = tipo === 'global' || tipo === 'orcamento' || tipo === 'andamento';
 
   return (
     <Document title={props.titulo} author="Spechotto Assessoria & Construção">
-      {exibirSumario && (
-        <PaginaComLayout dados={props}>
-          <SumarioExecutivo dados={props} />
-        </PaginaComLayout>
+      {tipo === 'global' && (
+        <Pagina dados={props}>
+          <ResumoObraSection dados={props} />
+        </Pagina>
       )}
 
       {mostrarSecao(tipo, 'orcamento') && (
-        <PaginaComLayout dados={props}>
-          <Text style={styles.sectionTitle}>Orçamento por Etapas</Text>
-          <TabelaOrcamento itens={props.orcamentos} incluiFinanceiro={props.incluiFinanceiro} total={props.totalOrcado} />
-        </PaginaComLayout>
+        <Pagina dados={props}>
+          <OrcamentoSection dados={props} />
+        </Pagina>
       )}
 
       {mostrarSecao(tipo, 'cronograma') && (
-        <PaginaComLayout dados={props}>
-          <Text style={styles.sectionTitle}>Cronograma — Curva S e Prazos</Text>
-          <TabelaCronograma
-            cronograma={props.cronograma}
-            meses={props.cronogramaMeses}
-            incluiFinanceiro={props.incluiFinanceiro}
-            obra={props.obra}
-            orcamentos={props.orcamentos}
-          />
-        </PaginaComLayout>
+        <Pagina dados={props}>
+          <CronogramaSection dados={props} />
+        </Pagina>
       )}
 
       {mostrarSecao(tipo, 'andamento') && (
-        <PaginaComLayout dados={props}>
-          <Text style={styles.sectionTitle}>Andamento — Previsto x Realizado</Text>
-          <TabelaAndamento etapas={props.andamento} />
-        </PaginaComLayout>
+        <Pagina dados={props}>
+          <AndamentoSection dados={props} />
+        </Pagina>
+      )}
+
+      {mostrarSecao(tipo, 'viabilidade') && (
+        <Pagina dados={props}>
+          <ViabilidadeSection dados={props} />
+        </Pagina>
       )}
 
       {mostrarSecao(tipo, 'acompanhamento') && (
-        <PaginaComLayout dados={props}>
-          <Text style={styles.sectionTitle}>Acompanhamento Fotográfico e Diário</Text>
-          <Text style={{ marginBottom: 8, color: '#64748b' }}>
-            Período: {periodoLabel(props.periodoInicio, props.periodoFim)}
-          </Text>
-          <AcompanhamentoSection diarios={props.diarios} fotosDataUri={props.fotosDataUri || []} />
-        </PaginaComLayout>
+        <Pagina dados={props}>
+          <AcompanhamentoSection dados={props} fotosDataUri={props.fotosDataUri || []} />
+        </Pagina>
+      )}
+
+      {mostrarSecao(tipo, 'mapa_lotes') && (
+        <Pagina dados={props}>
+          <MapaLotesSection dados={props} mapaDataUri={props.mapaDataUri} />
+        </Pagina>
       )}
     </Document>
   );
