@@ -231,13 +231,17 @@ export const GaleriaFotosPanel: React.FC<Props> = ({
                                     </span>
                                   )}
                                   {podeGerenciar && (
-                                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="absolute top-1 right-1 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                       <button
                                         type="button"
                                         disabled={salvando}
                                         onClick={() => alternarVisibilidade(foto)}
                                         className="p-1 bg-white/90 rounded shadow-sm"
-                                        title={foto.visivel_convidados ? 'Ocultar convidados' : 'Tornar visível'}
+                                        title={
+                                          foto.visivel_convidados
+                                            ? 'Ocultar do cliente/comprador'
+                                            : 'Tornar visível para cliente/comprador'
+                                        }
                                       >
                                         {foto.visivel_convidados ? (
                                           <EyeOff className="w-3 h-3 text-slate-600" />
@@ -257,6 +261,7 @@ export const GaleriaFotosPanel: React.FC<Props> = ({
                                         disabled={salvando}
                                         onClick={() => excluirFoto(foto)}
                                         className="p-1 bg-white/90 rounded shadow-sm"
+                                        title="Excluir foto"
                                       >
                                         <Trash2 className="w-3 h-3 text-rose-600" />
                                       </button>

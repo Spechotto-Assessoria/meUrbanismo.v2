@@ -3,6 +3,7 @@ import { UserRole, Obra, Empresa, TabId, User, Convite } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { dataService } from '../services/supabase';
 import { abasDoPerfil } from '../lib/permissoes';
+import { isMasterAdminUser } from '../lib/auth-admin';
 import { useRolePorObra } from '../hooks/useRolePorObra';
 import {
   AUTH_STORAGE_KEY,
@@ -63,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [obras, setObras] = useState<Obra[]>([]);
   const [activeObra, setActiveObraState] = useState<Obra | null>(null);
 
-  const isMasterAdmin = user?.role === 'ADMINISTRADOR';
+  const isMasterAdmin = isMasterAdminUser(user?.email, user?.role);
   const { getRoleForObra, effectiveRole, canViewFinancials, isCorretor } = useRolePorObra({
     convites: convitesUsuario,
     activeObraId: activeObra?.id,

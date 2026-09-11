@@ -48,7 +48,7 @@ export const AcompanhamentoTab: React.FC<{
         </div>
         <p className="text-xs text-slate-500">
           {ctx.activeObra.nome}
-          {ctx.isClienteOuCorretor && ' · Galeria pública (fotos visíveis para convidados)'}
+          {ctx.isClienteOuCorretor && ' · Galeria pública (fotos liberadas para cliente/comprador)'}
         </p>
       </header>
 

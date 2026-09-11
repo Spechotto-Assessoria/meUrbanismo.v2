@@ -141,7 +141,7 @@ export const UploadFotoModal: React.FC<UploadProps> = ({
         </Campo>
         <label className="flex items-center gap-2 text-xs text-slate-600">
           <input type="checkbox" checked={visivel} onChange={(e) => setVisivel(e.target.checked)} />
-          Visível para convidados (cliente/corretor)
+          Visível para cliente/comprador
         </label>
         {erro && <p className="text-xs text-rose-600">{erro}</p>}
         <button
@@ -228,7 +228,7 @@ export const EditFotoModal: React.FC<EditProps> = ({ foto, servicos, onClose, on
         </Campo>
         <label className="flex items-center gap-2 text-xs text-slate-600">
           <input type="checkbox" checked={visivel} onChange={(e) => setVisivel(e.target.checked)} />
-          Visível para convidados
+          Visível para cliente/comprador
         </label>
         <button
           type="button"

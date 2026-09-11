@@ -7,6 +7,7 @@ import {
   clearPendingObraId
 } from '../services/conviteResgate';
 import { Convite, Obra } from '../types';
+import { resolveUserRole } from '../lib/auth-admin';
 
 export const AUTH_STORAGE_KEY = 'meurbanismo_auth_session_v2';
 
@@ -45,7 +46,8 @@ export interface SyncSessionResult {
 /** Sincroniza usuário, resgata convites pendentes e carrega convites ativos. */
 export async function buildUserSession(sbUser: { id: string; email?: string; user_metadata?: Record<string, string> }): Promise<SyncSessionResult> {
   const email = sbUser.email || '';
-  const userRole = await fetchRoleFromPerfis(sbUser.id);
+  const perfilRole = await fetchRoleFromPerfis(sbUser.id);
+  const userRole = resolveUserRole(email, perfilRole);
   const nome = sbUser.user_metadata?.nome || sbUser.user_metadata?.full_name || email.split('@')[0];
 
   const appUser: User = {
