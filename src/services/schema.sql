@@ -95,6 +95,9 @@ alter table public.obras add column if not exists area_vendavel_m2 numeric(12,2)
 alter table public.obras add column if not exists mapa_masterplan_url text;
 alter table public.obras add column if not exists mapa_viewbox text default '0 0 1200 800';
 alter table public.obras add column if not exists mapa_img_transform jsonb default '{"scale":100,"offsetX":0,"offsetY":0}'::jsonb;
+alter table public.obras add column if not exists supervisao_tecnica text;
+alter table public.obras add column if not exists engenheiro_responsavel text;
+alter table public.obras add column if not exists crea_responsavel text;
 alter table public.obras alter column tipo set default 'Condomínio Horizontal Fechado';
 
 create table if not exists public.orcamentos (
@@ -935,6 +938,9 @@ select
   o.mapa_masterplan_url,
   o.mapa_viewbox,
   o.mapa_img_transform,
+  o.supervisao_tecnica,
+  o.engenheiro_responsavel,
+  o.crea_responsavel,
   o.created_at,
   case when public.can_view_financials_for_obra(o.id) then o.valor_vgv end as valor_vgv,
   case when public.can_view_financials_for_obra(o.id) then o.custo_orcado end as custo_orcado,

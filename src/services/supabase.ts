@@ -1120,6 +1120,34 @@ class SupabaseDataService {
     return data as Obra;
   }
 
+  async updateObraGestaoTecnica(
+    obraId: string,
+    dados: {
+      supervisao_tecnica?: string | null;
+      engenheiro_responsavel?: string | null;
+      crea_responsavel?: string | null;
+    }
+  ): Promise<Obra> {
+    const payload = {
+      supervisao_tecnica: dados.supervisao_tecnica?.trim() || null,
+      engenheiro_responsavel: dados.engenheiro_responsavel?.trim() || null,
+      crea_responsavel: dados.crea_responsavel?.trim() || null,
+    };
+
+    const { data, error } = await supabase
+      .from('obras')
+      .update(payload)
+      .eq('id', obraId)
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('updateObraGestaoTecnica', error);
+      throw new Error('Não foi possível atualizar os dados de gestão técnica.');
+    }
+    return data as Obra;
+  }
+
   // ============================================================
   // CONVITES (fonte real de RBAC por obra — ver has_obra_access() no schema.sql)
   // ============================================================

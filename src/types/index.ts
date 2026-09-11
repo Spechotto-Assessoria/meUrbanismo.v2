@@ -120,6 +120,9 @@ export interface Obra {
   valor_vgv?: number;
   valorGlobal?: number;
   arquivada?: boolean;
+  supervisao_tecnica?: string;
+  engenheiro_responsavel?: string;
+  crea_responsavel?: string;
 }
 
 // ============================================================

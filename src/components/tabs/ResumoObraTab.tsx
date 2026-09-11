@@ -12,11 +12,12 @@ import {
   Calendar,
   Layers,
   ArrowUpRight,
-  ShieldCheck,
   Activity,
   Briefcase
 } from 'lucide-react';
 import { TabId } from '../../types';
+import { useObraAccess } from '../../hooks/useObraAccess';
+import { GestaoTecnicaCard } from '../resumo/GestaoTecnicaCard';
 
 interface ResumoObraTabProps {
   onNavigateTab?: (tab: TabId) => void;
@@ -24,6 +25,7 @@ interface ResumoObraTabProps {
 
 export const ResumoObraTab: React.FC<ResumoObraTabProps> = ({ onNavigateTab }) => {
   const { activeObra, canViewFinancials, canAccessTab } = useAuth();
+  const { isMasterAdmin } = useObraAccess();
   const [totalOrcado, setTotalOrcado] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -233,22 +235,7 @@ export const ResumoObraTab: React.FC<ResumoObraTabProps> = ({ onNavigateTab }) =
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" /> Gestão & Responsabilidade Técnica
-          </h3>
-          <div className="text-xs space-y-1.5">
-            <p className="text-slate-600">
-              <strong>Supervisão Técnica:</strong> Spechotto Assessoria & Construção
-            </p>
-            <p className="text-slate-600">
-              <strong>Engenheiro Responsável:</strong> Rennan Seidl Spechotto (CREA-SP 5069248190)
-            </p>
-            <p className="text-[11px] text-slate-500">
-              Plataforma com conformidade às normas ABNT NBR 12721 e Leis Federais 6.766/79 e 13.465/17.
-            </p>
-          </div>
-        </div>
+        <GestaoTecnicaCard obra={activeObra} isAdmin={isMasterAdmin} />
       </div>
 
     </div>

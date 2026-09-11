@@ -7,7 +7,8 @@ export const Button = ({ children, className = '', variant = 'default', size = '
     else if (variant === 'secondary') base += "bg-slate-100 hover:bg-slate-200 text-slate-700 ";
     else base += "bg-purple-600 hover:bg-purple-700 text-white ";
 
-    if (size === 'sm') base += "h-7 px-2.5 text-[10px] ";
+    if (size === 'icon') base += "h-7 w-7 p-0 ";
+    else if (size === 'sm') base += "h-7 px-2.5 text-[10px] ";
     else base += "h-9 px-4 py-2 ";
 
     return <button className={`${base} ${className}`} {...props}>{children}</button>;
