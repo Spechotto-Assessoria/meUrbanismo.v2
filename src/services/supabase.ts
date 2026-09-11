@@ -584,7 +584,12 @@ class SupabaseDataService {
     const { data, error } = await query;
     if (error) {
       logSupabaseError('getDiarios', error);
-      return [];
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'Tabela diario_obra não encontrada ou cache da API desatualizado. Execute src/services/schema.sql e rode NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      throw new Error(error.message || 'Não foi possível carregar o diário de obra.');
     }
     return (data || []) as DiarioObra[];
   }
@@ -635,7 +640,12 @@ class SupabaseDataService {
     const { data, error } = await query;
     if (error) {
       logSupabaseError('getMedicoes', error);
-      return [];
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'View medicoes_publicas não encontrada ou cache da API desatualizado. Execute src/services/schema.sql e rode NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      throw new Error(error.message || 'Não foi possível carregar as medições.');
     }
     return (data || []).map((m) => ({
       ...(m as MedicaoItem),
@@ -690,7 +700,12 @@ class SupabaseDataService {
     const { data, error } = await query;
     if (error) {
       logSupabaseError('getFotos', error);
-      return [];
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'Tabela fotos_obra não encontrada ou cache da API desatualizado. Execute src/services/schema.sql e rode NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      throw new Error(error.message || 'Não foi possível carregar as fotos da obra.');
     }
     return (data || []) as FotoObra[];
   }
@@ -706,7 +721,15 @@ class SupabaseDataService {
     const { data, error } = await query;
     if (error) {
       logSupabaseError('saveFoto', error);
-      throw new Error('Não foi possível salvar a foto.');
+      if (isSchemaCacheError(error)) {
+        throw new Error(
+          'Tabela fotos_obra não encontrada ou cache da API desatualizado. Execute src/services/schema.sql e rode NOTIFY pgrst, \'reload schema\';'
+        );
+      }
+      if (isRlsError(error)) {
+        throw new Error('Permissão negada. Apenas administradores podem salvar fotos da obra.');
+      }
+      throw new Error(error.message || 'Não foi possível salvar a foto.');
     }
     return data as FotoObra;
   }
