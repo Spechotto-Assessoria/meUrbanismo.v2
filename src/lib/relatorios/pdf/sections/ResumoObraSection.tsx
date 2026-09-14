@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from '@react-pdf/renderer';
 import type { DadosRelatorio } from '../../tipos';
 import { brl, pct, dataPt, periodoLabel } from '../../formatadores';
 import { PdfSectionTitle } from '../PdfLayout';
+import { PizzaLotesStatusPdf } from '../charts/PizzaLotesStatusPdf';
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
@@ -21,6 +22,7 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
   const lotesVendidos = obra.lotes_vendidos || dados.contagemLotes.vendido || 0;
   const lotesDisponiveis = obra.lotes_disponiveis ?? dados.contagemLotes.disponivel;
   const vgv = obra.valor_vgv || dados.viabilidade?.vgvReajustado || 0;
+  const engenheiro = obra.engenheiro_responsavel?.trim();
 
   return (
     <View>
@@ -67,12 +69,14 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
           <Text style={styles.value}>{pct(geralRealizado)}</Text>
         </View>
       </View>
+      <PizzaLotesStatusPdf contagem={dados.contagemLotes} />
       <Text style={styles.marcos}>
         Início previsto: {dataPt(obra.data_inicio || obra.dataInicio)} • Entrega:{' '}
         {dataPt(obra.data_previsao || obra.dataEntrega)}
       </Text>
       <Text style={[styles.marcos, { marginTop: 4 }]}>
-        Engenheiro: {obra.engenheiro_responsavel || '—'} {obra.crea_responsavel ? `(${obra.crea_responsavel})` : ''}
+        Engenheiro: {engenheiro || 'Não informado (Apenas Assessoria)'}{' '}
+        {obra.crea_responsavel ? `(${obra.crea_responsavel})` : ''}
       </Text>
       <Text style={styles.marcos}>Supervisão: {obra.supervisao_tecnica || '—'}</Text>
     </View>

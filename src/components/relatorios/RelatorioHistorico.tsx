@@ -42,7 +42,7 @@ export const RelatorioHistorico: React.FC<Props> = ({
   }
 
   return (
-    <div className="space-y-3">
+    <div id="relatorio-historico" className="space-y-3">
       <h4 className="text-sm font-bold text-white flex items-center gap-2">
         <FileText className="w-4 h-4 text-brand-400" />
         Histórico de Relatórios Gerados

@@ -6,13 +6,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useObraAccess } from '../../hooks/useObraAccess';
 import { useRelatoriosObra } from '../../hooks/useRelatoriosObra';
 import { podeAcessarRelatorios, podeExcluirRelatorio } from '../../lib/relatorios/acesso';
-import type { RelatorioTipo } from '../../types';
+import type { RelatorioTipo, TabId } from '../../types';
 import { RelatorioAcessoRestrito } from '../relatorios/RelatorioAcessoRestrito';
 import { RelatorioTipoGrid } from '../relatorios/RelatorioTipoGrid';
 import { RelatorioConfigDialog } from '../relatorios/RelatorioConfigDialog';
 import { RelatorioHistorico } from '../relatorios/RelatorioHistorico';
 
-export const RelatoriosTab: React.FC = () => {
+type Props = {
+  onNavigateTab?: (tab: TabId) => void;
+};
+
+export const RelatoriosTab: React.FC<Props> = ({ onNavigateTab }) => {
   const queryClient = useQueryClient();
   const { activeObra, user, empresas, isMasterAdmin, getRoleForObra } = useAuth();
   const { canViewFinancials } = useObraAccess();
@@ -44,28 +48,41 @@ export const RelatoriosTab: React.FC = () => {
   const handleGerar = (params: Parameters<typeof gerar>[0]) => {
     setTipoSelecionado(null);
 
-    const promise = gerar({
+    toast.info(
+      'Seu relatório está sendo gerado em segundo plano. Você pode continuar navegando...',
+      { duration: 4000 }
+    );
+
+    const obraId = activeObra.id;
+
+    void gerar({
       ...params,
       obra: activeObra,
       logoEmpresaUrl: empresa?.logo_url,
-      empresaNome: empresa?.nome || activeObra.empresa_nome || activeObra.empresaNome
-    });
+      empresaNome: empresa?.nome || activeObra.empresa_nome || activeObra.empresaNome,
+    })
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ['relatorios', obraId] });
 
-    toast.promise(promise, {
-      loading: 'Seu relatório está sendo gerado em segundo plano. Você pode continuar navegando...',
-      success: (registro) => ({
-        message: 'Relatório gerado com sucesso!',
-        action: {
-          label: 'Abrir PDF',
-          onClick: () => window.open(registro.arquivo_url, '_blank', 'noopener,noreferrer'),
-        },
-      }),
-      error: 'Erro ao processar os dados do relatório. Tente novamente.',
-    });
-
-    void promise.finally(() => {
-      void queryClient.invalidateQueries({ queryKey: ['relatorios', activeObra.id] });
-    });
+        toast.success('Relatório gerado com sucesso!', {
+          duration: 5000,
+          action: {
+            label: 'Ver na Lista',
+            onClick: () => {
+              onNavigateTab?.('relatorios');
+              requestAnimationFrame(() => {
+                document.getElementById('relatorio-historico')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                });
+              });
+            },
+          },
+        });
+      })
+      .catch(() => {
+        toast.error('Erro ao gerar relatório. Tente novamente.');
+      });
   };
 
   return (

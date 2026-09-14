@@ -14,6 +14,7 @@ import { MapaLotesSection } from './sections/MapaLotesSection';
 type Props = DadosRelatorio & {
   logoMeUrbanismoDataUri?: string;
   logoSpechottoDataUri?: string;
+  watermarkIconDataUri?: string;
   fotosDataUri?: string[];
   mapaDataUri?: string;
 };
@@ -25,6 +26,7 @@ function layoutProps(dados: Props): LayoutProps {
     empresaNome: dados.empresaNome,
     logoMeUrbanismo: dados.logoMeUrbanismoDataUri,
     logoSpechotto: dados.logoSpechottoDataUri,
+    watermarkIcon: dados.watermarkIconDataUri,
     dataEmissao: dados.dataEmissao
   };
 }

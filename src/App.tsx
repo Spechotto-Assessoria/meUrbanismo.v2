@@ -299,7 +299,7 @@ const AuthenticatedApp: React.FC = () => {
       case 'vendas':
         return <VendasTab />;
       case 'relatorios':
-        return <RelatoriosTab />;
+        return <RelatoriosTab onNavigateTab={(t) => setActiveTab(t)} />;
       case 'portfolio':
         return <PortfolioTab />;
       default:

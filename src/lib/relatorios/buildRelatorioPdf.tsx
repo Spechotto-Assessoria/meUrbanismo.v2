@@ -8,7 +8,7 @@ import { RelatorioDocument } from './pdf/RelatorioDocument';
 export async function buildRelatorioPdf(params: GerarRelatorioParams): Promise<Blob> {
   const dados = await fetchDadosRelatorio(params);
   const fotosUrls = dados.fotos.map((f) => f.url).filter(Boolean) as string[];
-  const { logoMeUrbanismo, logoSpechotto, fotos } = await preloadImagensRelatorio(fotosUrls);
+  const { logoMeUrbanismo, logoSpechotto, watermarkIcon, fotos } = await preloadImagensRelatorio(fotosUrls);
 
   const precisaMapa = params.tipo === 'mapa_lotes' || params.tipo === 'global';
   const mapaDataUri = precisaMapa
@@ -25,6 +25,7 @@ export async function buildRelatorioPdf(params: GerarRelatorioParams): Promise<B
       {...dados}
       logoMeUrbanismoDataUri={logoMeUrbanismo}
       logoSpechottoDataUri={logoSpechotto}
+      watermarkIconDataUri={watermarkIcon}
       fotosDataUri={fotos}
       mapaDataUri={mapaDataUri || undefined}
     />

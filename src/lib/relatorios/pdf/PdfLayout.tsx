@@ -7,7 +7,7 @@ const SLATE = '#64748b';
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 88,
+    paddingTop: 96,
     paddingBottom: 56,
     paddingHorizontal: 32,
     fontSize: 9,
@@ -25,20 +25,27 @@ const styles = StyleSheet.create({
     borderBottomColor: NAVY,
     paddingBottom: 8
   },
-  colLeft: { width: '22%', alignItems: 'flex-start' },
-  colCenter: { width: '56%', alignItems: 'center', paddingHorizontal: 6 },
-  colRight: { width: '22%', alignItems: 'flex-end' },
-  logo: { width: 52, height: 36, objectFit: 'contain' },
+  colLeft: { width: '25%', alignItems: 'flex-start', justifyContent: 'center' },
+  colCenter: { width: '50%', alignItems: 'center', paddingHorizontal: 6 },
+  colRight: { width: '25%', alignItems: 'flex-end', justifyContent: 'center' },
+  logoMeUrbanismo: { height: 46, maxWidth: 90, objectFit: 'contain' },
+  logoSpechotto: { height: 46, maxWidth: 100, objectFit: 'contain' },
   titulo: { fontSize: 11, fontWeight: 'bold', color: '#0f172a', textAlign: 'center' },
   subtitulo: { fontSize: 8, color: SLATE, textAlign: 'center', marginTop: 2 },
   meta: { fontSize: 7, color: SLATE, textAlign: 'center', marginTop: 2 },
-  watermark: {
+  watermarkWrap: {
     position: 'absolute',
-    top: '35%',
-    left: '25%',
-    width: '50%',
-    height: 200,
-    opacity: 0.06,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  watermark: {
+    width: 280,
+    height: 280,
+    opacity: 0.07,
     objectFit: 'contain'
   },
   footer: {
@@ -71,6 +78,7 @@ export type LayoutProps = {
   empresaNome?: string | null;
   logoMeUrbanismo?: string;
   logoSpechotto?: string;
+  watermarkIcon?: string;
   dataEmissao: string;
 };
 
@@ -78,7 +86,7 @@ export function PdfHeader({ titulo, obraNome, empresaNome, logoMeUrbanismo, logo
   return (
     <View style={styles.header} fixed>
       <View style={styles.colLeft}>
-        {logoMeUrbanismo ? <Image src={logoMeUrbanismo} style={styles.logo} /> : null}
+        {logoMeUrbanismo ? <Image src={logoMeUrbanismo} style={styles.logoMeUrbanismo} /> : null}
       </View>
       <View style={styles.colCenter}>
         <Text style={styles.titulo}>{titulo}</Text>
@@ -87,15 +95,19 @@ export function PdfHeader({ titulo, obraNome, empresaNome, logoMeUrbanismo, logo
         <Text style={styles.meta}>Emissão: {dataPt(dataEmissao)}</Text>
       </View>
       <View style={styles.colRight}>
-        {logoSpechotto ? <Image src={logoSpechotto} style={styles.logo} /> : null}
+        {logoSpechotto ? <Image src={logoSpechotto} style={styles.logoSpechotto} /> : null}
       </View>
     </View>
   );
 }
 
-export function PdfWatermark({ logoMeUrbanismo }: { logoMeUrbanismo?: string }) {
-  if (!logoMeUrbanismo) return null;
-  return <Image src={logoMeUrbanismo} style={styles.watermark} fixed />;
+export function PdfWatermark({ watermarkIcon }: { watermarkIcon?: string }) {
+  if (!watermarkIcon) return null;
+  return (
+    <View style={styles.watermarkWrap} fixed>
+      <Image src={watermarkIcon} style={styles.watermark} />
+    </View>
+  );
 }
 
 export function PdfFooter({ dataEmissao }: { dataEmissao: string }) {
@@ -117,7 +129,7 @@ type PaginaProps = LayoutProps & { children: React.ReactNode };
 export function PaginaRelatorio({ children, ...layout }: PaginaProps) {
   return (
     <Page size="A4" style={styles.page} wrap>
-      <PdfWatermark logoMeUrbanismo={layout.logoMeUrbanismo} />
+      <PdfWatermark watermarkIcon={layout.watermarkIcon} />
       <PdfHeader {...layout} />
       {children}
       <PdfFooter dataEmissao={layout.dataEmissao} />

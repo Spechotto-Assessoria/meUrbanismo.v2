@@ -26,10 +26,11 @@ async function logoComFallback(paths: string[]): Promise<string | undefined> {
 export async function preloadImagensRelatorio(
   fotosUrls: string[],
   limite = 12
-): Promise<{ logoMeUrbanismo?: string; logoSpechotto?: string; fotos: string[] }> {
-  const [logoMeUrbanismo, logoSpechotto] = await Promise.all([
-    logoComFallback(['/logo-meurbanismo.jpg', '/logo-meurbanismo.png']),
-    logoComFallback(['/logo-spechotto.png'])
+): Promise<{ logoMeUrbanismo?: string; logoSpechotto?: string; watermarkIcon?: string; fotos: string[] }> {
+  const [logoMeUrbanismo, logoSpechotto, watermarkIcon] = await Promise.all([
+    logoComFallback(['/logo-meurbanismo.png', '/logo-meurbanismo.jpg']),
+    logoComFallback(['/logo-spechotto.png']),
+    logoComFallback(['/icon-192.png.png'])
   ]);
 
   const fotos: string[] = [];
@@ -38,5 +39,5 @@ export async function preloadImagensRelatorio(
     if (dataUri) fotos.push(dataUri);
   }
 
-  return { logoMeUrbanismo, logoSpechotto, fotos };
+  return { logoMeUrbanismo, logoSpechotto, watermarkIcon, fotos };
 }
