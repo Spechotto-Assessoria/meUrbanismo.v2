@@ -9,8 +9,16 @@ const CORES = {
 } as const;
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', gap: 14, marginTop: 18, marginBottom: 8, alignItems: 'center' },
-  titulo: { fontSize: 9, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 4 },
+  wrap: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 18,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%'
+  },
+  titulo: { fontSize: 9, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 4, marginTop: 40, textAlign: 'center' },
   legenda: { flex: 1, gap: 5 },
   legItem: { fontSize: 8, color: '#475569' },
   vazio: { fontSize: 8, color: '#64748b', marginVertical: 6 }

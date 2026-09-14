@@ -10,8 +10,7 @@ const styles = StyleSheet.create({
   card: { width: '31%', padding: 8, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 4, backgroundColor: '#f8fafc' },
   label: { fontSize: 7, color: '#64748b', marginBottom: 3, textTransform: 'uppercase' },
   value: { fontSize: 11, fontWeight: 'bold', color: '#0f172a' },
-  intro: { fontSize: 9, color: '#334155', marginBottom: 6, lineHeight: 1.4 },
-  marcos: { marginTop: 10, fontSize: 8, color: '#475569' }
+  intro: { fontSize: 9, color: '#334155', marginBottom: 6, lineHeight: 1.4 }
 });
 
 export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
@@ -67,12 +66,16 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
           <Text style={styles.label}>Progresso Físico</Text>
           <Text style={styles.value}>{pct(geralRealizado)}</Text>
         </View>
+        <View style={styles.card}>
+          <Text style={styles.label}>Início Previsto</Text>
+          <Text style={styles.value}>{dataPt(obra.data_inicio || obra.dataInicio)}</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.label}>Entrega Prevista</Text>
+          <Text style={styles.value}>{dataPt(obra.data_previsao || obra.dataEntrega)}</Text>
+        </View>
       </View>
       <PizzaLotesStatusPdf contagem={dados.contagemLotes} />
-      <Text style={styles.marcos}>
-        Início previsto: {dataPt(obra.data_inicio || obra.dataInicio)} • Entrega:{' '}
-        {dataPt(obra.data_previsao || obra.dataEntrega)}
-      </Text>
     </View>
   );
 }
