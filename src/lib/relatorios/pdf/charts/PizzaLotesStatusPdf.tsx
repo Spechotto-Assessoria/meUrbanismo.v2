@@ -9,20 +9,9 @@ const CORES = {
 } as const;
 
 const styles = StyleSheet.create({
+  wrap: { flexDirection: 'row', gap: 14, marginTop: 18, marginBottom: 8, alignItems: 'center' },
   titulo: { fontSize: 9, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 4 },
-  chartRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginBottom: 30,
-    marginTop: 15
-  },
-  chartBox: { width: 130, height: 130 },
-  legendaCol: {
-    flexDirection: 'column',
-    marginLeft: 20,
-    gap: 4
-  },
+  legenda: { flex: 1, gap: 5 },
   legItem: { fontSize: 8, color: '#475569' },
   vazio: { fontSize: 8, color: '#64748b', marginVertical: 6 }
 });
@@ -78,15 +67,13 @@ export function PizzaLotesStatusPdf({ contagem }: Props) {
   return (
     <View>
       <Text style={styles.titulo}>Distribuição de Lotes</Text>
-      <View style={styles.chartRow}>
-        <View style={styles.chartBox}>
-          <Svg width={130} height={130}>
-            {paths.map((p, i) => (
-              <Path key={i} d={p.d} fill={p.cor} />
-            ))}
-          </Svg>
-        </View>
-        <View style={styles.legendaCol}>
+      <View style={styles.wrap}>
+        <Svg width={130} height={130}>
+          {paths.map((p, i) => (
+            <Path key={i} d={p.d} fill={p.cor} />
+          ))}
+        </Svg>
+        <View style={styles.legenda}>
           {paths.map((p, i) => (
             <Text key={i} style={styles.legItem}>
               <Text style={{ color: p.cor }}>■</Text> {p.label} ({p.valor})

@@ -12,13 +12,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     fontSize: 9,
     fontFamily: 'Helvetica',
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  pageContent: {
-    flex: 1,
-    flexDirection: 'column'
+    position: 'relative'
   },
   header: {
     position: 'absolute',
@@ -148,7 +142,7 @@ export function PaginaRelatorio({ children, ...layout }: PaginaProps) {
     <Page size="A4" style={styles.page} wrap>
       <PdfWatermark watermarkIcon={layout.watermarkIcon} />
       <PdfHeader {...layout} />
-      <View style={styles.pageContent}>{children}</View>
+      {children}
       <PdfFooter />
     </Page>
   );
