@@ -5,11 +5,11 @@ import type { ContagemLotes } from '../../tipos';
 const CORES = {
   disponivel: '#10b981',
   reservado: '#f59e0b',
-  vendido: '#3b82f6'
+  vendido: '#dc2626'
 } as const;
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', gap: 14, marginVertical: 8, alignItems: 'center' },
+  wrap: { flexDirection: 'row', gap: 14, marginTop: 18, marginBottom: 8, alignItems: 'center' },
   titulo: { fontSize: 9, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 4 },
   legenda: { flex: 1, gap: 5 },
   legItem: { fontSize: 8, color: '#475569' },
@@ -51,10 +51,10 @@ export function PizzaLotesStatusPdf({ contagem }: Props) {
     return <Text style={styles.vazio}>Sem lotes cadastrados.</Text>;
   }
 
-  const cx = 55;
-  const cy = 55;
-  const rOuter = 48;
-  const rInner = 28;
+  const cx = 65;
+  const cy = 65;
+  const rOuter = 56;
+  const rInner = 32;
   let ang = -Math.PI / 2;
 
   const paths = fatias.map((f) => {
@@ -68,7 +68,7 @@ export function PizzaLotesStatusPdf({ contagem }: Props) {
     <View>
       <Text style={styles.titulo}>Distribuição de Lotes</Text>
       <View style={styles.wrap}>
-        <Svg width={110} height={110}>
+        <Svg width={130} height={130}>
           {paths.map((p, i) => (
             <Path key={i} d={p.d} fill={p.cor} />
           ))}

@@ -8,7 +8,7 @@ const SLATE = '#64748b';
 const styles = StyleSheet.create({
   page: {
     paddingTop: 96,
-    paddingBottom: 56,
+    paddingBottom: 68,
     paddingHorizontal: 32,
     fontSize: 9,
     fontFamily: 'Helvetica',
@@ -53,13 +53,20 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 32,
     right: 32,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingTop: 6,
+    paddingTop: 6
+  },
+  footerLinha1: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     fontSize: 7,
     color: SLATE
+  },
+  footerLegal: {
+    fontSize: 6,
+    color: '#94a3b8',
+    marginTop: 3
   },
   sectionTitle: {
     fontSize: 12,
@@ -110,12 +117,16 @@ export function PdfWatermark({ watermarkIcon }: { watermarkIcon?: string }) {
   );
 }
 
-export function PdfFooter({ dataEmissao }: { dataEmissao: string }) {
+export function PdfFooter() {
   return (
     <View style={styles.footer} fixed>
-      <Text>Spechotto Assessoria & Construção — meUrbanismo</Text>
-      <Text>{dataPt(dataEmissao)}</Text>
-      <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
+      <View style={styles.footerLinha1}>
+        <Text>Spechotto Assessoria & Construção — meUrbanismo</Text>
+        <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
+      </View>
+      <Text style={styles.footerLegal}>
+        Plataforma com conformidade às normas ABNT NBR 12721 e Leis Federais 6.766/79 e 13.465/17.
+      </Text>
     </View>
   );
 }
@@ -132,7 +143,7 @@ export function PaginaRelatorio({ children, ...layout }: PaginaProps) {
       <PdfWatermark watermarkIcon={layout.watermarkIcon} />
       <PdfHeader {...layout} />
       {children}
-      <PdfFooter dataEmissao={layout.dataEmissao} />
+      <PdfFooter />
     </Page>
   );
 }
