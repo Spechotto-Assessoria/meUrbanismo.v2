@@ -79,3 +79,39 @@ A política deve ser escrita em linguagem clara (Visual Law/Legal Design), sem "
 
 **Formato de Saída:**
 Gere o documento em formato Markdown (`.md`), estruturado com títulos (`##`), listas, e blocos de destaque para facilitar a leitura do usuário final.
+
+
+
+
+
+## 🤖 PROMPT MASTER: Integração Autônoma de Design System (Método Claude)
+**Quando usar:** Na criação da Landing Page ou novos projetos do zero (usando Claude 3.5 Sonnet).
+**Pré-requisito:** Ter gerado o código no Claude Design, baixado o ZIP, e colado a pasta renomeada para `design-system-export` na raiz do projeto.
+
+**Prompt para colar no Cursor Composer (Modo Agent):**
+
+> Na raiz deste projeto tem a pasta `design-system-export`, um dump cru do Claude Design com o design system completo. Não é um pacote limpo: tem código de verdade, tem artefato interno da ferramenta, e provavelmente versões duplicadas do mesmo componente.
+> 
+> Sua tarefa é triar, reorganizar tudo numa pasta nova `src/design-system`, incorporar ao projeto, deixar a documentação em ordem, e SÓ NO FIM apagar a pasta `design-system-export`.
+> 
+> Execute tudo de ponta a ponta sem pedir aprovação. Monte o plano internamente e siga com ele. Quando houver ambiguidade, tome a decisão mais conservadora (a que preserva o que já existe no projeto) e registre a escolha no relatório final. Só interrompa se algo impedir fisicamente a conclusão da tarefa.
+> 
+> **1. Triagem do Dump:**
+> Leia a pasta inteira e classifique cada arquivo em:
+> - Canônico: a versão mais completa e recente (só o grupo canônico entra no projeto).
+> - Derivado/Duplicado: versões antigas e cópias.
+> - Interno da ferramenta: manifests, thumbnails, etc (descartar).
+> Preserve qualquer `DESIGN.md` (fonte da verdade dos tokens) e integre configs de lint.
+> 
+> **2. HTMLs de Referência Visual:**
+> Preserve os HTMLs de referência visual que existirem no dump. Eles não viram componentes, mas mova-os para dentro de `src/design-system/referencias`, ajustando os caminhos dos assets para que continuem abrindo sozinhos no navegador.
+> 
+> **3. Validação:**
+> Instale dependências, rode build, typecheck e lint. Confirme se renderiza e conserte o que falhar autonomamente. NÃO me entregue com erro pendente. Só apague a pasta original após validar tudo.
+> 
+> **4. Relatório Final:**
+> Entregue de uma vez só, no fim:
+> - O que foi instalado e mudou no projeto.
+> - Quantos componentes foram portados vs quantos existiam no dump.
+> - Quais conflitos de duplicata apareceram e quem venceu.
+> - Decisões ambíguas que você tomou sozinho e o que ficou de fora.

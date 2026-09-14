@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { FileText } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import { useObraAccess } from '../../hooks/useObraAccess';
 import { useRelatoriosObra } from '../../hooks/useRelatoriosObra';
@@ -11,10 +13,10 @@ import { RelatorioConfigDialog } from '../relatorios/RelatorioConfigDialog';
 import { RelatorioHistorico } from '../relatorios/RelatorioHistorico';
 
 export const RelatoriosTab: React.FC = () => {
+  const queryClient = useQueryClient();
   const { activeObra, user, empresas, isMasterAdmin, getRoleForObra } = useAuth();
   const { canViewFinancials } = useObraAccess();
   const [tipoSelecionado, setTipoSelecionado] = useState<RelatorioTipo | null>(null);
-  const [sucesso, setSucesso] = useState<string | null>(null);
 
   const obraRole = activeObra ? getRoleForObra(activeObra.id) : 'CLIENTE_COMPRADOR';
   const podeAcessar = podeAcessarRelatorios(user?.email, isMasterAdmin, obraRole);
@@ -29,8 +31,6 @@ export const RelatoriosTab: React.FC = () => {
     relatorios,
     loading,
     gerar,
-    gerando,
-    erroGeracao,
     excluir,
     excluindo
   } = useRelatoriosObra(activeObra?.id || '');
@@ -41,15 +41,31 @@ export const RelatoriosTab: React.FC = () => {
     return <RelatorioAcessoRestrito />;
   }
 
-  const handleGerar = async (params: Parameters<typeof gerar>[0]) => {
-    await gerar({
+  const handleGerar = (params: Parameters<typeof gerar>[0]) => {
+    setTipoSelecionado(null);
+
+    const promise = gerar({
       ...params,
       obra: activeObra,
       logoEmpresaUrl: empresa?.logo_url,
       empresaNome: empresa?.nome || activeObra.empresa_nome || activeObra.empresaNome
     });
-    setTipoSelecionado(null);
-    setSucesso('Relatório gerado e arquivado com sucesso.');
+
+    toast.promise(promise, {
+      loading: 'Seu relatório está sendo gerado em segundo plano. Você pode continuar navegando...',
+      success: (registro) => ({
+        message: 'Relatório gerado com sucesso!',
+        action: {
+          label: 'Abrir PDF',
+          onClick: () => window.open(registro.arquivo_url, '_blank', 'noopener,noreferrer'),
+        },
+      }),
+      error: 'Erro ao processar os dados do relatório. Tente novamente.',
+    });
+
+    void promise.finally(() => {
+      void queryClient.invalidateQueries({ queryKey: ['relatorios', activeObra.id] });
+    });
   };
 
   return (
@@ -63,19 +79,6 @@ export const RelatoriosTab: React.FC = () => {
           Geração, visualização e arquivamento de PDFs para diretoria e investidores
         </p>
       </div>
-
-      {sucesso && (
-        <div className="bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 px-4 py-3 rounded-2xl text-xs font-semibold flex justify-between">
-          <span>{sucesso}</span>
-          <button type="button" onClick={() => setSucesso(null)} className="text-emerald-400">×</button>
-        </div>
-      )}
-
-      {erroGeracao && (
-        <div className="bg-red-950/40 border border-red-800/50 text-red-300 px-4 py-3 rounded-2xl text-xs font-semibold">
-          {erroGeracao}
-        </div>
-      )}
 
       <RelatorioTipoGrid onSelecionar={setTipoSelecionado} />
 
@@ -93,7 +96,6 @@ export const RelatoriosTab: React.FC = () => {
         tipo={tipoSelecionado}
         onClose={() => setTipoSelecionado(null)}
         onGerar={handleGerar}
-        gerando={gerando}
         userEmail={user?.email}
         isMasterAdmin={isMasterAdmin}
         canViewFinancials={canViewFinancials}

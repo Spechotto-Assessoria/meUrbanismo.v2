@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +21,7 @@ type Props = {
   open: boolean;
   tipo: RelatorioTipo | null;
   onClose: () => void;
-  onGerar: (params: Omit<GerarRelatorioParams, 'obra' | 'logoEmpresaUrl' | 'empresaNome'>) => Promise<void>;
-  gerando: boolean;
+  onGerar: (params: Omit<GerarRelatorioParams, 'obra' | 'logoEmpresaUrl' | 'empresaNome'>) => void;
   userEmail?: string;
   isMasterAdmin: boolean;
   canViewFinancials: boolean;
@@ -39,7 +37,6 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
   tipo,
   onClose,
   onGerar,
-  gerando,
   userEmail,
   isMasterAdmin,
   canViewFinancials
@@ -70,10 +67,10 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
 
   const financeiroDesabilitado = !canViewFinancials;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim) return;
-    await onGerar({
+    onGerar({
       tipo,
       titulo: titulo.trim() || card.tituloPadrao,
       periodoInicio,
@@ -91,7 +88,7 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
         <p className="text-xs text-slate-500 mt-1">{card.descricao}</p>
       </DialogHeader>
       <DialogContent>
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="titulo-relatorio">Título do Relatório</Label>
             <Input
@@ -176,22 +173,15 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
           )}
 
           <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={gerando}>
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               Cancelar
             </Button>
             <Button
               type="submit"
               className="flex-1 bg-brand-500 hover:bg-brand-600"
-              disabled={gerando || (exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim)}
+              disabled={exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim}
             >
-              {gerando ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
-                  Gerando...
-                </>
-              ) : (
-                'Gerar e Salvar PDF'
-              )}
+              Gerar e Salvar PDF
             </Button>
           </div>
         </form>

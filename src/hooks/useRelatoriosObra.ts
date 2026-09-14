@@ -60,8 +60,6 @@ export function useRelatoriosObra(obraId: string) {
     loading: query.isLoading,
     erro: query.error instanceof Error ? query.error.message : null,
     gerar: gerarMutation.mutateAsync,
-    gerando: gerarMutation.isPending,
-    erroGeracao: gerarMutation.error instanceof Error ? gerarMutation.error.message : null,
     excluir: excluirMutation.mutateAsync,
     excluindo: excluirMutation.isPending
   };
