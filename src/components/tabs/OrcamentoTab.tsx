@@ -3,9 +3,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useOrcamento } from '../../hooks/useOrcamento';
 import { parseBudgetFile, type ParsedEtapa, type SheetRead } from '../../lib/budget-parser';
 import { DropzoneImportacao, ImportOrcamentoModal } from '../orcamento/ImportOrcamentoModal';
+import { OrcamentoResumoCards } from '../orcamento/OrcamentoResumoCards';
+import { OrcamentoComposicaoChart } from '../orcamento/OrcamentoComposicaoChart';
 import { SkeletonTable } from '../common/SkeletonLoader';
 import {
-  DollarSign, UploadCloud, Plus, CheckCircle, TrendingUp, Filter, X, Pencil, Trash2,
+  UploadCloud, Plus, Filter, X, Pencil, Trash2,
   ShieldAlert, FileSpreadsheet, AlertTriangle, Loader2
 } from 'lucide-react';
 
@@ -25,6 +27,7 @@ export const OrcamentoTab: React.FC = () => {
   const [lendo, setLendo] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const graficoOrcamentoRef = useRef<HTMLDivElement>(null);
 
   const itens = orc.itens;
   const totalOrcado = itens.reduce((a, c) => a + (c.valor_total || 0), 0);
@@ -82,33 +85,15 @@ export const OrcamentoTab: React.FC = () => {
         </div>
       )}
 
-      <div className={`grid grid-cols-1 gap-3.5 ${isAdmin ? 'sm:grid-cols-3' : ''}`}>
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-navy-900 to-navy-850 border border-slate-800 shadow-md">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <DollarSign className="w-3.5 h-3.5 text-brand-400" /> Orçamento Global Previsto
-          </div>
-          <div className="text-xl sm:text-2xl font-black text-white mt-1">{brl(totalOrcado)}</div>
-          <div className="text-[11px] text-slate-400 mt-1">100% da planilha contratada</div>
-        </div>
-        {isAdmin && (
-          <>
-            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-navy-900 to-navy-850 border border-brand-500/30 shadow-glow-sm">
-              <div className="text-[11px] font-bold text-brand-300 uppercase tracking-wider flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-brand-400" /> Total Medido / Executado
-              </div>
-              <div className="text-xl sm:text-2xl font-black text-brand-300 mt-1">{brl(totalExecutado)}</div>
-              <div className="text-[11px] text-emerald-400 mt-1 font-semibold">{percentualGeral}% do custo total realizado</div>
-            </div>
-            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-navy-900 to-navy-850 border border-slate-800 shadow-md">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-cyan-400" /> Saldo a Executar
-              </div>
-              <div className="text-xl sm:text-2xl font-black text-white mt-1">{brl(totalOrcado - totalExecutado)}</div>
-              <div className="text-[11px] text-slate-400 mt-1">{(100 - Number(percentualGeral)).toFixed(1)}% pendente de medição</div>
-            </div>
-          </>
-        )}
-      </div>
+      <OrcamentoResumoCards
+        totalOrcado={totalOrcado}
+        totalExecutado={totalExecutado}
+        percentualGeral={percentualGeral}
+      />
+
+      {!orc.loading && itens.length > 0 && (
+        <OrcamentoComposicaoChart ref={graficoOrcamentoRef} itens={itens} />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-1.5 py-1">

@@ -17,6 +17,7 @@ type Props = DadosRelatorio & {
   watermarkIconDataUri?: string;
   fotosDataUri?: string[];
   mapaDataUri?: string;
+  graficoOrcamentoDataUri?: string;
 };
 
 function layoutProps(dados: Props): LayoutProps {
@@ -48,7 +49,10 @@ export function RelatorioDocument(props: Props) {
 
       {mostrarSecao(tipo, 'orcamento') && (
         <Pagina dados={props}>
-          <OrcamentoSection dados={props} />
+          <OrcamentoSection
+            dados={props}
+            graficoOrcamentoDataUri={props.graficoOrcamentoDataUri}
+          />
         </Pagina>
       )}
 

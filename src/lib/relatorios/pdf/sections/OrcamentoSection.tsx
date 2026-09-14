@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from '@react-pdf/renderer';
+import { View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 import type { DadosRelatorio } from '../../tipos';
 import { brl } from '../../formatadores';
 import { PdfSectionTitle } from '../PdfLayout';
@@ -23,10 +23,16 @@ const styles = StyleSheet.create({
     marginBottom: 4
   },
   resumoValor: { fontSize: 12, fontWeight: 'bold', color: '#ffffff' },
-  resumoSub: { fontSize: 6, color: '#94a3b8', marginTop: 3 }
+  resumoSub: { fontSize: 6, color: '#94a3b8', marginTop: 3 },
+  graficoImg: { width: '100%', maxHeight: 200, objectFit: 'contain', marginVertical: 8 }
 });
 
-export function OrcamentoSection({ dados }: { dados: DadosRelatorio }) {
+type Props = {
+  dados: DadosRelatorio;
+  graficoOrcamentoDataUri?: string;
+};
+
+export function OrcamentoSection({ dados, graficoOrcamentoDataUri }: Props) {
   const { totalOrcado, totalExecutado, incluiFinanceiro } = dados;
   const saldo = totalOrcado - totalExecutado;
   const pctRealizado = totalOrcado > 0 ? ((totalExecutado / totalOrcado) * 100).toFixed(1) : '0.0';
@@ -56,7 +62,11 @@ export function OrcamentoSection({ dados }: { dados: DadosRelatorio }) {
           </Text>
         </View>
       </View>
-      <PizzaParticipacaoPdf itens={dados.orcamentos} total={dados.totalOrcado} />
+      {graficoOrcamentoDataUri ? (
+        <Image src={graficoOrcamentoDataUri} style={styles.graficoImg} />
+      ) : (
+        <PizzaParticipacaoPdf itens={dados.orcamentos} total={dados.totalOrcado} />
+      )}
       <TabelaOrcamento itens={dados.orcamentos} incluiFinanceiro={dados.incluiFinanceiro} total={dados.totalOrcado} />
     </View>
   );

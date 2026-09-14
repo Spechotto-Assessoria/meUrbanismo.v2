@@ -70,6 +70,8 @@ export interface GerarRelatorioParams {
   modoVendas?: ModoVendasRelatorio;
   logoEmpresaUrl?: string | null;
   empresaNome?: string | null;
+  /** PNG Base64 capturado do gráfico de composição (futuro: Relatório Global). */
+  graficoOrcamentoDataUri?: string | null;
 }
 
 export interface ContagemLotes {

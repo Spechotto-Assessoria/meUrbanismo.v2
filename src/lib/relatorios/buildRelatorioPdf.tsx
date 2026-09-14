@@ -28,6 +28,7 @@ export async function buildRelatorioPdf(params: GerarRelatorioParams): Promise<B
       watermarkIconDataUri={watermarkIcon}
       fotosDataUri={fotos}
       mapaDataUri={mapaDataUri || undefined}
+      graficoOrcamentoDataUri={params.graficoOrcamentoDataUri || undefined}
     />
   );
 
