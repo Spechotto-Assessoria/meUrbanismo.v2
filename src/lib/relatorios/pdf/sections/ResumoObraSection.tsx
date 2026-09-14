@@ -6,23 +6,24 @@ import { PdfSectionTitle } from '../PdfLayout';
 import { PizzaLotesStatusPdf } from '../charts/PizzaLotesStatusPdf';
 
 const styles = StyleSheet.create({
+  pageContent: {
+    flex: 1,
+    flexDirection: 'column'
+  },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   card: { width: '31%', padding: 8, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 4, backgroundColor: '#f8fafc' },
   label: { fontSize: 7, color: '#64748b', marginBottom: 3, textTransform: 'uppercase' },
   value: { fontSize: 11, fontWeight: 'bold', color: '#0f172a' },
   intro: { fontSize: 9, color: '#334155', marginBottom: 6, lineHeight: 1.4 },
-  marcos: { marginTop: 10, fontSize: 8, color: '#475569' },
+  introPrazos: { fontSize: 9, color: '#334155', marginBottom: 6, marginTop: 4 },
   gestaoTecnicaRodape: {
-    position: 'absolute',
-    bottom: 44,
-    left: 0,
-    right: 0,
+    marginTop: 'auto',
+    paddingTop: 15,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    paddingTop: 6,
     fontSize: 8,
-    color: '#475569',
-    gap: 3
+    color: '#334155',
+    gap: 4
   }
 });
 
@@ -37,11 +38,15 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
   const engenheiro = obra.engenheiro_responsavel?.trim();
 
   return (
-    <View>
+    <View style={styles.pageContent}>
       <PdfSectionTitle>Resumo do Empreendimento</PdfSectionTitle>
       <Text style={styles.intro}>
         {obra.nome} — {obra.cidade}/{obra.uf}. Status: {obra.status || 'Em andamento'}.
         {dados.tipo === 'global' ? ` Período de referência: ${periodoLabel(dados.periodoInicio, dados.periodoFim)}.` : ''}
+      </Text>
+      <Text style={styles.introPrazos}>
+        Início previsto: {dataPt(obra.data_inicio || obra.dataInicio)} • Entrega:{' '}
+        {dataPt(obra.data_previsao || obra.dataEntrega)}
       </Text>
       <View style={styles.grid}>
         <View style={styles.card}>
@@ -82,10 +87,6 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
         </View>
       </View>
       <PizzaLotesStatusPdf contagem={dados.contagemLotes} />
-      <Text style={styles.marcos}>
-        Início previsto: {dataPt(obra.data_inicio || obra.dataInicio)} • Entrega:{' '}
-        {dataPt(obra.data_previsao || obra.dataEntrega)}
-      </Text>
       <View style={styles.gestaoTecnicaRodape}>
         <Text>Supervisão Técnica: {obra.supervisao_tecnica?.trim() || '—'}</Text>
         <Text>
