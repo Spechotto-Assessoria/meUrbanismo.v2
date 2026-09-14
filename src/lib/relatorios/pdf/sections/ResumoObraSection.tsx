@@ -11,19 +11,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 7, color: '#64748b', marginBottom: 3, textTransform: 'uppercase' },
   value: { fontSize: 11, fontWeight: 'bold', color: '#0f172a' },
   intro: { fontSize: 9, color: '#334155', marginBottom: 6, lineHeight: 1.4 },
-  marcos: { marginTop: 10, fontSize: 8, color: '#475569' },
-  gestaoTecnicaRodape: {
-    position: 'absolute',
-    bottom: 44,
-    left: 0,
-    right: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingTop: 6,
-    fontSize: 8,
-    color: '#475569',
-    gap: 3
-  }
+  marcos: { marginTop: 10, fontSize: 8, color: '#475569' }
 });
 
 export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
@@ -34,7 +22,6 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
   const lotesVendidos = obra.lotes_vendidos || dados.contagemLotes.vendido || 0;
   const lotesDisponiveis = obra.lotes_disponiveis ?? dados.contagemLotes.disponivel;
   const vgv = obra.valor_vgv || dados.viabilidade?.vgvReajustado || 0;
-  const engenheiro = obra.engenheiro_responsavel?.trim();
 
   return (
     <View>
@@ -86,13 +73,6 @@ export function ResumoObraSection({ dados }: { dados: DadosRelatorio }) {
         Início previsto: {dataPt(obra.data_inicio || obra.dataInicio)} • Entrega:{' '}
         {dataPt(obra.data_previsao || obra.dataEntrega)}
       </Text>
-      <View style={styles.gestaoTecnicaRodape}>
-        <Text>Supervisão Técnica: {obra.supervisao_tecnica?.trim() || '—'}</Text>
-        <Text>
-          Engenheiro Responsável: {engenheiro || 'Não informado (Apenas Assessoria)'}
-          {obra.crea_responsavel ? ` (${obra.crea_responsavel})` : ''}
-        </Text>
-      </View>
     </View>
   );
 }

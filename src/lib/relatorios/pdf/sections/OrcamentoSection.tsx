@@ -7,14 +7,12 @@ import { TabelaOrcamento } from '../TabelaOrcamento';
 import { PizzaParticipacaoPdf } from '../charts/PizzaParticipacaoPdf';
 
 const styles = StyleSheet.create({
-  resumoGrid: { flexDirection: 'row', gap: 6, marginTop: 8, marginBottom: 10 },
+  resumoGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   resumoCard: {
-    width: '32%',
-    padding: 8,
+    width: '30%',
+    padding: 10,
     borderRadius: 4,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#1e293b'
+    backgroundColor: '#0f172a'
   },
   resumoLabel: {
     fontSize: 7,
@@ -43,19 +41,19 @@ export function OrcamentoSection({ dados, graficoOrcamentoDataUri }: Props) {
       <PdfSectionTitle>Orçamento por Etapas</PdfSectionTitle>
       <View style={styles.resumoGrid}>
         <View style={styles.resumoCard}>
-          <Text style={styles.resumoLabel}>Orçamento Global Previsto</Text>
+          <Text style={styles.resumoLabel}>ORÇAMENTO GLOBAL PREVISTO</Text>
           <Text style={styles.resumoValor}>{brl(totalOrcado, incluiFinanceiro)}</Text>
           <Text style={styles.resumoSub}>100% da planilha contratada</Text>
         </View>
         <View style={styles.resumoCard}>
-          <Text style={styles.resumoLabel}>Total Medido / Executado</Text>
+          <Text style={styles.resumoLabel}>TOTAL MEDIDO / EXECUTADO</Text>
           <Text style={styles.resumoValor}>{brl(totalExecutado, incluiFinanceiro)}</Text>
           <Text style={styles.resumoSub}>
             {incluiFinanceiro ? `${pctRealizado}% do custo total realizado` : '—'}
           </Text>
         </View>
         <View style={styles.resumoCard}>
-          <Text style={styles.resumoLabel}>Saldo a Executar</Text>
+          <Text style={styles.resumoLabel}>SALDO A EXECUTAR</Text>
           <Text style={styles.resumoValor}>{brl(saldo, incluiFinanceiro)}</Text>
           <Text style={styles.resumoSub}>
             {incluiFinanceiro ? `${pctPendente}% pendente de medição` : '—'}

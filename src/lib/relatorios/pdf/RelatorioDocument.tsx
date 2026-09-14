@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document } from '@react-pdf/renderer';
+import { Document, View, Text } from '@react-pdf/renderer';
 import type { DadosRelatorio } from '../tipos';
 import { mostrarSecao } from '../tipos';
 import { PaginaRelatorio, type LayoutProps } from './PdfLayout';
@@ -43,7 +43,24 @@ export function RelatorioDocument(props: Props) {
     <Document title={props.titulo} author="Spechotto Assessoria & Construção">
       {tipo === 'global' && (
         <Pagina dados={props}>
-          <ResumoObraSection dados={props} />
+          <View style={{ flexDirection: 'column', flexGrow: 1, minHeight: 620 }}>
+            <ResumoObraSection dados={props} />
+            <View
+              style={{
+                marginTop: 'auto',
+                borderTopWidth: 1,
+                paddingTop: 10,
+                borderColor: '#e2e8f0'
+              }}
+            >
+              <Text style={{ fontSize: 8, color: '#475569' }}>
+                Supervisão: {props.obra.supervisao_tecnica?.trim() || '—'}
+              </Text>
+              <Text style={{ fontSize: 8, color: '#475569', marginTop: 3 }}>
+                Engenheiro: {props.obra.engenheiro_responsavel || 'Não informado (Apenas Assessoria)'}
+              </Text>
+            </View>
+          </View>
         </Pagina>
       )}
 

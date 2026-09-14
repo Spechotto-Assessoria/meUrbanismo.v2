@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   watermark: {
     width: 280,
     height: 280,
-    opacity: 0.07,
+    opacity: 0.05,
     objectFit: 'contain'
   },
   footer: {
@@ -62,11 +62,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     fontSize: 7,
     color: SLATE
-  },
-  footerLegal: {
-    fontSize: 6,
-    color: '#94a3b8',
-    marginTop: 3
   },
   sectionTitle: {
     fontSize: 12,
@@ -124,7 +119,7 @@ export function PdfFooter() {
         <Text>Spechotto Assessoria & Construção — meUrbanismo</Text>
         <Text render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`} />
       </View>
-      <Text style={styles.footerLegal}>
+      <Text style={{ fontSize: 6, color: '#64748b', marginTop: 4, textAlign: 'left' }}>
         Plataforma com conformidade às normas ABNT NBR 12721 e Leis Federais 6.766/79 e 13.465/17.
       </Text>
     </View>
