@@ -43,8 +43,8 @@ function extensaoDe(file: File): string {
 }
 
 export type ValidacaoArquivosResult =
-  | { ok: true; files: File[] }
-  | { ok: false; erro: string };
+  | { ok: true; files: File[]; erro?: never }
+  | { ok: false; erro: string; files?: never };
 
 /** Valida tamanho, extensão e MIME antes de upload. */
 export function validarArquivos(

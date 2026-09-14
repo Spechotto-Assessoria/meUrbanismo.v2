@@ -17,6 +17,7 @@ import {
   ViabilidadeEstudo,
   EstudoViabilidade,
   Lote,
+  MapaImgTransform,
   Convite,
   UserProfile,
   Notificacao,
@@ -664,7 +665,7 @@ class SupabaseDataService {
       resumo_atividades: medicao.resumo_atividades,
       valor_medicao: medicao.valor_medicao ?? medicao.valor_medido ?? 0,
       valor_acumulado: medicao.valor_acumulado ?? 0,
-      percentual_medido_periodo: medicao.percentual_periodo ?? medicao.percentual_medido_periodo ?? 0,
+      percentual_medido_periodo: medicao.percentual_periodo ?? 0,
       percentual_medido_acumulado: medicao.percentual_medido_acumulado ?? 0,
       status: medicao.status ?? 'registrada',
       link_relatorio_pdf: medicao.link_relatorio_pdf,
@@ -1121,7 +1122,7 @@ class SupabaseDataService {
     dados: {
       mapa_masterplan_url?: string | null;
       mapa_viewbox?: string | null;
-      mapa_img_transform?: Record<string, number> | null;
+      mapa_img_transform?: MapaImgTransform | null;
     }
   ): Promise<Obra> {
     const payload: Record<string, unknown> = {};
