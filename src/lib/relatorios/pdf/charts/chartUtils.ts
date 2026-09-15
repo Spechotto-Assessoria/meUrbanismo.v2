@@ -29,3 +29,20 @@ export function arcoDonut(
   const large = end - start > Math.PI ? 1 : 0;
   return `M ${x1o} ${y1o} A ${rOuter} ${rOuter} 0 ${large} 1 ${x2o} ${y2o} L ${x1i} ${y1i} A ${rInner} ${rInner} 0 ${large} 0 ${x2i} ${y2i} Z`;
 }
+
+export function calloutDonut(
+  cx: number,
+  cy: number,
+  rOuter: number,
+  midAngle: number,
+  extensao: number,
+  distTexto: number
+) {
+  const xBorda = cx + rOuter * Math.cos(midAngle);
+  const yBorda = cy + rOuter * Math.sin(midAngle);
+  const xFim = cx + (rOuter + extensao) * Math.cos(midAngle);
+  const yFim = cy + (rOuter + extensao) * Math.sin(midAngle);
+  const xTexto = cx + (rOuter + distTexto) * Math.cos(midAngle);
+  const yTexto = cy + (rOuter + distTexto) * Math.sin(midAngle);
+  return { xBorda, yBorda, xFim, yFim, xTexto, yTexto };
+}

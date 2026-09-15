@@ -15,11 +15,11 @@ const styles = StyleSheet.create({
 type Props = { itens: OrcamentoItem[]; incluiFinanceiro: boolean; total: number };
 
 export function TabelaOrcamento({ itens, incluiFinanceiro, total }: Props) {
-  const linhas = itens.slice(0, 25);
+  const linhas = itens;
 
   return (
     <View>
-      <View style={[styles.row, styles.head]}>
+      <View style={[styles.row, styles.head]} minPresenceAhead={40}>
         <Text style={styles.cellCod}>Cód</Text>
         <Text style={styles.cellNome}>Serviço / Etapa</Text>
         <Text style={styles.cellValor}>Valor</Text>

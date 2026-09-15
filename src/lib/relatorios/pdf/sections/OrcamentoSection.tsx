@@ -65,7 +65,13 @@ export function OrcamentoSection({ dados, graficoOrcamentoDataUri }: Props) {
       ) : (
         <PizzaParticipacaoPdf itens={dados.orcamentos} total={dados.totalOrcado} />
       )}
-      <TabelaOrcamento itens={dados.orcamentos} incluiFinanceiro={dados.incluiFinanceiro} total={dados.totalOrcado} />
+      <View break>
+        <TabelaOrcamento
+          itens={dados.orcamentos}
+          incluiFinanceiro={dados.incluiFinanceiro}
+          total={dados.totalOrcado}
+        />
+      </View>
     </View>
   );
 }
