@@ -4,7 +4,7 @@ import type { DadosRelatorio } from '../tipos';
 import { mostrarSecao } from '../tipos';
 import { PaginaRelatorio, type LayoutProps } from './PdfLayout';
 import { ResumoObraSection } from './sections/ResumoObraSection';
-import { OrcamentoSection } from './sections/OrcamentoSection';
+import { OrcamentoResumoSection, OrcamentoTabelaSection } from './sections/OrcamentoSection';
 import { CronogramaSection } from './sections/CronogramaSection';
 import { AndamentoSection } from './sections/AndamentoSection';
 import { ViabilidadeSection } from './sections/ViabilidadeSection';
@@ -65,12 +65,17 @@ export function RelatorioDocument(props: Props) {
       )}
 
       {mostrarSecao(tipo, 'orcamento') && (
-        <Pagina dados={props}>
-          <OrcamentoSection
-            dados={props}
-            graficoOrcamentoDataUri={props.graficoOrcamentoDataUri}
-          />
-        </Pagina>
+        <>
+          <Pagina dados={props}>
+            <OrcamentoResumoSection
+              dados={props}
+              graficoOrcamentoDataUri={props.graficoOrcamentoDataUri}
+            />
+          </Pagina>
+          <Pagina dados={props}>
+            <OrcamentoTabelaSection dados={props} />
+          </Pagina>
+        </>
       )}
 
       {mostrarSecao(tipo, 'cronograma') && (

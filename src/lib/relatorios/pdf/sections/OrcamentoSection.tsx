@@ -7,7 +7,8 @@ import { TabelaOrcamento } from '../TabelaOrcamento';
 import { PizzaParticipacaoPdf } from '../charts/PizzaParticipacaoPdf';
 
 const styles = StyleSheet.create({
-  resumoGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
+  pageWrap: { paddingBottom: 10 },
+  resumoGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   resumoCard: {
     width: '30%',
     padding: 10,
@@ -22,22 +23,24 @@ const styles = StyleSheet.create({
   },
   resumoValor: { fontSize: 12, fontWeight: 'bold', color: '#ffffff' },
   resumoSub: { fontSize: 6, color: '#94a3b8', marginTop: 3 },
-  graficoImg: { width: '100%', maxHeight: 200, objectFit: 'contain', marginVertical: 8 }
+  graficoWrap: { alignItems: 'center', marginVertical: 5 },
+  graficoImg: { width: '100%', maxHeight: 160, objectFit: 'contain', marginVertical: 5 },
+  subtitulo: { fontSize: 8, color: '#64748b', marginBottom: 8 }
 });
 
-type Props = {
+type ResumoProps = {
   dados: DadosRelatorio;
   graficoOrcamentoDataUri?: string;
 };
 
-export function OrcamentoSection({ dados, graficoOrcamentoDataUri }: Props) {
+export function OrcamentoResumoSection({ dados, graficoOrcamentoDataUri }: ResumoProps) {
   const { totalOrcado, totalExecutado, incluiFinanceiro } = dados;
   const saldo = totalOrcado - totalExecutado;
   const pctRealizado = totalOrcado > 0 ? ((totalExecutado / totalOrcado) * 100).toFixed(1) : '0.0';
   const pctPendente = totalOrcado > 0 ? (100 - Number(pctRealizado)).toFixed(1) : '0.0';
 
   return (
-    <View>
+    <View style={styles.pageWrap}>
       <PdfSectionTitle>Orçamento por Etapas</PdfSectionTitle>
       <View style={styles.resumoGrid}>
         <View style={styles.resumoCard}>
@@ -60,18 +63,27 @@ export function OrcamentoSection({ dados, graficoOrcamentoDataUri }: Props) {
           </Text>
         </View>
       </View>
-      {graficoOrcamentoDataUri ? (
-        <Image src={graficoOrcamentoDataUri} style={styles.graficoImg} />
-      ) : (
-        <PizzaParticipacaoPdf itens={dados.orcamentos} total={dados.totalOrcado} />
-      )}
-      <View break>
-        <TabelaOrcamento
-          itens={dados.orcamentos}
-          incluiFinanceiro={dados.incluiFinanceiro}
-          total={dados.totalOrcado}
-        />
+      <View style={styles.graficoWrap}>
+        {graficoOrcamentoDataUri ? (
+          <Image src={graficoOrcamentoDataUri} style={styles.graficoImg} />
+        ) : (
+          <PizzaParticipacaoPdf itens={dados.orcamentos} total={dados.totalOrcado} />
+        )}
       </View>
+    </View>
+  );
+}
+
+export function OrcamentoTabelaSection({ dados }: { dados: DadosRelatorio }) {
+  return (
+    <View>
+      <PdfSectionTitle>Orçamento por Etapas</PdfSectionTitle>
+      <Text style={styles.subtitulo}>Detalhamento analítico por etapa</Text>
+      <TabelaOrcamento
+        itens={dados.orcamentos}
+        incluiFinanceiro={dados.incluiFinanceiro}
+        total={dados.totalOrcado}
+      />
     </View>
   );
 }

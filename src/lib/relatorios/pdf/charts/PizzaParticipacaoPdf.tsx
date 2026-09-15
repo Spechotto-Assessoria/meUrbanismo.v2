@@ -4,29 +4,29 @@ import type { OrcamentoItem } from '../../../../types';
 import { corPorIndice, CORES_TEXTO } from '../pdfPaleta';
 import { arcoDonut, calloutDonut } from './chartUtils';
 
-const SVG_SIZE = 320;
-const CX = 160;
-const CY = 160;
-const R_OUTER = 118;
-const R_INNER = 70;
-const CALLOUT_EXTENSAO = 10;
+const SVG_SIZE = 240;
+const CX = 120;
+const CY = 120;
+const R_OUTER = 85;
+const R_INNER = 45;
+const CALLOUT_EXTENSAO = 8;
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', marginVertical: 8 },
+  wrap: { alignItems: 'center', marginVertical: 5 },
   titulo: {
     fontSize: 9,
     fontWeight: 'bold',
     color: CORES_TEXTO.navy,
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center'
   },
-  legendaWrap: { width: '100%', marginTop: 8 },
-  legendaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  legendaWrap: { width: '100%', marginTop: 5 },
+  legendaGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 2 },
   legItem: {
     width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
     gap: 4
   },
   swatch: { width: 8, height: 8, borderRadius: 2 },
