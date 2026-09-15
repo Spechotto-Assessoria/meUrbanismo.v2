@@ -1,48 +1,33 @@
 import React from 'react';
 import { View, Text, Svg, Path, StyleSheet } from '@react-pdf/renderer';
 import type { ContagemLotes } from '../../tipos';
-
-const CORES = {
-  disponivel: '#10b981',
-  reservado: '#f59e0b',
-  vendido: '#dc2626'
-} as const;
+import { CORES_LOTES_STATUS, CORES_TEXTO } from '../pdfPaleta';
+import { arcoDonut } from './chartUtils';
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' },
-  titulo: { fontSize: 9, fontWeight: 'bold', color: '#1e3a8a', marginBottom: 4, marginTop: 40, textAlign: 'center' },
+  titulo: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: CORES_TEXTO.navy,
+    marginBottom: 4,
+    marginTop: 40,
+    textAlign: 'center'
+  },
   legenda: { gap: 5, marginLeft: 30 },
-  legItem: { fontSize: 8, color: '#475569' },
-  vazio: { fontSize: 8, color: '#64748b', marginVertical: 6 }
+  legItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  swatch: { width: 8, height: 8, borderRadius: 2 },
+  legText: { fontSize: 8, color: CORES_TEXTO.steel },
+  vazio: { fontSize: 8, color: CORES_TEXTO.slate, marginVertical: 6 }
 });
-
-function arcoDonut(
-  cx: number,
-  cy: number,
-  rInner: number,
-  rOuter: number,
-  start: number,
-  end: number
-): string {
-  const x1o = cx + rOuter * Math.cos(start);
-  const y1o = cy + rOuter * Math.sin(start);
-  const x2o = cx + rOuter * Math.cos(end);
-  const y2o = cy + rOuter * Math.sin(end);
-  const x1i = cx + rInner * Math.cos(end);
-  const y1i = cy + rInner * Math.sin(end);
-  const x2i = cx + rInner * Math.cos(start);
-  const y2i = cy + rInner * Math.sin(start);
-  const large = end - start > Math.PI ? 1 : 0;
-  return `M ${x1o} ${y1o} A ${rOuter} ${rOuter} 0 ${large} 1 ${x2o} ${y2o} L ${x1i} ${y1i} A ${rInner} ${rInner} 0 ${large} 0 ${x2i} ${y2i} Z`;
-}
 
 type Props = { contagem: ContagemLotes };
 
 export function PizzaLotesStatusPdf({ contagem }: Props) {
   const fatias = [
-    { key: 'disponivel', label: 'Disponível', valor: contagem.disponivel, cor: CORES.disponivel },
-    { key: 'reservado', label: 'Reservado', valor: contagem.reservado, cor: CORES.reservado },
-    { key: 'vendido', label: 'Vendido', valor: contagem.vendido, cor: CORES.vendido }
+    { key: 'disponivel', label: 'Disponível', valor: contagem.disponivel, cor: CORES_LOTES_STATUS.disponivel },
+    { key: 'reservado', label: 'Reservado', valor: contagem.reservado, cor: CORES_LOTES_STATUS.reservado },
+    { key: 'vendido', label: 'Vendido', valor: contagem.vendido, cor: CORES_LOTES_STATUS.vendido }
   ].filter((f) => f.valor > 0);
 
   const total = contagem.total || contagem.disponivel + contagem.reservado + contagem.vendido;
@@ -75,9 +60,12 @@ export function PizzaLotesStatusPdf({ contagem }: Props) {
         </Svg>
         <View style={styles.legenda}>
           {paths.map((p, i) => (
-            <Text key={i} style={styles.legItem}>
-              <Text style={{ color: p.cor }}>■</Text> {p.label} ({p.valor})
-            </Text>
+            <View key={i} style={styles.legItem}>
+              <View style={[styles.swatch, { backgroundColor: p.cor }]} />
+              <Text style={styles.legText}>
+                {p.label} ({p.valor})
+              </Text>
+            </View>
           ))}
         </View>
       </View>

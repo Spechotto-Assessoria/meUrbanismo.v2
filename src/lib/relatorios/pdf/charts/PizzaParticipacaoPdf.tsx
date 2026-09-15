@@ -1,40 +1,49 @@
 import React from 'react';
 import { View, Text, Svg, Path, StyleSheet } from '@react-pdf/renderer';
 import type { OrcamentoItem } from '../../../../types';
+import { corPorIndice, CORES_TEXTO } from '../pdfPaleta';
+import { arcoDonut } from './chartUtils';
 
-const PALETA_BASE = [
-  '#1e3a8a', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd',
-  '#0f766e', '#059669', '#10b981', '#34d399',
-  '#b45309', '#d97706', '#f59e0b',
-  '#64748b', '#475569', '#334155', '#1e293b'
-];
-
-function corPorIndice(i: number): string {
-  return PALETA_BASE[i % PALETA_BASE.length];
-}
+const SVG_SIZE = 200;
+const CX = 100;
+const CY = 100;
+const R_OUTER = 88;
+const R_INNER = 52;
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', gap: 12, marginVertical: 8, alignItems: 'flex-start' },
-  label: { fontSize: 8, color: '#64748b' },
-  legenda: { flex: 1, gap: 3 },
-  legItem: { fontSize: 7, color: '#475569' },
-  legItemCompacto: { fontSize: 6, color: '#475569' }
+  wrap: { alignItems: 'center', marginVertical: 12 },
+  titulo: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: CORES_TEXTO.navy,
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  legendaWrap: { width: '100%', marginTop: 12 },
+  legendaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  legItem: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 4
+  },
+  swatch: { width: 8, height: 8, borderRadius: 2 },
+  codigo: { fontSize: 7, color: CORES_TEXTO.steel, width: 28 },
+  nome: { fontSize: 7, color: CORES_TEXTO.steel, flex: 1 },
+  pct: { fontSize: 7, fontWeight: 'bold', color: CORES_TEXTO.navy, textAlign: 'right', width: 32 },
+  vazio: { fontSize: 8, color: CORES_TEXTO.slate, marginVertical: 6 }
 });
-
-function arco(cx: number, cy: number, r: number, start: number, end: number): string {
-  const x1 = cx + r * Math.cos(start);
-  const y1 = cy + r * Math.sin(start);
-  const x2 = cx + r * Math.cos(end);
-  const y2 = cy + r * Math.sin(end);
-  const large = end - start > Math.PI ? 1 : 0;
-  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-}
 
 type Props = { itens: OrcamentoItem[]; total: number };
 
 export function PizzaParticipacaoPdf({ itens, total }: Props) {
   const etapas = itens
-    .map((item) => ({ nome: item.descricao, valor: Number(item.valor_total) || 0 }))
+    .map((item, idx) => ({
+      codigo: item.codigo_sinapi || String(idx + 1).padStart(2, '0'),
+      nome: item.descricao,
+      valor: Number(item.valor_total) || 0
+    }))
     .filter((i) => i.valor > 0)
     .sort((a, b) => b.valor - a.valor);
 
@@ -42,43 +51,46 @@ export function PizzaParticipacaoPdf({ itens, total }: Props) {
   const denominador = somaItens > 0 ? somaItens : total;
 
   if (etapas.length === 0 || denominador <= 0) {
-    return <Text style={styles.label}>Sem dados para gráfico de participação.</Text>;
+    return <Text style={styles.vazio}>Sem dados para gráfico de participação.</Text>;
   }
 
-  const cx = 55;
-  const cy = 55;
-  const r = 48;
   let ang = -Math.PI / 2;
+  const legendaCompacta = etapas.length > 8;
+  const maxNome = legendaCompacta ? 28 : 38;
 
   const paths = etapas.map((item, i) => {
     const frac = item.valor / denominador;
     const sweep = frac * Math.PI * 2;
-    const d = arco(cx, cy, r, ang, ang + sweep);
+    const d = arcoDonut(CX, CY, R_INNER, R_OUTER, ang, ang + sweep);
     ang += sweep;
     return {
       d,
       cor: corPorIndice(i),
-      nome: item.nome,
+      codigo: item.codigo,
+      nome: item.nome.length > maxNome ? `${item.nome.slice(0, maxNome)}…` : item.nome,
       pct: (frac * 100).toFixed(1)
     };
   });
 
-  const legendaCompacta = etapas.length > 8;
-
   return (
     <View style={styles.wrap}>
-      <Svg width={110} height={110}>
+      <Text style={styles.titulo}>Participação por Etapa</Text>
+      <Svg width={SVG_SIZE} height={SVG_SIZE}>
         {paths.map((p, i) => (
           <Path key={i} d={p.d} fill={p.cor} />
         ))}
       </Svg>
-      <View style={styles.legenda}>
-        <Text style={styles.label}>Participação por etapa</Text>
-        {paths.map((p, i) => (
-          <Text key={i} style={legendaCompacta ? styles.legItemCompacto : styles.legItem}>
-            {p.pct}% — {p.nome.slice(0, 35)}
-          </Text>
-        ))}
+      <View style={styles.legendaWrap}>
+        <View style={styles.legendaGrid}>
+          {paths.map((p, i) => (
+            <View key={i} style={styles.legItem}>
+              <View style={[styles.swatch, { backgroundColor: p.cor }]} />
+              <Text style={styles.codigo}>{p.codigo}</Text>
+              <Text style={styles.nome}>{p.nome}</Text>
+              <Text style={styles.pct}>{p.pct}%</Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
