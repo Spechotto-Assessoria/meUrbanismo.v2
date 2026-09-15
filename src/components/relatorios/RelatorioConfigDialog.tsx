@@ -14,6 +14,8 @@ import {
   tipoPrecisaPeriodo
 } from '../../lib/relatorios/tipos';
 import { financeiroPadraoMarcado } from '../../lib/relatorios/acesso';
+import { periodoMesAnteriorPadrao, periodoValido } from '../../lib/relatorios/periodo-utils';
+import { PeriodoRangePicker } from './PeriodoRangePicker';
 import type { RelatorioTipo } from '../../types';
 import type { GerarRelatorioParams, ModoVendasRelatorio } from '../../lib/relatorios/tipos';
 
@@ -27,11 +29,6 @@ type Props = {
   canViewFinancials: boolean;
 };
 
-function mesAtual(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
 export const RelatorioConfigDialog: React.FC<Props> = ({
   open,
   tipo,
@@ -43,8 +40,8 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
 }) => {
   const card = useMemo(() => RELATORIO_CARDS.find((c) => c.tipo === tipo), [tipo]);
   const [titulo, setTitulo] = useState('');
-  const [periodoInicio, setPeriodoInicio] = useState(mesAtual());
-  const [periodoFim, setPeriodoFim] = useState(mesAtual());
+  const [periodoInicio, setPeriodoInicio] = useState('');
+  const [periodoFim, setPeriodoFim] = useState('');
   const [incluiFinanceiro, setIncluiFinanceiro] = useState(false);
   const [todosPeriodos, setTodosPeriodos] = useState(false);
   const [modoVendas, setModoVendas] = useState<ModoVendasRelatorio>('acumulado');
@@ -52,12 +49,14 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
   const exibirPeriodo = tipo ? tipoPrecisaPeriodo(tipo) : false;
   const exibirTodoHistorico = tipo ? tipoPermiteTodoHistorico(tipo) : false;
   const exibirModoVendas = tipo === 'mapa_lotes' || tipo === 'global';
+  const periodoInvalido = exibirPeriodo && !todosPeriodos && !periodoValido(periodoInicio, periodoFim);
 
   useEffect(() => {
     if (!open || !card) return;
+    const padrao = periodoMesAnteriorPadrao();
     setTitulo(card.tituloPadrao);
-    setPeriodoInicio(mesAtual());
-    setPeriodoFim(mesAtual());
+    setPeriodoInicio(padrao.inicio);
+    setPeriodoFim(padrao.fim);
     setTodosPeriodos(false);
     setModoVendas('acumulado');
     setIncluiFinanceiro(financeiroPadraoMarcado(userEmail, isMasterAdmin) && canViewFinancials);
@@ -67,9 +66,14 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
 
   const financeiroDesabilitado = !canViewFinancials;
 
+  const handlePeriodoChange = (inicio: string, fim: string) => {
+    setPeriodoInicio(inicio);
+    setPeriodoFim(fim);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim) return;
+    if (periodoInvalido) return;
     onGerar({
       tipo,
       titulo: titulo.trim() || card.tituloPadrao,
@@ -100,26 +104,11 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
           </div>
 
           {exibirPeriodo && !todosPeriodos && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="mes-inicio">Mês Início</Label>
-                <Input
-                  id="mes-inicio"
-                  type="month"
-                  value={periodoInicio}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPeriodoInicio(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="mes-fim">Mês Fim</Label>
-                <Input
-                  id="mes-fim"
-                  type="month"
-                  value={periodoFim}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPeriodoFim(e.target.value)}
-                />
-              </div>
-            </div>
+            <PeriodoRangePicker
+              inicio={periodoInicio}
+              fim={periodoFim}
+              onChange={handlePeriodoChange}
+            />
           )}
 
           {exibirTodoHistorico && (
@@ -168,10 +157,6 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
             <span className="text-slate-700">Incluir dados financeiros</span>
           </label>
 
-          {exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim && (
-            <p className="text-xs text-red-600">O mês início deve ser anterior ou igual ao mês fim.</p>
-          )}
-
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               Cancelar
@@ -179,7 +164,7 @@ export const RelatorioConfigDialog: React.FC<Props> = ({
             <Button
               type="submit"
               className="flex-1 bg-brand-500 hover:bg-brand-600"
-              disabled={exibirPeriodo && !todosPeriodos && periodoInicio > periodoFim}
+              disabled={periodoInvalido}
             >
               Gerar e Salvar PDF
             </Button>

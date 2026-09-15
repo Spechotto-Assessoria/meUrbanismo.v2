@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
-import { Download, ExternalLink, MessageCircle, Trash2, FileText, Loader2 } from 'lucide-react';
-import { Button } from '../tabs/ui-components';
-import { periodoLabel, dataPt } from '../../lib/relatorios/formatadores';
-import { RELATORIO_CARDS } from '../../lib/relatorios/tipos';
+import React, { useMemo, useState } from 'react';
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Folder,
+  FolderOpen,
+  Loader2
+} from 'lucide-react';
+import {
+  agruparRelatoriosHistorico,
+  estadoAberturaInicial
+} from '../../lib/relatorios/historico-agrupamento';
 import type { RelatorioObra } from '../../types';
+import { RelatorioHistoricoCard } from './RelatorioHistoricoCard';
 
 type Props = {
   relatorios: RelatorioObra[];
@@ -14,9 +23,6 @@ type Props = {
   obraNome: string;
 };
 
-const tipoLabel = (tipo: RelatorioObra['tipo']) =>
-  RELATORIO_CARDS.find((c) => c.tipo === tipo)?.tituloPadrao || tipo;
-
 export const RelatorioHistorico: React.FC<Props> = ({
   relatorios,
   loading,
@@ -26,10 +32,27 @@ export const RelatorioHistorico: React.FC<Props> = ({
   obraNome
 }) => {
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [anosAbertos, setAnosAbertos] = useState<Record<string, boolean>>(
+    () => estadoAberturaInicial().anos
+  );
+  const [mesesAbertos, setMesesAbertos] = useState<Record<string, boolean>>(
+    () => estadoAberturaInicial().meses
+  );
+  const [tiposAbertos, setTiposAbertos] = useState<Record<string, boolean>>({});
 
-  const whatsappLink = (rel: RelatorioObra) => {
-    const texto = `Relatório "${rel.titulo}" — ${obraNome}\n${rel.arquivo_url}`;
-    return `https://wa.me/?text=${encodeURIComponent(texto)}`;
+  const anos = useMemo(() => agruparRelatoriosHistorico(relatorios), [relatorios]);
+
+  const toggleAno = (chave: string) =>
+    setAnosAbertos((p) => ({ ...p, [chave]: !p[chave] }));
+
+  const toggleMes = (chaveAno: string, chaveMes: string) => {
+    const key = `${chaveAno}:${chaveMes}`;
+    setMesesAbertos((p) => ({ ...p, [key]: !p[key] }));
+  };
+
+  const toggleTipo = (chaveAno: string, chaveMes: string, tipo: string) => {
+    const key = `${chaveAno}:${chaveMes}:${tipo}`;
+    setTiposAbertos((p) => ({ ...p, [key]: !p[key] }));
   };
 
   if (loading) {
@@ -54,88 +77,120 @@ export const RelatorioHistorico: React.FC<Props> = ({
         </div>
       ) : (
         <div className="space-y-2">
-          {relatorios.map((rel) => (
-            <div
-              key={rel.id}
-              className="p-4 rounded-2xl border border-slate-800 bg-navy-950 flex flex-col sm:flex-row sm:items-center gap-3"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">{rel.titulo}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {tipoLabel(rel.tipo)} • {periodoLabel(rel.periodo_inicio, rel.periodo_fim)}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  {dataPt(rel.created_at)} • {rel.gerado_por_nome || '—'}
-                  {rel.inclui_financeiro ? ' • Com financeiro' : ' • Sem financeiro'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
+          {anos.map((ano) => {
+            const anoAberto = anosAbertos[ano.chave] ?? false;
+            return (
+              <div
+                key={ano.chave}
+                className="rounded-2xl border border-slate-800 bg-navy-950 overflow-hidden"
+              >
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="border-slate-700 bg-navy-900 text-slate-200 hover:bg-navy-800"
-                  onClick={() => window.open(rel.arquivo_url, '_blank')}
+                  onClick={() => toggleAno(ano.chave)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-navy-900/60 transition-colors"
                 >
-                  <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                  Abrir
-                </Button>
-                <a href={rel.arquivo_url} download={`${rel.titulo}.pdf`} target="_blank" rel="noreferrer">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-700 bg-navy-900 text-slate-200 hover:bg-navy-800"
-                  >
-                    <Download className="w-3.5 h-3.5 mr-1" />
-                    Baixar
-                  </Button>
-                </a>
-                <a href={whatsappLink(rel)} target="_blank" rel="noreferrer">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="border-emerald-800/50 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-950/50"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5 mr-1" />
-                    WhatsApp
-                  </Button>
-                </a>
-
-                {podeExcluir && (
-                  confirmId === rel.id ? (
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="bg-red-600 hover:bg-red-700"
-                        disabled={excluindo}
-                        onClick={() => void onExcluir(rel).then(() => setConfirmId(null))}
-                      >
-                        Confirmar
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmId(null)}>
-                        Não
-                      </Button>
-                    </div>
+                  {anoAberto ? (
+                    <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
                   ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="border-red-900/50 text-red-400 hover:bg-red-950/30"
-                      onClick={() => setConfirmId(rel.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-1" />
-                      Excluir
-                    </Button>
-                  )
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  )}
+                  {anoAberto ? (
+                    <FolderOpen className="w-4 h-4 text-brand-400 shrink-0" />
+                  ) : (
+                    <Folder className="w-4 h-4 text-brand-400 shrink-0" />
+                  )}
+                  <span className="text-sm font-semibold text-white">{ano.rotulo}</span>
+                  <span className="text-xs text-slate-500 ml-auto">
+                    {ano.total} relatório{ano.total !== 1 ? 's' : ''}
+                  </span>
+                </button>
+
+                {anoAberto && (
+                  <div className="border-t border-slate-800 p-3 space-y-2">
+                    {ano.meses.map((mes) => {
+                      const mesKey = `${ano.chave}:${mes.chave}`;
+                      const mesAberto = mesesAbertos[mesKey] ?? false;
+                      return (
+                        <div
+                          key={mes.chave}
+                          className="rounded-xl border border-slate-800/80 bg-navy-900/30 overflow-hidden"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleMes(ano.chave, mes.chave)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-navy-900/50 transition-colors"
+                          >
+                            {mesAberto ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            )}
+                            <span className="text-xs font-semibold text-slate-200 capitalize">
+                              {mes.rotulo}
+                            </span>
+                            <span className="text-[10px] text-slate-500 ml-auto">
+                              {mes.tipos.length} tipo{mes.tipos.length !== 1 ? 's' : ''} · {mes.total} PDF{mes.total !== 1 ? 's' : ''}
+                            </span>
+                          </button>
+
+                          {mesAberto && (
+                            <div className="border-t border-slate-800/60 p-2 space-y-2">
+                              {mes.tipos.map((grupo) => {
+                                const tipoKey = `${ano.chave}:${mes.chave}:${grupo.tipo}`;
+                                const tipoAberto = tiposAbertos[tipoKey] ?? true;
+                                return (
+                                  <div
+                                    key={grupo.tipo}
+                                    className="rounded-lg border border-slate-800/60 overflow-hidden"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleTipo(ano.chave, mes.chave, grupo.tipo)}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-navy-900/40 transition-colors"
+                                    >
+                                      {tipoAberto ? (
+                                        <ChevronDown className="w-3 h-3 text-slate-600 shrink-0" />
+                                      ) : (
+                                        <ChevronRight className="w-3 h-3 text-slate-600 shrink-0" />
+                                      )}
+                                      <span className="text-[11px] font-medium text-slate-300">
+                                        {grupo.rotulo}
+                                      </span>
+                                      <span className="text-[10px] text-slate-600 ml-auto">
+                                        {grupo.relatorios.length}
+                                      </span>
+                                    </button>
+
+                                    {tipoAberto && (
+                                      <div className="p-2 space-y-2">
+                                        {grupo.relatorios.map((rel) => (
+                                          <RelatorioHistoricoCard
+                                            key={rel.id}
+                                            relatorio={rel}
+                                            obraNome={obraNome}
+                                            podeExcluir={podeExcluir}
+                                            confirmId={confirmId}
+                                            excluindo={excluindo}
+                                            onConfirmarExclusao={setConfirmId}
+                                            onCancelarExclusao={() => setConfirmId(null)}
+                                            onExcluir={onExcluir}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

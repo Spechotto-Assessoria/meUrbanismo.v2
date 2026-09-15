@@ -16,6 +16,16 @@ export const dataPt = (valor?: string | null): string => {
   return d.toLocaleDateString('pt-BR');
 };
 
+/** Data e hora exata — uso exclusivo da UI web (não enviar ao PDF). */
+export const dataHoraPt = (valor?: string | null): string => {
+  if (!valor) return '—';
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return valor;
+  const data = d.toLocaleDateString('pt-BR');
+  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${data} às ${hora}`;
+};
+
 export const mesAnoPt = (valor?: string | null): string => {
   if (!valor) return '—';
   const [ano, mes] = valor.split('-');
@@ -26,5 +36,24 @@ export const mesAnoPt = (valor?: string | null): string => {
 
 export const periodoLabel = (inicio?: string | null, fim?: string | null): string => {
   if (!inicio && !fim) return 'Período completo';
-  return `${mesAnoPt(inicio)} — ${mesAnoPt(fim)}`;
+
+  const ini = inicio?.slice(0, 10) || '';
+  const fin = fim?.slice(0, 10) || ini;
+
+  // Compatível com registros antigos (YYYY-MM-01) e novos (YYYY-MM-DD)
+  const iniDia = ini.slice(8, 10);
+  const finDia = fin.slice(8, 10);
+  const mesmoMes = ini.slice(0, 7) === fin.slice(0, 7);
+
+  if (mesmoMes && iniDia === '01' && finDia === '01') {
+    return mesAnoPt(inicio);
+  }
+
+  const fmt = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00`);
+    return d.toLocaleDateString('pt-BR');
+  };
+
+  if (ini === fin) return fmt(ini);
+  return `${fmt(ini)} — ${fmt(fin)}`;
 };
